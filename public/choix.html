@@ -221,16 +221,30 @@
     let styleActuel = 1;
     let socket = null;
 
-    fetch('/api/me').then(res => res.json()).then(user => {
-      if (!user || !user.pseudo) return window.location.href = '/';
-      pseudoGlobal = user.pseudo;
-      apiKeyGlobal = user.apiKey;
-      baseUrl = window.location.origin;
-      document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
-      document.getElementById('input-pseudo').value = user.pseudo;
-      document.getElementById('input-apikey').value = user.apiKey || '';
-      verifierStatutLive(user.pseudo);
-    });
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(user => {
+        if (!user || !user.pseudo) {
+          window.location.href = '/';
+          return;
+        }
+        pseudoGlobal = user.pseudo;
+        apiKeyGlobal = user.apiKey;
+        baseUrl = window.location.origin;
+
+        document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
+        document.getElementById('input-pseudo').value = user.pseudo;
+        document.getElementById('input-apikey').value = user.apiKey || '';
+
+        // Connexion Socket automatique pour lancer l'écoute du live
+        socket = io();
+        socket.on('connect', () => {
+          socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+        });
+
+        verifierStatutLive(user.pseudo);
+        setInterval(() => verifierStatutLive(user.pseudo), 3000);
+      })
 
     function verifierStatutLive(pseudo) {
       fetch('/api/live-status/' + encodeURIComponent(pseudo)).then(r => r.json()).then(s => {

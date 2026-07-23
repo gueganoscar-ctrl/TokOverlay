@@ -482,8 +482,12 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   }
 });
 
-app.get('/api/live-status/:pseudo', (req, res) => {
+app.get('/api/live-status/:pseudo', async (req, res) => {
   const pseudo = req.params.pseudo;
+  if (!connexionsActives[pseudo] && db) {
+    const user = await db.collection('users').findOne({ pseudo });
+    if (user) demarrerEcouteLive(pseudo, user.apiKey);
+  }
   const data = connexionsActives[pseudo];
   const isOnline = data && data.connection && data.connection.isConnected;
   res.json({ online: !!isOnline });
