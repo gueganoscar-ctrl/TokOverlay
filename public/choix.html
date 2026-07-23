@@ -248,17 +248,23 @@
     fetch('/api/me')
       .then(res => res.json())
       .then(user => {
-        if (!user || !user.pseudo) { window.location.href = '/'; return; }
+        if (!user || !user.pseudo) {
+          window.location.href = '/';
+          return;
+        }
         pseudoGlobal = user.pseudo;
-        apiKeyGlobal = user.apiKey;
+        overlayTokenGlobal = user.overlayToken || '';
         baseUrl = window.location.origin;
 
         document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
         document.getElementById('input-pseudo').value = user.pseudo;
-        document.getElementById('input-apikey').value = user.apiKey || '';
+        document.getElementById('input-apikey').value = ''; // Masqué pour la sécurité
 
+        // Connexion Socket automatique avec le pseudo et le token pour réveiller le bot
         socket = io();
-        socket.on('connect', () => { socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal }); });
+        socket.on('connect', () => {
+          socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal });
+        });
 
         verifierStatutLive(user.pseudo);
         setInterval(() => verifierStatutLive(user.pseudo), 3000);
