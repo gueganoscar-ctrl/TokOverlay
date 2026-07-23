@@ -16,8 +16,17 @@ const PORT = process.env.PORT || 3000;
 
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 
+// ----------------------------------------------------
+// POINT 13 : VALIDATION STRICTE DES VARIABLES D'ENVIRONNEMENT
+// ----------------------------------------------------
+const isProduction = process.env.NODE_ENV === 'production';
+
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
   throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
+}
+
+if (isProduction && (!process.env.OVERLAY_TOKEN_SECRET || process.env.OVERLAY_TOKEN_SECRET.length < 32)) {
+  console.warn("⚠️ ATTENTION : OVERLAY_TOKEN_SECRET est absent ou trop court en production. Un secret aléatoire fort va être généré, mais les tokens d'overlay existants seront invalidés au redémarrage.");
 }
 
 app.set('trust proxy', 1);
@@ -41,7 +50,7 @@ const sessionMiddleware = session({
   }),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     sameSite: 'lax',
     path: '/',
     maxAge: 1000 * 60 * 60 * 24 * 7
@@ -412,31 +421,43 @@ app.get('/api/live-stats/:pseudo', (req, res) => {
 });
 
 // ----------------------------------------------------
-// GESTION DU LIVE TIKTOK (SÉCURISÉE & ROBUSTE)
+// GESTION DU LIVE TIKTOK & NETTOYAGE DES RESSOURCES
 // ----------------------------------------------------
 
 const connexionsActives = {};
 
 function arreterEcouteLive(pseudo, data, reason) {
-  if (connexionsActives[pseudo] !== data || data.closed) return;
-
+  if (!data || data.closed) return;
   data.closed = true;
-  clearInterval(data.refreshTimer);
 
-  if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+  if (data.refreshTimer) {
+    clearInterval(data.refreshTimer);
+    data.refreshTimer = null;
+  }
+
+  if (data.enchere?.minuteur) {
+    clearTimeout(data.enchere.minuteur);
+    data.enchere.minuteur = null;
+  }
+
   if (!data.historySaved) {
     data.historySaved = true;
     sauvegarderHistoriqueLive(pseudo, data);
   }
 
   try {
-    data.connection.removeAllListeners();
-    if (typeof data.connection.disconnect === 'function') {
-      data.connection.disconnect();
+    if (data.connection) {
+      data.connection.removeAllListeners();
+      if (typeof data.connection.disconnect === 'function') {
+        data.connection.disconnect();
+      }
     }
   } catch {}
 
-  delete connexionsActives[pseudo];
+  if (connexionsActives[pseudo] === data) {
+    delete connexionsActives[pseudo];
+  }
+  
   io.to(`streamer:${pseudo}`).emit('liveArrete', { reason });
 }
 
@@ -643,7 +664,10 @@ function sauvegarderHistoriqueLive(pseudo, customData = null) {
 function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
   const data = connexionsActives[pseudo];
   if (!data) return;
-  if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+  if (data.enchere?.minuteur) {
+    clearTimeout(data.enchere.minuteur);
+    data.enchere.minuteur = null;
+  }
 
   const enchere = {
     actif: true, phase: 'timer',
@@ -687,7 +711,10 @@ function programmerTransitionOuFin(pseudo, enchere) {
   const data = connexionsActives[pseudo];
   if (!data || !data.enchere || data.enchere !== enchere) return;
   
-  if (enchere.minuteur) clearTimeout(enchere.minuteur);
+  if (enchere.minuteur) {
+    clearTimeout(enchere.minuteur);
+    enchere.minuteur = null;
+  }
   const delai = Math.max(enchere.finTimestamp - Date.now(), 0);
 
   enchere.minuteur = setTimeout(() => {
@@ -756,10 +783,12 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS AVEC VALIDATION STRICTE DES TYPES
+// GESTION DES WEBSOCKETS
 // ----------------------------------------------------
 
 io.on('connection', socket => {
+  socket.on('disconnect', () => {});
+
   socket.on('rejoindre', async ({ pseudo, apiKey, token }) => {
     const pseudoNettoye = normalizePseudo(pseudo);
     if (!pseudoNettoye) return;
