@@ -439,8 +439,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
-}
-
+  
 function etatCoffrePublic(pseudo) {
   const coffre = connexionsActives[pseudo]?.coffre;
   if (!coffre) return null;
