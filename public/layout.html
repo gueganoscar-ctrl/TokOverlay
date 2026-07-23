@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Multi-Layout OBS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    :root { --cyan: #22e5e0; --fuchsia: #fe2c55; --gold: #ffbe3d; --bg-dark: #100f14; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #ffffff;
+      background: transparent;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    /* Styles des composants intégrés dans le layout unifié */
+    #leaderboard { display: flex; flex-direction: column; gap: 10px; width: 260px; }
+    #leaderboard h3 { margin: 0 0 4px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); }
+
+    .carte-joueur { display: flex; align-items: center; position: relative; }
+    .avatar-container { position: relative; margin-right: 12px; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.2); object-fit: cover; background: #1e1e24; }
+    .crown { position: absolute; top: -12px; left: -6px; font-size: 16px; display: none; }
+    .rank-1 .crown { display: block; }
+    .rank-1 .avatar { border-color: var(--gold); }
+    .info { display: flex; flex-direction: column; }
+    .nickname { font-size: 13px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9); }
+    .valeur { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: var(--cyan); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9); }
+
+    body.style-1 .carte-joueur { background: rgba(16, 15, 20, 0.85); border: 1px solid rgba(34, 229, 224, 0.3); border-radius: 10px; padding: 6px 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); }
+    body.style-1 .rank-1.carte-joueur { border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 190, 61, 0.25); }
+
+    /* Best Gift */
+    #best-gift-container { background: #08080c; border: 1px solid var(--gold); border-radius: 16px; padding: 16px; display: none; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); width: 140px; }
+    .bg-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+    #bg-icon { width: 70px; height: 70px; object-fit: contain; }
+    #bg-pseudo { font-size: 13px; font-weight: 700; color: #ffffff; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+    /* Objectif de Live */
+    #objectif-panel { width: 320px; padding: 18px 20px; border-radius: 16px; background: var(--bg-dark); border: 1px solid #29283a; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: none; }
+    #objectif-label { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    #objectif-barre-fond { width: 100%; height: 22px; background: #18181f; border: 1px solid #29283a; border-radius: 999px; overflow: hidden; position: relative; }
+    #objectif-barre-remplissage { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), var(--fuchsia)); transition: width 0.4s ease; }
+    #objectif-texte { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f4f4f5; display: flex; justify-content: space-between; }
+    #objectif-texte .valeur-actuelle { color: var(--cyan); }
+    #objectif-texte .valeur-cible { color: #a1a1aa; }
+
+    /* Coffre-fort */
+    #coffre-panel { width: 320px; background: var(--bg-dark); border: 2px solid var(--gold); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); display: none; flex-direction: column; gap: 14px; }
+    .coffre-header { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+    .coffre-icon { font-size: 28px; }
+    .coffre-recompense { font-size: 12px; color: #a1a1aa; font-weight: 600; background: #18181f; padding: 6px 12px; border-radius: 8px; border: 1px solid #29283a; }
+    .coffre-cases-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+    .case-char { width: 32px; height: 38px; background: #18181f; border: 2px solid #29283a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+    .case-char.devoile { border-color: var(--gold); background: rgba(255, 190, 61, 0.1); color: #ffffff; }
+    .coffre-gagnant-box { background: rgba(52, 211, 153, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 12px; display: none; text-align: center; }
+    .coffre-gagnant-titre { font-size: 11px; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 4px; }
+    .coffre-gagnant-profil { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .coffre-gagnant-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--success); }
+    .coffre-gagnant-nom { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: white; }
+    .gagnant-chat-container { background: #18181f; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: left; }
+    .gagnant-chat-title { font-size: 9px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 2px; }
+    .gagnant-chat-texte { font-size: 11px; color: #f4f4f5; font-style: italic; word-break: break-word; }
+  </style>
+</head>
+<body>
+
+  <!-- Widgets combinés -->
+  <div id="best-gift-container">
+    <div class="bg-title">👑 Best Gift</div>
+    <img id="bg-icon" src="" alt="Cadeau">
+    <div id="bg-pseudo">En attente...</div>
+  </div>
+
+  <div id="leaderboard" style="display:none;">
+    <h3 id="titre-classement">Top Donateurs</h3>
+    <p class="message-attente" id="message-attente-simple">Connexion...</p>
+  </div>
+
+  <div id="objectif-panel">
+    <div id="objectif-label">Objectif du live</div>
+    <div id="objectif-barre-fond">
+      <div id="objectif-barre-remplissage"></div>
+    </div>
+    <div id="objectif-texte">
+      <span class="valeur-actuelle" id="objectif-valeur-actuelle">0</span>
+      <span class="valeur-cible" id="objectif-valeur-cible">/ 0</span>
+    </div>
+  </div>
+
+  <div id="coffre-panel">
+    <div class="coffre-header">
+      <span class="coffre-icon" id="coffre-icon-etat">🔒</span>
+      <span id="coffre-titre-texte">Coffre-Fort Verrouillé</span>
+    </div>
+    <div class="coffre-recompense" id="coffre-recompense-texte">Récompense : --</div>
+    <div class="coffre-cases-grid" id="coffre-cases-grid"></div>
+    <div class="coffre-gagnant-box" id="coffre-gagnant-box">
+      <div class="coffre-gagnant-titre">🎉 Coffre Ouvert !</div>
+      <div class="coffre-gagnant-profil">
+        <img class="coffre-gagnant-avatar" id="coffre-gagnant-avatar" src="" alt="">
+        <span class="coffre-gagnant-nom" id="coffre-gagnant-nom">--</span>
+      </div>
+      <div class="gagnant-chat-container">
+        <div class="gagnant-chat-title">💬 Message du gagnant :</div>
+        <div class="gagnant-chat-texte" id="coffre-gagnant-msg">En attente d'un message...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const widgetsParam = params.get('widgets') || 'donateurs,objectif,coffre,bestgift';
+    const widgetsList = widgetsParam.split(',');
+    const style = params.get('style') || '1';
+    const isDemo = params.get('demo') === '1';
+
+    document.body.className = `style-${style}`;
+
+    // Gestion de l'affichage selon la liste demandée dans l'URL
+    if (!widgetsList.includes('bestgift')) document.getElementById('best-gift-container').style.display = 'none';
+    else document.getElementById('best-gift-container').style.display = 'flex';
+
+    if (!widgetsList.includes('donateurs')) document.getElementById('leaderboard').style.display = 'none';
+    else document.getElementById('leaderboard').style.display = 'flex';
+
+    if (!widgetsList.includes('objectif')) document.getElementById('objectif-panel').style.display = 'none';
+    else document.getElementById('objectif-panel').style.display = 'block';
+
+    if (!widgetsList.includes('coffre')) document.getElementById('coffre-panel').style.display = 'none';
+    else document.getElementById('coffre-panel').style.display = 'flex';
+
+    function creerCarteJoueur(user, rank, cle, emoji) {
+      const carte = document.createElement('div');
+      carte.className = `carte-joueur rank-${rank}`;
+      const avatarContainer = document.createElement('div');
+      avatarContainer.className = 'avatar-container';
+      const crown = document.createElement('span'); crown.className = 'crown'; crown.textContent = '👑';
+      const img = document.createElement('img'); img.className = 'avatar'; img.src = user.profilePictureUrl;
+      avatarContainer.append(crown, img);
+
+      const info = document.createElement('div'); info.className = 'info';
+      const nickname = document.createElement('span'); nickname.className = 'nickname'; nickname.textContent = user.nickname;
+      const valeur = document.createElement('span'); valeur.className = 'valeur'; valeur.textContent = `${emoji}${user[cle].toLocaleString()}`;
+      info.append(nickname, valeur);
+      carte.append(avatarContainer, info);
+      return carte;
+    }
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, apiKey: params.get('key') });
+    });
+
+    socket.on('updateTopGifters', top3 => {
+      if (widgetsList.includes('donateurs')) {
+        const lb = document.getElementById('leaderboard');
+        lb.querySelectorAll('.carte-joueur').forEach(el => el.remove());
+        const msgAtt = document.getElementById('message-attente-simple');
+        if (msgAtt) msgAtt.remove();
+        top3.forEach((user, i) => lb.appendChild(creerCarteJoueur(user, i + 1, 'coins', '💎 ')));
+      }
+    });
+
+    socket.on('updateBestGift', data => {
+      if (widgetsList.includes('bestgift')) {
+        document.getElementById('bg-icon').src = data.icon || 'https://via.placeholder.com/60';
+        document.getElementById('bg-pseudo').textContent = data.pseudo;
+      }
+    });
+
+    socket.on('updateObjectif', etat => {
+      if (widgetsList.includes('objectif') && etat) {
+        document.getElementById('objectif-label').textContent = etat.label;
+        const pct = Math.min(100, Math.round((etat.valeurActuelle / etat.cible) * 100));
+        document.getElementById('objectif-barre-remplissage').style.width = pct + '%';
+        const emoji = etat.metrique === 'likes' ? '❤️' : '💎';
+        document.getElementById('objectif-valeur-actuelle').textContent = `${emoji} ${etat.valeurActuelle.toLocaleString()}`;
+        document.getElementById('objectif-valeur-cible').textContent = `/ ${etat.cible.toLocaleString()}`;
+      }
+    });
+
+    socket.on('updateCoffre', coffre => {
+      if (widgetsList.includes('coffre') && coffre) {
+        const grid = document.getElementById('coffre-cases-grid');
+        grid.innerHTML = '';
+        if (!coffre.gagnant) {
+          document.getElementById('coffre-icon-etat').textContent = '🔒';
+          document.getElementById('coffre-titre-texte').textContent = 'Coffre-Fort Verrouillé';
+          document.getElementById('coffre-gagnant-box').style.display = 'none';
+          coffre.caracteres.forEach(char => {
+            const div = document.createElement('div');
+            div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
+            div.textContent = char !== '_' ? char : '?';
+            grid.appendChild(div);
+          });
+        } else {
+          document.getElementById('coffre-icon-etat').textContent = '🔓';
+          document.getElementById('coffre-titre-texte').textContent = 'Coffre Ouvert !';
+          document.getElementById('coffre-gagnant-box').style.display = 'block';
+          document.getElementById('coffre-gagnant-avatar').src = coffre.gagnant.avatar;
+          document.getElementById('coffre-gagnant-nom').textContent = coffre.gagnant.nickname;
+          if (coffre.dernierMessageGagnant) document.getElementById('coffre-gagnant-msg').textContent = `"${coffre.dernierMessageGagnant}"`;
+          (coffre.secretComplet || '').split('').forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'case-char devoile';
+            div.textContent = char;
+            grid.appendChild(div);
+          });
+        }
+        document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
+      }
+    });
+
+    socket.on('updateMessageGagnantCoffre', data => {
+      document.getElementById('coffre-gagnant-msg').textContent = `"${data.message}"`;
+    });
+
+    if (isDemo) {
+      document.getElementById('bg-icon').src = 'https://via.placeholder.com/60';
+      document.getElementById('bg-pseudo').textContent = 'Mia.Star';
+      document.getElementById('leaderboard').querySelectorAll('.carte-joueur').forEach(el => el.remove());
+      document.getElementById('leaderboard').appendChild(creerCarteJoueur({ nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', coins: 1200 }, 1, 'coins', '💎 '));
+      
+      const grid = document.getElementById('coffre-cases-grid');
+      grid.innerHTML = '<div class="case-char devoile">7</div><div class="case-char">?</div><div class="case-char">?</div>';
+      document.getElementById('coffre-recompense-texte').textContent = 'Récompense : 1 Abo Offert';
+    }
+  </script>
+</body>
+</html>

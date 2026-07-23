@@ -126,6 +126,7 @@ app.post('/api/update-profile', async (req, res) => {
 
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/')));
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
+app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 app.get('/encheres/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
@@ -192,7 +193,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Détection de la victoire du Coffre-Fort
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
         data.coffre.gagnant = { id, nickname, avatar };
@@ -200,7 +200,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
         io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo));
       }
     } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
-      // Retransmettre uniquement les messages du gagnant du coffre
       data.coffre.dernierMessageGagnant = message;
       io.to(pseudo).emit('updateMessageGagnantCoffre', { message });
     }
@@ -235,7 +234,7 @@ function etatCoffrePublic(pseudo) {
   return {
     actif: coffre.actif,
     longueur: coffre.secret.length,
-    devoiles: coffre.devoiles, // Ex: [true, false, false, true]
+    devoiles: coffre.devoiles,
     caracteres: coffre.secret.split('').map((char, index) => coffre.devoiles[index] ? char : '_'),
     recompense: coffre.recompense,
     gagnant: coffre.gagnant,
@@ -423,7 +422,6 @@ io.on('connection', socket => {
     io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
   });
 
-  // Lancement du coffre avec tableau de masquage des cases
   socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
     const utilisateurConnecte = socket.request.session?.user;
     if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
@@ -442,7 +440,6 @@ io.on('connection', socket => {
     io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
   });
 
-  // Dévoiler un caractère au hasard
   socket.on('devoilerCharHasard', ({ pseudo }) => {
     const utilisateurConnecte = socket.request.session?.user;
     if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
@@ -457,7 +454,6 @@ io.on('connection', socket => {
     }
   });
 
-  // Dévoiler un caractère à un index spécifique (1-indexed)
   socket.on('devoilerCharIndex', ({ pseudo, index }) => {
     const utilisateurConnecte = socket.request.session?.user;
     if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
