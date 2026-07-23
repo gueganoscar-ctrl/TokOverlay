@@ -20,7 +20,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
-// Sécurité : Validation stricte du secret de session en production
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   throw new Error("FATAL ERROR: SESSION_SECRET est manquant dans l'environnement de production !");
 }
@@ -305,24 +304,23 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
-  // ANALYSE DU CHAT UNIFIÉE POUR TOUS LES MODULES (Coffre, Enchères, Vouch, Radar)
+  // GESTION DU CHAT EXACTEMENT SUR LA BASE QUI MARCHAIT
   connection.on('chat', d => {
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     
-    // LA LIGNE MAGIQUE QUI RÉCUPÈRE LE TEXTE :
-    const message = d.comment || d.text || d.message || d.msg || '';
+    const message = d.comment || d.text || d.message || d.msg || d.content || '';
 
-    // Envoi au radar de chat
+    // Envoi vers le panneau de chat en direct / debug
     io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
-    // Mise à jour de l'enchère en cours
+    // Mise à jour de l'enchère
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Gestion du Coffre-Fort (déblocage automatique par le chat)
+    // Gestion du Coffre-Fort
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
