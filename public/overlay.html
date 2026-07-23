@@ -2,15 +2,16 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TokOverlay</title>
+  <title>TokOverlay - Multi-Styles</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
     :root {
       --cyan: #22e5e0;
       --fuchsia: #fe2c55;
       --gold: #ffbe3d;
+      --bg-dark: #100f14;
     }
     * { box-sizing: border-box; }
     body {
@@ -25,6 +26,9 @@
       padding-top: 20px;
     }
 
+    /* ==========================================
+       1. LEADERBOARD (Top Donateurs / Top Likers)
+       ========================================== */
     #leaderboard {
       display: flex;
       flex-direction: column;
@@ -78,15 +82,73 @@
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
     }
 
-    .message-attente { font-size: 12px; font-weight: 700; color: #d4d4d8; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-    .message-erreur { font-size: 12px; font-weight: 700; color: var(--fuchsia); text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+    /* --- STYLES LEADERBOARD --- */
+    /* STYLE 1 : Cyber Néon */
+    body.style-1 .carte-joueur {
+      background: rgba(16, 15, 20, 0.85);
+      border: 1px solid rgba(34, 229, 224, 0.3);
+      border-radius: 10px;
+      padding: 6px 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    body.style-1 .rank-1.carte-joueur { border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 190, 61, 0.25); }
 
-    /* --------- Panneau Enchère TokOverlay --------- */
+    /* STYLE 2 : Gold Luxe */
+    body.style-2 .carte-joueur {
+      background: linear-gradient(90deg, #18171d 0%, #0d0c10 100%);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 12px 12px 0;
+      padding: 8px 12px;
+      margin-bottom: 4px;
+    }
+    body.style-2 .avatar { border-radius: 8px; border-color: var(--gold); }
+    body.style-2 .valeur { color: var(--gold); }
+
+    /* STYLE 3 : Dynamic Arcade */
+    body.style-3 .carte-joueur {
+      background: #1a1926;
+      border: 2px solid #2f2d4a;
+      border-radius: 14px;
+      padding: 8px 12px;
+    }
+    body.style-3 .rank-1.carte-joueur { border-color: var(--fuchsia); background: rgba(254, 44, 85, 0.08); }
+    body.style-3 .valeur { color: var(--fuchsia); }
+
+
+    /* ==========================================
+       2. WIDGET BEST GIFT
+       ========================================== */
+    #best-gift-container {
+      background: #08080c;
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2);
+      width: 140px;
+      margin-bottom: 10px;
+    }
+    .bg-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+    #bg-icon { width: 70px; height: 70px; object-fit: contain; }
+    #bg-pseudo { font-size: 13px; font-weight: 700; color: #ffffff; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+    /* Variations Best Gift selon le style */
+    body.style-2 #best-gift-container { border-radius: 8px; background: #121118; border-color: #3f3e52; }
+    body.style-3 #best-gift-container { border-color: var(--fuchsia); box-shadow: 0 10px 30px rgba(254, 44, 85, 0.25); }
+    body.style-3 .bg-title { color: var(--fuchsia); }
+
+
+    /* ==========================================
+       3. PANNEAU ENCHÈRES
+       ========================================== */
     #enchere-panel {
       width: 300px;
       padding: 20px;
       border-radius: 18px;
-      background: #100f14;
+      background: var(--bg-dark);
       border: 1px solid #29283a;
       text-align: center;
       color: white;
@@ -94,51 +156,51 @@
       position: relative;
       overflow: hidden;
     }
-    #enchere-panel::before {
-      content: '';
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 0% 0%, rgba(34, 229, 224, 0.10), transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(254, 44, 85, 0.10), transparent 45%);
+
+    /* Styles spécifiques panneau enchères */
+    /* STYLE 1 : Cyber Néon */
+    body.style-1 #enchere-panel {
+      background: linear-gradient(135deg, #0e0d12 0%, #161522 100%);
+      border: 1px solid rgba(34, 229, 224, 0.4);
+      box-shadow: 0 10px 35px rgba(34, 229, 224, 0.15);
+    }
+    body.style-1 #enchere-panel::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(34, 229, 224, 0.12), transparent 60%);
       pointer-events: none;
     }
-    #enchere-panel > * { position: relative; z-index: 1; }
 
-    .badges-top-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 16px;
+    /* STYLE 2 : Gold Luxe */
+    body.style-2 #enchere-panel {
+      background: #0d0c10;
+      border: 1px solid rgba(255, 190, 61, 0.4);
+      border-radius: 10px;
+      box-shadow: 0 10px 35px rgba(255, 190, 61, 0.1);
     }
+    body.style-2 .pill-badge { border-radius: 6px; border-color: rgba(255, 190, 61, 0.2); }
+    body.style-2 .ench-infos { border-radius: 8px; border-color: rgba(255, 190, 61, 0.2); }
 
+    /* STYLE 3 : Dynamic Arcade */
+    body.style-3 #enchere-panel {
+      background: #151322;
+      border: 2px solid var(--fuchsia);
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(254, 44, 85, 0.25);
+    }
+    body.style-3 .pill-badge { border-radius: 12px; background: #1f1c30; }
+
+    /* Éléments internes enchères */
+    .badges-top-container { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 16px; }
     .pill-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: #18181f;
-      border: 1px solid #29283a;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #a1a1aa;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      width: 100%;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      background: #18181f; border: 1px solid #29283a; padding: 6px 14px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; width: 100%;
     }
     .pill-badge .highlight { font-family: 'JetBrains Mono', monospace; color: var(--cyan); font-weight: 800; text-transform: none; }
 
     .ench-infos {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 18px;
-      background: #18181f;
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid #29283a;
+      display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px;
+      background: #18181f; padding: 12px; border-radius: 12px; border: 1px solid #29283a;
     }
     .ench-info-ligne { display: flex; justify-content: space-between; align-items: center; }
     .ench-info-cle { color: #a1a1aa; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -150,12 +212,7 @@
     #enchere-label.phase-snipe { color: var(--fuchsia); }
 
     #enchere-chrono {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 54px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; color: #ffffff;
     }
     #enchere-chrono.phase-snipe { color: var(--fuchsia); }
 
@@ -180,59 +237,13 @@
     .nom-gagnant { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 2px; }
     .total-gagnant { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
 
-    .winner-chat-box {
-      background: #18181f;
-      border: 1px solid #29283a;
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 8px;
-      text-align: left;
-    }
-    .winner-chat-title {
-      font-size: 10px;
-      font-weight: 800;
-      color: var(--cyan);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .winner-chat-msg {
-      font-size: 12px;
-      color: #f4f4f5;
-      font-style: italic;
-      word-break: break-word;
-    }
+    .winner-chat-box { background: #18181f; border: 1px solid #29283a; border-radius: 10px; padding: 10px; margin-top: 8px; text-align: left; }
+    .winner-chat-title { font-size: 10px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 4px; }
+    .winner-chat-msg { font-size: 12px; color: #f4f4f5; font-style: italic; word-break: break-word; }
 
-    /* --- WIDGET BEST GIFT --- */
-    #best-gift-container {
-      background: #08080c;
-      border: 1px solid var(--gold);
-      border-radius: 16px;
-      padding: 16px;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2);
-      width: 140px;
-      margin-bottom: 10px;
-    }
-    .bg-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
-    #bg-icon { width: 70px; height: 70px; object-fit: contain; }
-    #bg-pseudo { font-size: 13px; font-weight: 700; color: #ffffff; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-
-    /* Style bannière égalité */
     #alerte-egalite {
-      display: none;
-      background: rgba(254, 44, 85, 0.15);
-      border: 1px solid var(--fuchsia);
-      color: var(--fuchsia);
-      font-weight: 800;
-      font-size: 12px;
-      padding: 8px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      animation: pulse 1s infinite;
+      display: none; background: rgba(254, 44, 85, 0.15); border: 1px solid var(--fuchsia); color: var(--fuchsia);
+      font-weight: 800; font-size: 12px; padding: 8px; border-radius: 8px; margin-bottom: 10px; text-transform: uppercase; animation: pulse 1s infinite;
     }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   </style>
@@ -253,12 +264,8 @@
 
   <div id="enchere-panel" style="display:none;">
     <div class="badges-top-container">
-      <div class="pill-badge">
-        <span>TokOverlay</span>
-      </div>
-      <div class="pill-badge" id="global-vouch-box">
-        <span>Vouchs :</span> <span class="highlight" id="global-vouch-count">0</span>
-      </div>
+      <div class="pill-badge"><span>TokOverlay</span></div>
+      <div class="pill-badge" id="global-vouch-box"><span>Vouchs :</span> <span class="highlight" id="global-vouch-count">0</span></div>
     </div>
 
     <div class="ench-infos">
@@ -301,6 +308,10 @@
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
     const apiKey = params.get('key');
+    const style = params.get('style') || '1';
+
+    // Application automatique de la classe de style sur le body (style-1, style-2 ou style-3)
+    document.body.className = `style-${style}`;
 
     function creerCarteJoueur(user, rank, cle, emoji) {
       const carte = document.createElement('div');
@@ -450,9 +461,7 @@
 
       socket.on('egaliteEnchere', () => {
         alerteEgaliteEl.style.display = 'block';
-        setTimeout(() => {
-          alerteEgaliteEl.style.display = 'none';
-        }, 5000);
+        setTimeout => { alerteEgaliteEl.style.display = 'none'; }, 5000;
       });
 
       socket.on('enchereTerminee', ({ gagnant }) => {
