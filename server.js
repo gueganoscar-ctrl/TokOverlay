@@ -311,10 +311,10 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     
-    // Extraction parfaite validée par le radar
+    // LA LIGNE MAGIQUE QUI RÉCUPÈRE LE TEXTE :
     const message = d.comment || d.text || d.message || d.msg || '';
 
-    // Envoi en direct vers le panneau de débogage / chat
+    // Envoi au radar de chat
     io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
     // Mise à jour de l'enchère en cours
