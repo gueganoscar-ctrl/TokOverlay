@@ -219,22 +219,146 @@ function demarrerEcouteLive(pseudo, apiKey) {
   const data = {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
     debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
-    coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' }
+    coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
+    // NOUVEAU : Drapeaux pour grouper les envois (Throttling)
+    pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
 
+  // NOUVEAU : Boucle d'envoi toutes les 2 secondes pour économiser les ressources
+  const boucleActualisation = setInterval(() => {
+    if (!connexionsActives[pseudo]) {
+      clearInterval(boucleActualisation);
+      return;
+    }
+    const p = data.pendingUpdates;
+
+    // Si on a eu de nouveaux likes dans les 2 dernières secondes
+    if (p.likers) {
+      io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
+      p.likers = false;
+    }
+    // Si on a eu de nouveaux cadeaux dans les 2 dernières secondes
+    if (p.gifters) {
+      io.to(pseudo).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
+      p.gifters = false;
+    }
+    // Si les stats globales (total diamants/likes) ont bougé
+    if (p.stats) {
+      const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
+      const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
+      io.to(pseudo).emit('updateStatsLive', { totalDiamonds, totalLikes });
+      p.stats = false;
+    }
+    // Si l'objectif a bougé
+    if (p.objectif && data.objectif) {
+      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+      p.objectif = false;
+    }
+  }, 2000); // 2000 millisecondes = 2 secondes
+
   connection.connect().catch(err => {
     io.to(pseudo).emit('erreurConnexion', "Impossible de se connecter au live.");
+    clearInterval(boucleActualisation);
     delete connexionsActives[pseudo];
   });
 
-  // Robustesse : Nettoyage en cas d'erreur de la connexion
   connection.on('error', err => {
-    console.error(`[TikTok] Erreur fatale pour ${pseudo}:`, err.message);
+    console.error(`[TikTok] Erreur fatale pour ${pseudo}:`, err.message || err);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+    clearInterval(boucleActualisation); // On coupe la boucle si erreur
     delete connexionsActives[pseudo];
   });
+
+  connection.on('like', d => {
+    const id = d.user?.displayId || 'inconnu';
+    const nickname = d.user?.nickname || 'Anonyme';
+    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+    
+    if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
+    data.likers[id].likes += d.count || 1;
+    
+    // Au lieu d'envoyer instantanément au client, on active les drapeaux
+    data.pendingUpdates.likers = true;
+    data.pendingUpdates.stats = true;
+    if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
+  });
+
+  connection.on('gift', d => {
+    if (d.gift?.type === 1 && !d.repeatEnd) return;
+    const id = d.user?.displayId || d.uniqueId || 'inconnu';
+    const nickname = d.user?.nickname || d.nickname || 'Anonyme';
+    const totalPieces = (d.gift?.diamondCount || 0) * (d.repeatCount || 1);
+    if (totalPieces === 0) return;
+    
+    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+    const giftIcon = d.gift?.icon?.urlList?.[0] || 'https://via.placeholder.com/60';
+
+    if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
+    data.gifters[id].coins += totalPieces;
+    
+    // ⚡ INSTANTANÉ : Les enchères restent en temps réel direct ! ⚡
+    traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
+    
+    // ⚡ INSTANTANÉ : Le Best Gift reste en temps réel ! ⚡
+    if (!data.bestGift || totalPieces > data.bestGift.montant) {
+      data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
+      io.to(pseudo).emit('updateBestGift', data.bestGift); 
+    }
+
+    // 🐢 DIFFÉRÉ : Classements classiques, objectifs et stats
+    data.pendingUpdates.gifters = true;
+    data.pendingUpdates.stats = true;
+    if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
+  });
+
+  connection.on('chat', d => {
+    const id = d.user?.displayId || 'inconnu';
+    const nickname = d.user?.nickname || 'Anonyme';
+    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+    const message = d.comment || '';
+
+    if (data.enchere && data.enchere.dons[id]) {
+      data.enchere.dons[id].dernierMessageChat = message;
+    }
+
+    if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
+      if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
+        data.coffre.gagnant = { id, nickname, avatar };
+        data.coffre.actif = false;
+        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo)); // Instantané
+      }
+    } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
+      data.coffre.dernierMessageGagnant = message;
+      io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); // Instantané
+    }
+
+    if (data.derniereGagnantId && id === data.derniereGagnantId) {
+      io.to(pseudo).emit('updateMessageGagnant', { message }); // Instantané
+
+      if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
+        data.vouchFait = true;
+        incrementerVouchGlobal();
+        io.to(pseudo).emit('vouchConfirme', {}); // Instantané
+      }
+    }
+  });
+
+  connection.on('disconnect', () => {
+    sauvegarderHistoriqueLive(pseudo);
+    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+    clearInterval(boucleActualisation); // Nettoyage
+    delete connexionsActives[pseudo];
+  });
+  
+  connection.on('streamEnd', () => {
+    sauvegarderHistoriqueLive(pseudo);
+    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+    clearInterval(boucleActualisation); // Nettoyage
+    delete connexionsActives[pseudo];
+  });
+}
 
   connection.on('like', d => {
     const id = d.user?.displayId || 'inconnu';
