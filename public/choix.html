@@ -141,7 +141,6 @@
         <span class="click-hint">Configurer le coffre & Indices →</span>
       </div>
 
-      <!-- NOUVEAU : ROUE DE LA FORTUNE -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div><p>S'active automatiquement aux dons pour distribuer des gages ou des lots.</p></div>
         <span class="click-hint">Configurer les options & Lien →</span>
@@ -239,7 +238,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let pseudoGlobal = '';
-    let apiKeyGlobal = '';
+    let overlayTokenGlobal = '';
     let baseUrl = '';
     let typeActuel = '';
     let styleActuel = 1;
@@ -260,7 +259,7 @@
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = ''; // Masqué pour la sécurité
 
-        // Connexion Socket automatique avec le pseudo et le token pour réveiller le bot
+        // Connexion Socket automatique avec le pseudo et le token sécurisé
         socket = io();
         socket.on('connect', () => {
           socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal });
@@ -335,7 +334,7 @@
 
       if (!socket) {
         socket = io();
-        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal }));
+        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal }));
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -352,7 +351,8 @@
 
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      const lien = `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
+      // Utilisation du token sécurisé au lieu de la clé API en clair
+      const lien = `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }

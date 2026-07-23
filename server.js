@@ -684,7 +684,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS (SÉCURISÉS PAR ROOM PRÉFIXÉE)
+// GESTION DES WEBSOCKETS (SÉCURISÉS + FALLBACK COMPATIBILITÉ)
 // ----------------------------------------------------
 
 io.on('connection', socket => {
@@ -704,7 +704,11 @@ io.on('connection', socket => {
         return;
       }
 
-      if (!estAdmin && !tokenValide && (!estProprietaireConnecte || utilisateur.apiKey !== apiKey)) {
+      const cleFournie = (apiKey || '').trim();
+      const cleValideEnBase = utilisateur.apiKey && utilisateur.apiKey === cleFournie;
+
+      // Autorisation acceptée si admin, proprio session, token valide OU clé API valide fournie
+      if (!estAdmin && !estProprietaireConnecte && !tokenValide && !cleValideEnBase) {
         socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
         return;
       }
