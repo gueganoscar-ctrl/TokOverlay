@@ -310,16 +310,22 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     const message = d.comment || '';
 
+    // 🚨 ESPION 1 : Affiche chaque message reçu dans la console Render
+    console.log(`[CHAT TIKTOK] ${nickname} dit : "${message}"`);
+
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // CORRECTIF : Gestion améliorée du coffre (tolérance accents/majuscules et bonne émission)
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
+      // 🚨 ESPION 2 : Compare ce que tu as tapé avec le secret du coffre
+      console.log(`[COFFRE DEBUG] On compare "${msgNettoye}" avec le secret "${secretNettoye}"`);
+      
       if (msgNettoye === secretNettoye) {
+        console.log(`🎉 [COFFRE] VICTOIRE ! ${nickname} a ouvert le coffre !`);
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
         
