@@ -51,7 +51,7 @@ async function connectMongo() {
     db = client.db('tokoverlay_db');
     console.log("✅ Connecté à MongoDB Atlas avec succès !");
 
-    // Création des index uniques pour éviter les doublons de pseudos / emails
+    // Création des index uniques pour empêcher les doublons de pseudos et emails
     await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
     await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
 
@@ -63,7 +63,7 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Fonctions utilitaires de sécurité
+// Fonctions utilitaires de sécurité et normalisation
 function normalizePseudo(value) {
   if (typeof value !== 'string') return '';
   return value.replace('@', '').trim().toLowerCase();
@@ -115,7 +115,6 @@ app.post('/register', async (req, res) => {
     }
 
     const passwordHache = await bcrypt.hash(password, 10);
-    // Rôle attribué strictement côté serveur à 'streamer' (impossible de s'inscrire en admin)
     const newUser = { 
       pseudo: pseudoNettoye, 
       apiKey: apiKey.trim(), 
@@ -154,14 +153,19 @@ app.get('/api/me', (req, res) => {
   else res.status(401).json({ error: 'Non connecté' });
 });
 
+// ROUTE MISE À JOUR PROFIL SÉCURISÉE (Anti-conflit de pseudo)
 app.post('/api/update-profile', async (req, res) => {
   let { pseudo, apiKey } = req.body;
   if (!req.session.user || !db) return res.status(401).json({ error: "Non autorisé" });
   try {
     const nvPseudo = normalizePseudo(pseudo);
-    const nvApiKey = apiKey.trim();
+    const nvApiKey = (apiKey || '').trim();
 
-    // Vérifier si le nouveau pseudo est déjà pris par un autre utilisateur
+    if (!nvPseudo || !nvApiKey) {
+      return res.status(400).json({ error: "Champs invalides." });
+    }
+
+    // Vérifier si un autre utilisateur possède déjà ce pseudo
     const conflict = await db.collection('users').findOne({
       pseudo: nvPseudo,
       email: { $ne: req.session.user.email }
@@ -205,7 +209,6 @@ app.get('/statistiques/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'statistiques.html'));
 });
 
-// Route Admin sécurisée par le rôle et non par un pseudo en dur
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   
@@ -629,7 +632,6 @@ io.on('connection', socket => {
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo: pseudoNettoye });
       
-      // Sécurité Socket : seuls le propriétaire avec sa clé API ou un admin connecté peuvent rejoindre la room
       if (!estAdmin && (!utilisateur || utilisateur.apiKey !== apiKey)) {
         socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
         return;
