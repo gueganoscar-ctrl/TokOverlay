@@ -312,15 +312,16 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('chat', d => {
-    // 1. Extraction hyper-robuste de l'ID et du Pseudo 
+    // 🚨 INSPECTION TOTALE : On affiche tout l'objet reçu dans la console Render pour voir où est caché le texte
+    console.log("STRUCTURE CHAT REÇUE DE TIKTOK :", JSON.stringify(d, null, 2));
+
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     
-    // 2. Extraction du message
-    const message = d.comment || d.text || d.message || d.msg || '';
+    // On teste un maximum de variantes de propriétés
+    const message = d.comment || d.text || d.message || d.msg || d.content || '';
 
-    // Envoi du chat à notre panneau de débogage
     io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
     // Espion pour le débogage (visible dans Render)
