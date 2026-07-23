@@ -67,8 +67,8 @@
       background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 650px;
       padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
       position: relative; animation: modalAppear 0.25s ease-out;
-      max-height: 90vh; /* Empêche la modale de dépasser */
-      overflow-y: auto;  /* Permet le défilement vertical complet */
+      max-height: 90vh;
+      overflow-y: auto;
     }
     @keyframes modalAppear { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
@@ -336,6 +336,7 @@
     }
 
     function ouvrirModalLayout() {
+      typeActuel = 'layout';
       document.getElementById('modal-title').innerHTML = `🧩 Layout Multi-Widgets OBS`;
       document.getElementById('style-selector-group').style.display = 'block';
       const extraDiv = document.getElementById('modal-extra-action');
@@ -360,7 +361,7 @@
     function mettreAJourLienLayout() {
       const checkboxes = document.querySelectorAll('.layout-cb:checked');
       const widgets = Array.from(checkboxes).map(cb => cb.value).join(',');
-      const lien = `${baseUrl}/layout/${pseudoGlobal}?widgets=${widgets}&style=${styleActuel}`;
+      const lien = `${baseUrl}/layout/${pseudoGlobal}?widgets=${widgets}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
@@ -482,7 +483,10 @@
       if (!socket || !pseudoGlobal) socket = io();
       const secret = document.getElementById('coffre-secret-input').value;
       const recompense = document.getElementById('coffre-recompense-input').value;
-      if (!secret || !recompense) return alert("Veuillez remplir le secret et la récompense !");
+      if (!secret || !recompense) {
+        alert("Veuillez remplir le secret et la récompense !");
+        return;
+      }
       socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
       alert("Coffre-fort configuré et verrouillé !");
     }
@@ -502,8 +506,9 @@
     }
 
     function copierLienModal() {
-      navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent).then(() => {
-        alert("Lien OBS copié !");
+      const lien = obtenirLienActuel();
+      navigator.clipboard.writeText(lien).then(() => {
+        alert("Lien OBS copié dans le presse-papier !");
       });
     }
 
