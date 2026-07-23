@@ -151,7 +151,19 @@
         <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
       </div>
 
-      <!-- CARTE REPARÉE : PANNEAU D'ADMINISTRATION -->
+      <!-- CARTE : STATISTIQUES & HISTORIQUE -->
+      <div class="widget-card card" onclick="allerAuxStatistiques()" style="border-color: rgba(34, 211, 238, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #082f49 100%);">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon" style="background: rgba(34, 211, 238, 0.1); border-color: rgba(34, 211, 238, 0.3);">📊</div>
+            <h3>Statistiques & Historique</h3>
+          </div>
+          <p>Analyse l'évolution de tes diamants et tes performances passées.</p>
+        </div>
+        <span class="click-hint" style="color: #22d3ee;">Voir les graphiques →</span>
+      </div>
+
+      <!-- CARTE : PANNEAU D'ADMINISTRATION -->
       <div class="widget-card card" onclick="window.open('/admin-live/auto', '_blank')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
         <div class="widget-top">
           <div class="widget-icon-title">
@@ -249,7 +261,6 @@
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = user.apiKey || '';
 
-        // Connexion Socket automatique pour lancer l'écoute du live
         socket = io();
         socket.on('connect', () => {
           socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
@@ -265,6 +276,12 @@
         dot.className = s.online ? 'dot online' : 'dot offline';
         document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'Online' : 'Offline'}`;
       });
+    }
+
+    function allerAuxStatistiques() {
+      if (pseudoGlobal) {
+        window.location.href = `/statistiques/${pseudoGlobal}`;
+      }
     }
 
     function ouvrirPersonnalisation(type, titre, icone) {
