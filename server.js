@@ -38,7 +38,6 @@ io.use((socket, next) => {
 
 const mongoUri = process.env.MONGO_URI;
 let db = null;
-
 let vouchesGlobalCount = 0;
 
 async function connectMongo() {
@@ -52,6 +51,10 @@ async function connectMongo() {
     db = client.db('tokoverlay_db');
     console.log("✅ Connecté à MongoDB Atlas avec succès !");
 
+    // Création des index uniques pour éviter les doublons de pseudos / emails
+    await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
+    await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
+
     const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
     vouchesGlobalCount = compteur?.total || 0;
   } catch (err) {
@@ -59,6 +62,20 @@ async function connectMongo() {
   }
 }
 connectMongo();
+
+// Fonctions utilitaires de sécurité
+function normalizePseudo(value) {
+  if (typeof value !== 'string') return '';
+  return value.replace('@', '').trim().toLowerCase();
+}
+
+function isAdmin(user) {
+  return user && user.role === 'admin';
+}
+
+function canManage(user, pseudo) {
+  return Boolean(user && (isAdmin(user) || user.pseudo === pseudo));
+}
 
 async function incrementerVouchGlobal() {
   vouchesGlobalCount += 1;
@@ -85,7 +102,7 @@ app.post('/register', async (req, res) => {
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     email = email.trim().toLowerCase();
-    const pseudoNettoye = pseudo.replace('@', '').trim();
+    const pseudoNettoye = normalizePseudo(pseudo);
     const usersCollection = db.collection('users');
 
     const existingUser = await usersCollection.findOne({
@@ -98,9 +115,18 @@ app.post('/register', async (req, res) => {
     }
 
     const passwordHache = await bcrypt.hash(password, 10);
-    const newUser = { pseudo: pseudoNettoye, apiKey: apiKey.trim(), email, password: passwordHache, totalDiamantsGlobal: 0 };
+    // Rôle attribué strictement côté serveur à 'streamer' (impossible de s'inscrire en admin)
+    const newUser = { 
+      pseudo: pseudoNettoye, 
+      apiKey: apiKey.trim(), 
+      email, 
+      password: passwordHache, 
+      role: 'streamer',
+      totalDiamantsGlobal: 0 
+    };
     await usersCollection.insertOne(newUser);
-    req.session.user = { pseudo: newUser.pseudo, apiKey: newUser.apiKey, email: newUser.email };
+    
+    req.session.user = { id: newUser._id, pseudo: newUser.pseudo, apiKey: newUser.apiKey, email: newUser.email, role: newUser.role };
     res.redirect('/choix.html');
   } catch (err) {
     res.status(500).send("Erreur serveur lors de l'inscription.");
@@ -112,9 +138,9 @@ app.post('/login', async (req, res) => {
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ pseudo: pseudo.replace('@', '').trim() });
+    const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
     if (user && await bcrypt.compare(password, user.password)) {
-      req.session.user = { pseudo: user.pseudo, apiKey: user.apiKey, email: user.email };
+      req.session.user = { id: user._id, pseudo: user.pseudo, apiKey: user.apiKey, email: user.email, role: user.role || 'streamer' };
       return res.redirect('/choix.html');
     }
     res.redirect('/?error=wrong_credentials');
@@ -132,9 +158,24 @@ app.post('/api/update-profile', async (req, res) => {
   let { pseudo, apiKey } = req.body;
   if (!req.session.user || !db) return res.status(401).json({ error: "Non autorisé" });
   try {
-    const nvPseudo = pseudo.replace('@', '').trim();
+    const nvPseudo = normalizePseudo(pseudo);
     const nvApiKey = apiKey.trim();
-    await db.collection('users').updateOne({ email: req.session.user.email }, { $set: { pseudo: nvPseudo, apiKey: nvApiKey } });
+
+    // Vérifier si le nouveau pseudo est déjà pris par un autre utilisateur
+    const conflict = await db.collection('users').findOne({
+      pseudo: nvPseudo,
+      email: { $ne: req.session.user.email }
+    });
+
+    if (conflict) {
+      return res.status(409).json({ error: "Ce pseudo est déjà utilisé par un autre compte." });
+    }
+
+    await db.collection('users').updateOne(
+      { email: req.session.user.email }, 
+      { $set: { pseudo: nvPseudo, apiKey: nvApiKey } }
+    );
+    
     req.session.user.pseudo = nvPseudo;
     req.session.user.apiKey = nvApiKey;
     res.json({ success: true });
@@ -158,17 +199,17 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
-// Nouvelle route pour la page Statistiques / Graphiques
 app.get('/statistiques/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'statistiques.html'));
 });
 
+// Route Admin sécurisée par le rôle et non par un pseudo en dur
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   
-  if (req.session.user.pseudo === 'slacezzz') {
+  if (isAdmin(req.session.user)) {
     return res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
   }
 
@@ -183,7 +224,7 @@ app.get('/admin-live/:username', (req, res) => {
 // ROUTES VIP / SUPER ADMIN
 // ----------------------------------------------------
 app.get('/api/admin/stats-globales', async (req, res) => {
-  if (!req.session.user || req.session.user.pseudo !== 'slacezzz') {
+  if (!req.session.user || !isAdmin(req.session.user)) {
     return res.status(403).json({ error: "Accès refusé. Réservé à l'administrateur." });
   }
   if (!db) return res.json({ streamers: [] });
@@ -212,7 +253,7 @@ app.get('/api/admin/stats-globales', async (req, res) => {
 });
 
 app.get('/vip-room', (req, res) => {
-  if (!req.session.user || req.session.user.pseudo !== 'slacezzz') {
+  if (!req.session.user || !isAdmin(req.session.user)) {
     return res.redirect('/');
   }
   res.sendFile(path.join(__dirname, 'public', 'vip.html'));
@@ -220,8 +261,8 @@ app.get('/vip-room', (req, res) => {
 // ----------------------------------------------------
 
 app.get('/api/historique/:pseudo', async (req, res) => {
-  const pseudo = req.params.pseudo;
-  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
+  const pseudo = normalizePseudo(req.params.pseudo);
+  if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
   if (!db) return res.json({ lives: [], encheres: [] });
 
   try {
@@ -234,7 +275,7 @@ app.get('/api/historique/:pseudo', async (req, res) => {
 });
 
 app.get('/api/live-status/:pseudo', async (req, res) => {
-  const pseudo = req.params.pseudo;
+  const pseudo = normalizePseudo(req.params.pseudo);
   if (!connexionsActives[pseudo] && db) {
     const user = await db.collection('users').findOne({ pseudo });
     if (user) demarrerEcouteLive(pseudo, user.apiKey);
@@ -245,8 +286,8 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
 });
 
 app.get('/api/live-stats/:pseudo', (req, res) => {
-  const pseudo = req.params.pseudo;
-  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
+  const pseudo = normalizePseudo(req.params.pseudo);
+  if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
   
   const data = connexionsActives[pseudo];
   if (!data) return res.json({ totalDiamonds: 0, totalLikes: 0 });
@@ -352,7 +393,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
-    // Déclenchement automatique de la Roue de la Fortune sur don >= 10 pièces
     if (totalPieces >= 10 && data.roue && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
       io.to(pseudo).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
@@ -386,7 +426,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
       if (msgNettoye !== "" && msgNettoye === secretNettoye) {
-        console.log(`🎉 [COFFRE] VICTOIRE ! ${nickname} a ouvert le coffre !`);
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
         
@@ -581,37 +620,42 @@ function terminerEnchere(pseudo) {
 
 io.on('connection', socket => {
   socket.on('rejoindre', async ({ pseudo, apiKey }) => {
-    if (!pseudo) return;
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!pseudoNettoye) return;
+
+    const utilisateurConnecte = socket.request.session?.user;
+    const estAdmin = isAdmin(utilisateurConnecte);
 
     if (db) {
-      const utilisateur = await db.collection('users').findOne({ pseudo });
-      const adminConnecte = socket.request.session?.user?.pseudo === 'slacezzz';
+      const utilisateur = await db.collection('users').findOne({ pseudo: pseudoNettoye });
       
-      if (!adminConnecte && (!utilisateur || utilisateur.apiKey !== apiKey)) {
+      // Sécurité Socket : seuls le propriétaire avec sa clé API ou un admin connecté peuvent rejoindre la room
+      if (!estAdmin && (!utilisateur || utilisateur.apiKey !== apiKey)) {
         socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
         return;
       }
       
-      const cleApiUtilisee = (adminConnecte && utilisateur) ? utilisateur.apiKey : apiKey;
-      socket.join(pseudo);
-      demarrerEcouteLive(pseudo, cleApiUtilisee);
+      const cleApiUtilisee = (estAdmin && utilisateur) ? utilisateur.apiKey : apiKey;
+      socket.join(pseudoNettoye);
+      demarrerEcouteLive(pseudoNettoye, cleApiUtilisee);
     } else {
-      socket.join(pseudo);
-      demarrerEcouteLive(pseudo, apiKey);
+      socket.join(pseudoNettoye);
+      demarrerEcouteLive(pseudoNettoye, apiKey);
     }
     
-    const data = connexionsActives[pseudo];
-    if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
+    const data = connexionsActives[pseudoNettoye];
+    if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
     if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
-    if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudo));
-    if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudo));
+    if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
+    if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     socket.emit('initVouch', { vouches: vouchesGlobalCount });
   });
 
   socket.on('configurerRoue', ({ pseudo, options }) => {
     const user = socket.request.session?.user;
-    if (!user || (user.pseudo !== pseudo && user.pseudo !== 'slacezzz')) return;
-    const data = connexionsActives[pseudo];
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(user, pseudoNettoye)) return;
+    const data = connexionsActives[pseudoNettoye];
     if (data && Array.isArray(options)) {
       data.roue.options = options;
     }
@@ -619,17 +663,19 @@ io.on('connection', socket => {
 
   socket.on('forcerTournerRoue', ({ pseudo }) => {
     const user = socket.request.session?.user;
-    if (!user || (user.pseudo !== pseudo && user.pseudo !== 'slacezzz')) return;
-    const data = connexionsActives[pseudo];
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(user, pseudoNettoye)) return;
+    const data = connexionsActives[pseudoNettoye];
     if (data && data.roue && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(pseudo).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+      io.to(pseudoNettoye).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
     }
   });
 
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
 
     const duree = parseInt(dureeSecondes, 10);
     const snipe = parseInt(snipeSecondes, 10);
@@ -637,13 +683,14 @@ io.on('connection', socket => {
 
     if (isNaN(duree) || duree <= 0 || isNaN(snipe) || snipe < 0 || isNaN(min) || min < 0) return;
 
-    if (connexionsActives[pseudo]) demarrerEnchere(pseudo, duree, snipe, min);
+    if (connexionsActives[pseudoNettoye]) demarrerEnchere(pseudoNettoye, duree, snipe, min);
   });
 
   socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
-    const data = connexionsActives[pseudo];
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+    const data = connexionsActives[pseudoNettoye];
     if (!data) return;
 
     const cibleNombre = parseInt(cible, 10);
@@ -654,13 +701,14 @@ io.on('connection', socket => {
       metrique: metrique === 'likes' ? 'likes' : 'diamants',
       label: (label || '').trim().slice(0, 60) || 'Objectif du live'
     };
-    io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+    io.to(pseudoNettoye).emit('updateObjectif', etatObjectif(pseudoNettoye));
   });
 
   socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
-    const data = connexionsActives[pseudo];
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+    const data = connexionsActives[pseudoNettoye];
     if (!data) return;
 
     const cleanSecret = secret.trim();
@@ -672,33 +720,35 @@ io.on('connection', socket => {
       gagnant: null,
       dernierMessageGagnant: ''
     };
-    io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+    io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
   });
 
   socket.on('devoilerCharHasard', ({ pseudo }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
-    const coffre = connexionsActives[pseudo]?.coffre;
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+    const coffre = connexionsActives[pseudoNettoye]?.coffre;
     if (!coffre || !coffre.actif) return;
 
     const indicesNonDevoiles = coffre.devoiles.map((dev, idx) => dev ? -1 : idx).filter(idx => idx !== -1);
     if (indicesNonDevoiles.length > 0) {
       const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
       coffre.devoiles[idxChoisi] = true;
-      io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+      io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     }
   });
 
   socket.on('devoilerCharIndex', ({ pseudo, index }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
-    const coffre = connexionsActives[pseudo]?.coffre;
+    const pseudoNettoye = normalizePseudo(pseudo);
+    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+    const coffre = connexionsActives[pseudoNettoye]?.coffre;
     if (!coffre || !coffre.actif) return;
 
     const idxArr = parseInt(index, 10) - 1;
     if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
       coffre.devoiles[idxArr] = true;
-      io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+      io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     }
   });
 });
