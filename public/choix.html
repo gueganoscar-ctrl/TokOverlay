@@ -36,11 +36,13 @@
 
     .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
 
+    /* Cartes cliquables */
     .widget-card {
       padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
       transition: transform 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
     }
-    .widget-card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+    .widget-card:hover { border-color: var(--cyan); transform: translateY(-3px); }
 
     .widget-top { display: flex; flex-direction: column; gap: 12px; }
     .widget-icon-title { display: flex; align-items: center; gap: 12px; }
@@ -54,28 +56,62 @@
     .widget-card.accent-encheres { border-color: rgba(34, 229, 224, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #10202a 100%); }
     .widget-card.accent-encheres .widget-icon { background: rgba(34, 229, 224, 0.1); border-color: rgba(34, 229, 224, 0.3); }
 
-    .style-selector {
-      display: flex; align-items: center; gap: 8px; background: var(--ink); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
-    }
-    .style-selector label { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; }
-    .style-selector select {
-      background: var(--surface); color: white; border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; font-size: 12px; outline: none; cursor: pointer;
-    }
+    .click-hint { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; }
 
+    /* ==========================================
+       FENÊTRE MODALE DE PERSONNALISATION
+       ========================================== */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    }
+    .modal-box {
+      background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 650px;
+      padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      position: relative; animation: modalAppear 0.25s ease-out;
+    }
+    @keyframes modalAppear { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h2 { font-size: 20px; font-family: 'Space Grotesk', sans-serif; display: flex; align-items: center; gap: 10px; margin: 0; }
+    .close-btn { background: none; border: none; color: #a1a1aa; font-size: 20px; cursor: pointer; }
+    .close-btn:hover { color: white; }
+
+    /* Grille de sélection des styles dans la modale */
+    .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .style-option {
+      background: #1c1b26; border: 2px solid #29283a; border-radius: 14px; padding: 14px;
+      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .style-option:hover { border-color: rgba(34, 229, 224, 0.5); }
+    .style-option.selected { border-color: var(--cyan); background: rgba(34, 229, 224, 0.08); box-shadow: 0 0 15px rgba(34, 229, 224, 0.2); }
+    
+    .style-preview-img {
+      width: 100%; height: 90px; border-radius: 8px; background: #0b0a0f; border: 1px solid #2f2d3d;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; color: #71717a; text-align: center; padding: 5px;
+      object-fit: cover;
+    }
+    .style-title { font-size: 12px; font-weight: 700; color: white; }
+
+    .modal-link-section { display: flex; flex-direction: column; gap: 10px; }
+    .modal-link-label { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
+    
     .obs-link-box {
-      background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
     .obs-url { font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
+
+    #modal-extra-action { margin-top: 5px; }
 
     #modal-profil {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
       align-items: center; justify-content: center; z-index: 100;
     }
     .modal-content { padding: 30px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; }
-    .modal-content h2 { font-size: 18px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { text-transform: uppercase; }
+    .form-group label { text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo); }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
   </style>
 </head>
@@ -95,113 +131,105 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="ouvrirModal()">⚙️ Modifier mon profil</button>
+        <button class="btn btn-secondary" onclick="ouvrirModalProfil()">⚙️ Modifier mon profil</button>
         <a href="/logout" class="btn btn-danger">Déconnexion</a>
       </div>
     </header>
 
-    <div class="section-header">Widgets pour OBS / TikTok Live Studio</div>
+    <div class="section-header">Widgets pour OBS / TikTok Live Studio (Clique sur une carte)</div>
 
     <div class="grid-widgets">
 
       <!-- Top Donateurs -->
-      <div class="widget-card card">
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
         <div class="widget-top">
           <div class="widget-icon-title">
             <div class="widget-icon">💎</div>
             <h3>Top Pièces (Donateurs)</h3>
           </div>
           <p>Classement dynamique des spectateurs donateurs.</p>
-          <div class="style-selector">
-            <label>Style d'affichage :</label>
-            <select id="style-donateurs" onchange="mettreAJourLien('donateurs')">
-              <option value="1">Style 1 : Cyber Néon</option>
-              <option value="2">Style 2 : Gold Luxe</option>
-              <option value="3">Style 3 : Dynamic Arcade</option>
-            </select>
-          </div>
         </div>
-        <div class="obs-link-box">
-          <span class="obs-url" id="url-donateurs">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('donateurs')">Copier</button>
-        </div>
+        <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
       <!-- Top Likers -->
-      <div class="widget-card card">
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
         <div class="widget-top">
           <div class="widget-icon-title">
             <div class="widget-icon">❤️</div>
             <h3>Top Likers</h3>
           </div>
           <p>Classement des spectateurs qui tapent le plus l'écran.</p>
-          <div class="style-selector">
-            <label>Style d'affichage :</label>
-            <select id="style-likers" onchange="mettreAJourLien('likers')">
-              <option value="1">Style 1 : Cyber Néon</option>
-              <option value="2">Style 2 : Gold Luxe</option>
-              <option value="3">Style 3 : Dynamic Arcade</option>
-            </select>
-          </div>
         </div>
-        <div class="obs-link-box">
-          <span class="obs-url" id="url-likers">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('likers')">Copier</button>
-        </div>
+        <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
       <!-- Best Gift -->
-      <div class="widget-card card">
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
         <div class="widget-top">
           <div class="widget-icon-title">
             <div class="widget-icon">👑</div>
             <h3>Widget Best Gift</h3>
           </div>
           <p>Affiche le meilleur cadeau et le donateur associé.</p>
-          <div class="style-selector">
-            <label>Style d'affichage :</label>
-            <select id="style-bestgift" onchange="mettreAJourLien('bestgift')">
-              <option value="1">Style 1 : Cyber Néon</option>
-              <option value="2">Style 2 : Gold Luxe</option>
-              <option value="3">Style 3 : Dynamic Arcade</option>
-            </select>
-          </div>
         </div>
-        <div class="obs-link-box">
-          <span class="obs-url" id="url-bestgift">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('bestgift')">Copier</button>
-        </div>
+        <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
       <!-- Enchères -->
-      <div class="widget-card card accent-encheres">
+      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
         <div class="widget-top">
           <div class="widget-icon-title">
             <div class="widget-icon">⚖️</div>
             <h3>Panneau d'Enchères & Overlay</h3>
           </div>
-          <p>Gère tes enchères et configure le style de l'overlay.</p>
-          <div class="style-selector">
-            <label>Style d'affichage :</label>
-            <select id="style-encheres" onchange="mettreAJourLien('encheres')">
-              <option value="1">Style 1 : Cyber Néon</option>
-              <option value="2">Style 2 : Gold Luxe</option>
-              <option value="3">Style 3 : Dynamic Arcade</option>
-            </select>
-          </div>
+          <p>Gère tes enchères en direct et configure ton overlay de salon.</p>
         </div>
-        <div style="display: flex; gap: 8px; flex-direction: column;">
-          <div class="obs-link-box">
-            <span class="obs-url" id="url-encheres">Chargement...</span>
-            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('encheres')">Copier</button>
-          </div>
-          <a id="btn-encheres-panel" href="#" class="btn btn-primary" style="width: 100%; padding: 10px; text-align: center;">Ouvrir le panneau de contrôle →</a>
-        </div>
+        <span class="click-hint" style="color: var(--cyan);">Configurer l'overlay & Ouvrir le panneau →</span>
       </div>
 
     </div>
   </div>
 
+  <!-- FENÊTRE MODALE DE PERSONNALISATION DE STYLE -->
+  <div id="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title">⚙️ Personnaliser l'overlay</h2>
+        <button class="close-btn" onclick="fermerPersonnalisation()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label>Choisis ton style d'affichage :</label>
+        <div class="styles-grid">
+          <div class="style-option selected" id="opt-style-1" onclick="changerStyle(1)">
+            <div class="style-preview-img" style="border-color: rgba(34,229,224,0.4); background: linear-gradient(135deg, #0e0d12, #161522); color: #22e5e0;">Aperçu Cyber</div>
+            <div class="style-title">Style 1 : Cyber Néon</div>
+          </div>
+          <div class="style-option" id="opt-style-2" onclick="changerStyle(2)">
+            <div class="style-preview-img" style="border-color: rgba(255,190,61,0.4); background: linear-gradient(135deg, #18171d, #0d0c10); color: #ffbe3d;">Aperçu Gold</div>
+            <div class="style-title">Style 2 : Gold Luxe</div>
+          </div>
+          <div class="style-option" id="opt-style-3" onclick="changerStyle(3)">
+            <div class="style-preview-img" style="border-color: #fe2c55; background: linear-gradient(135deg, #151322, #1f1c30); color: #fe2c55;">Aperçu Arcade</div>
+            <div class="style-title">Style 3 : Dynamic Arcade</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-link-section">
+        <span class="modal-link-label">Lien OBS généré :</span>
+        <div class="obs-link-box">
+          <span class="obs-url" id="modal-obs-url">Chargement...</span>
+          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLienModal()">Copier le lien</button>
+        </div>
+      </div>
+
+      <div id="modal-extra-action"></div>
+    </div>
+  </div>
+
+  <!-- MODAL PROFIL -->
   <div id="modal-profil">
     <div class="modal-content card">
       <h2>Modifier vos identifiants</h2>
@@ -215,7 +243,7 @@
           <input type="text" id="input-apikey" required>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+          <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </form>
@@ -226,6 +254,8 @@
     let pseudoGlobal = '';
     let apiKeyGlobal = '';
     let baseUrl = '';
+    let typeActuel = '';
+    let styleActuel = 1;
 
     fetch('/api/me')
       .then(res => res.json())
@@ -241,37 +271,67 @@
         document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = user.apiKey || '';
-
-        mettreAJourLien('donateurs');
-        mettreAJourLien('likers');
-        mettreAJourLien('bestgift');
-        mettreAJourLien('encheres');
-        
-        document.getElementById('btn-encheres-panel').href = `/encheres/${user.pseudo}`;
       })
       .catch(() => {
         window.location.href = '/';
       });
 
-    function getLien(type) {
-      const styleChoisi = document.getElementById(`style-${type}`).value;
-      return `${baseUrl}/overlay/${pseudoGlobal}?type=${type}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleChoisi}`;
+    function ouvrirPersonnalisation(type, titre, icone) {
+      typeActuel = type;
+      styleActuel = 1;
+      document.getElementById('modal-title').innerHTML = `${icone} Personnaliser : ${titre}`;
+      mettreAJourSelectionStyleUI();
+
+      const extraDiv = document.getElementById('modal-extra-action');
+      if (type === 'encheres') {
+        extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block; box-sizing: border-box;">Ouvrir le panneau de contrôle des enchères →</a>`;
+      } else {
+        extraDiv.innerHTML = '';
+      }
+
+      document.getElementById('modal-overlay').style.display = 'flex';
+      mettreAJourLienModal();
     }
 
-    function mettreAJourLien(type) {
+    function fermerPersonnalisation() {
+      document.getElementById('modal-overlay').style.display = 'none';
+    }
+
+    function changerStyle(styleNum) {
+      styleActuel = styleNum;
+      mettreAJourSelectionStyleUI();
+      mettreAJourLienModal();
+    }
+
+    function mettreAJourSelectionStyleUI() {
+      for (let i = 1; i <= 3; i++) {
+        const opt = document.getElementById(`opt-style-${i}`);
+        if (i === styleActuel) {
+          opt.classList.add('selected');
+        } else {
+          opt.classList.remove('selected');
+        }
+      }
+    }
+
+    function obtenirLienActuel() {
+      return `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
+    }
+
+    function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      document.getElementById(`url-${type}`).textContent = getLien(type);
+      document.getElementById('modal-obs-url').textContent = obtenirLienActuel();
     }
 
-    function copierLien(type) {
-      const lien = getLien(type);
+    function copierLienModal() {
+      const lien = obtenirLienActuel();
       navigator.clipboard.writeText(lien).then(() => {
         alert("Lien OBS copié dans le presse-papier !");
       });
     }
 
-    function ouvrirModal() { document.getElementById('modal-profil').style.display = 'flex'; }
-    function fermerModal() { document.getElementById('modal-profil').style.display = 'none'; }
+    function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
+    function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
 
     function sauvegarderProfil(e) {
       e.preventDefault();
