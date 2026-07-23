@@ -158,23 +158,25 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
+// ROUTE ADMIN MODIFIÉE : slacezzz peut observer n'importe quel streamer
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
-  if (req.session.user.pseudo !== req.params.username) return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
-  res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
-});
+  
+  if (req.session.user.pseudo === 'slacezzz') {
+    return res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
+  }
 
-app.get('/chat/:username', (req, res) => {
-  if (!req.session.user) return res.redirect('/');
-  if (req.session.user.pseudo !== req.params.username) return res.redirect('/chat/' + encodeURIComponent(req.session.user.pseudo));
-  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+  if (req.session.user.pseudo !== req.params.username) {
+    return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
+  }
+  
+  res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
 });
 
 // ----------------------------------------------------
 // ROUTES VIP / SUPER ADMIN
 // ----------------------------------------------------
 app.get('/api/admin/stats-globales', async (req, res) => {
-  // ⚠️ Remplace 'slacezzz' par ton pseudo exact d'administrateur
   if (!req.session.user || req.session.user.pseudo !== 'slacezzz') {
     return res.status(403).json({ error: "Accès refusé. Réservé à l'administrateur." });
   }
@@ -333,7 +335,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
     data.gifters[id].coins += totalPieces;
     
-    // Cumul des diamants globaux dans la base MongoDB pour la VIP Room
     if (db) {
       db.collection('users').updateOne(
         { pseudo: pseudo },
@@ -354,7 +355,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
-  // GESTION DU CHAT SÛRE ET VALIDÉE
   connection.on('chat', d => {
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
@@ -572,14 +572,22 @@ io.on('connection', socket => {
 
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo });
-      if (!utilisateur || utilisateur.apiKey !== apiKey) {
+      const adminConnecte = socket.request.session?.user?.pseudo === 'slacezzz';
+      
+      // Si c'est l'admin slacezzz qui supervise, on l'autorise à se connecter au socket du streamer cible même s'il n'a pas sa clé API exacte
+      if (!adminConnecte && (!utilisateur || utilisateur.apiKey !== apiKey)) {
         socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
         return;
       }
+      
+      // Récupération de la clé API du streamer cible si l'admin se connecte à lui sans sa clé
+      const cleApiUtilisee = (adminConnecte && utilisateur) ? utilisateur.apiKey : apiKey;
+      socket.join(pseudo);
+      demarrerEcouteLive(pseudo, cleApiUtilisee);
+    } else {
+      socket.join(pseudo);
+      demarrerEcouteLive(pseudo, apiKey);
     }
-
-    socket.join(pseudo);
-    demarrerEcouteLive(pseudo, apiKey);
     
     const data = connexionsActives[pseudo];
     if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
@@ -591,7 +599,7 @@ io.on('connection', socket => {
 
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
 
     const duree = parseInt(dureeSecondes, 10);
     const snipe = parseInt(snipeSecondes, 10);
@@ -604,7 +612,7 @@ io.on('connection', socket => {
 
   socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
     const data = connexionsActives[pseudo];
     if (!data) return;
 
@@ -621,7 +629,7 @@ io.on('connection', socket => {
 
   socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
     const data = connexionsActives[pseudo];
     if (!data) return;
 
@@ -639,7 +647,7 @@ io.on('connection', socket => {
 
   socket.on('devoilerCharHasard', ({ pseudo }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
     const coffre = connexionsActives[pseudo]?.coffre;
     if (!coffre || !coffre.actif) return;
 
@@ -653,7 +661,7 @@ io.on('connection', socket => {
 
   socket.on('devoilerCharIndex', ({ pseudo, index }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    if (!utilisateurConnecte || (utilisateurConnecte.pseudo !== pseudo && utilisateurConnecte.pseudo !== 'slacezzz')) return;
     const coffre = connexionsActives[pseudo]?.coffre;
     if (!coffre || !coffre.actif) return;
 
