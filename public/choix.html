@@ -9,42 +9,30 @@
   <link rel="stylesheet" href="/style.css">
   <style>
     body.app-bg { padding: 40px 20px; display: flex; justify-content: center; }
-
     .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 32px; }
-
-    .dashboard-header {
-      padding: 24px 32px; display: flex; justify-content: space-between; align-items: center;
-    }
+    .dashboard-header { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
     .header-left { display: flex; flex-direction: column; gap: 8px; }
     .brand-row { display: flex; align-items: center; gap: 10px; }
-
     .user-badge {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--ink); border: 1px solid var(--border);
-      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-lo);
-      width: fit-content;
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-lo); width: fit-content;
     }
     .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; }
     .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
     .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.5); }
-
     .header-actions { display: flex; gap: 12px; }
-
     .section-header {
       font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase;
       letter-spacing: 1.5px; margin-bottom: -12px; display: flex; align-items: center; gap: 8px;
     }
     .section-header::before { content: ''; width: 3px; height: 14px; background: var(--fuchsia); border-radius: 2px; }
-
     .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
-
     .widget-card {
       padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease; cursor: pointer;
     }
     .widget-card:hover { border-color: var(--cyan); transform: translateY(-3px); }
-
     .widget-top { display: flex; flex-direction: column; gap: 12px; }
     .widget-icon-title { display: flex; align-items: center; gap: 12px; }
     .widget-icon {
@@ -53,12 +41,9 @@
     }
     .widget-card h3 { font-size: 17px; }
     .widget-card p { font-size: 13px; color: var(--text-lo); line-height: 1.5; margin: 0; }
-
     .widget-card.accent-encheres { border-color: rgba(34, 229, 224, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #10202a 100%); }
     .widget-card.accent-encheres .widget-icon { background: rgba(34, 229, 224, 0.1); border-color: rgba(34, 229, 224, 0.3); }
-
     .click-hint { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; }
-
     #modal-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
       align-items: center; justify-content: center; z-index: 100; padding: 20px;
@@ -66,53 +51,31 @@
     .modal-box {
       background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 650px;
       padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      position: relative; animation: modalAppear 0.25s ease-out;
-      max-height: 90vh;
-      overflow-y: auto;
+      position: relative; max-height: 90vh; overflow-y: auto;
     }
-    @keyframes modalAppear { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
     .modal-header { display: flex; justify-content: space-between; align-items: center; }
     .modal-header h2 { font-size: 20px; font-family: 'Space Grotesk', sans-serif; display: flex; align-items: center; gap: 10px; margin: 0; }
     .close-btn { background: none; border: none; color: #a1a1aa; font-size: 20px; cursor: pointer; }
     .close-btn:hover { color: white; }
-
     .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .style-option {
       background: #1c1b26; border: 2px solid #29283a; border-radius: 14px; padding: 14px;
-      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; cursor: pointer;
-      transition: all 0.2s;
+      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; cursor: pointer; transition: all 0.2s;
     }
-    .style-option:hover { border-color: rgba(34, 229, 224, 0.5); }
     .style-option.selected { border-color: var(--cyan); background: rgba(34, 229, 224, 0.08); box-shadow: 0 0 15px rgba(34, 229, 224, 0.2); }
-    
     .style-preview-img {
       width: 100%; height: 90px; border-radius: 8px; background: #0b0a0f; border: 1px solid #2f2d3d;
-      display: flex; align-items: center; justify-content: center; font-size: 11px; color: #71717a; text-align: center; padding: 5px;
-      object-fit: cover;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; color: #71717a; padding: 5px;
     }
     .style-title { font-size: 12px; font-weight: 700; color: white; }
-
     .modal-link-section { display: flex; flex-direction: column; gap: 10px; }
     .modal-link-label { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
-    
     .obs-link-box {
       background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
     .obs-url { font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
-
     #modal-extra-action { margin-top: 5px; }
-
-    #modal-profil {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
-      align-items: center; justify-content: center; z-index: 100;
-    }
-    .modal-content { padding: 30px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo); }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
-
     .indices-controls { display: flex; gap: 10px; margin-top: 8px; }
     .indices-controls input { width: 80px; text-align: center; }
   </style>
@@ -120,7 +83,6 @@
 <body class="app-bg">
 
   <div class="app-container">
-
     <header class="dashboard-header card">
       <div class="header-left">
         <div class="brand-row">
@@ -133,7 +95,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="ouvrirModalProfil()">⚙️ Modifier mon profil</button>
         <a href="/logout" class="btn btn-danger">Déconnexion</a>
       </div>
     </header>
@@ -141,8 +102,6 @@
     <div class="section-header">Widgets & Layout OBS</div>
 
     <div class="grid-widgets">
-
-      <!-- Multi-Layout OBS -->
       <div class="widget-card card" onclick="ouvrirModalLayout()" style="border-color: rgba(34, 229, 224, 0.4); background: linear-gradient(135deg, var(--surface) 0%, #0d1f26 100%);">
         <div class="widget-top">
           <div class="widget-icon-title">
@@ -154,73 +113,38 @@
         <span class="click-hint" style="color: var(--cyan);">Générer le lien groupé →</span>
       </div>
 
-      <!-- Top Donateurs -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">💎</div><h3>Top Pièces (Donateurs)</h3></div>
-          <p>Classement dynamique des spectateurs donateurs.</p>
-        </div>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">💎</div><h3>Top Pièces (Donateurs)</h3></div><p>Classement dynamique des spectateurs donateurs.</p></div>
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
-      <!-- Top Likers -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">❤️</div><h3>Top Likers</h3></div>
-          <p>Classement des spectateurs qui tapent le plus l'écran.</p>
-        </div>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">❤️</div><h3>Top Likers</h3></div><p>Classement des spectateurs qui tapent l'écran.</p></div>
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
-      <!-- Best Gift -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div>
-          <p>Affiche le meilleur cadeau et le donateur associé.</p>
-        </div>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div><p>Affiche le meilleur cadeau.</p></div>
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
-      <!-- Objectif de Live -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">🎯</div><h3>Objectif de Live</h3></div>
-          <p>Barre de progression vers un objectif de pièces ou de likes.</p>
-        </div>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎯</div><h3>Objectif de Live</h3></div><p>Barre de progression vers un objectif.</p></div>
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
-      <!-- Coffre-Fort Interactif -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div>
-          <p>Le chat doit deviner un mot ou un chiffre secret affiché sous forme de cases.</p>
-        </div>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div><p>Le chat devine un mot ou chiffre secret en cases.</p></div>
         <span class="click-hint">Configurer le coffre & Indices →</span>
       </div>
 
-      <!-- Enchères -->
       <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div>
-          <p>Gère tes enchères en direct et configure ton overlay de salon.</p>
-        </div>
-        <span class="click-hint" style="color: var(--cyan);">Configurer l'overlay & Ouvrir le panneau →</span>
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
+        <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
       </div>
-
-      <!-- Panneau Admin Live -->
-      <div class="widget-card card" onclick="window.location.href='/admin-live.html'">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon">📊</div><h3>Panneau Admin Live</h3></div>
-          <p>Suivi en direct de tes statistiques globales de live, estimation de tes gains et alertes d'activité récentes.</p>
-        </div>
-        <span class="click-hint" style="color: var(--text-lo);">Ouvrir le dashboard live →</span>
-      </div>
-
     </div>
   </div>
 
-  <!-- FENÊTRE MODALE DE PERSONNALISATION -->
   <div id="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
@@ -232,16 +156,16 @@
         <label>Choisis ton style d'affichage :</label>
         <div class="styles-grid">
           <div class="style-option selected" id="opt-style-1" onclick="changerStyle(1)">
-            <div class="style-preview-img" style="border-color: rgba(34,229,224,0.4); background: linear-gradient(135deg, #0e0d12, #161522); color: #22e5e0;">Aperçu Cyber</div>
-            <div class="style-title">Style 1 : Cyber Néon</div>
+            <div class="style-preview-img">Cyber</div>
+            <div class="style-title">Style 1</div>
           </div>
           <div class="style-option" id="opt-style-2" onclick="changerStyle(2)">
-            <div class="style-preview-img" style="border-color: rgba(255,190,61,0.4); background: linear-gradient(135deg, #18171d, #0d0c10); color: #ffbe3d;">Aperçu Gold</div>
-            <div class="style-title">Style 2 : Gold Luxe</div>
+            <div class="style-preview-img">Gold</div>
+            <div class="style-title">Style 2</div>
           </div>
           <div class="style-option" id="opt-style-3" onclick="changerStyle(3)">
-            <div class="style-preview-img" style="border-color: #fe2c55; background: linear-gradient(135deg, #151322, #1f1c30); color: #fe2c55;">Aperçu Arcade</div>
-            <div class="style-title">Style 3 : Dynamic Arcade</div>
+            <div class="style-preview-img">Arcade</div>
+            <div class="style-title">Style 3</div>
           </div>
         </div>
       </div>
@@ -250,35 +174,12 @@
         <span class="modal-link-label">Lien OBS généré :</span>
         <div class="obs-link-box">
           <span class="obs-url" id="modal-obs-url">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLienModal()">Copier le lien</button>
+          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLienModal()">Copier</button>
         </div>
-        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline; align-self: flex-start;">
-          👁️ Voir un aperçu (mode démo, sans live réel)
-        </a>
+        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline;">👁️ Voir la démo</a>
       </div>
 
       <div id="modal-extra-action"></div>
-    </div>
-  </div>
-
-  <!-- MODAL PROFIL -->
-  <div id="modal-profil">
-    <div class="modal-content card">
-      <h2>Modifier vos identifiants</h2>
-      <form id="form-profil" onsubmit="sauvegarderProfil(event)">
-        <div class="form-group">
-          <label>Pseudo TikTok</label>
-          <input type="text" id="input-pseudo" required>
-        </div>
-        <div class="form-group" style="margin-top: 12px;">
-          <label>Clé API Live Connector</label>
-          <input type="text" id="input-apikey" required>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
-          <button type="submit" class="btn btn-primary">Enregistrer</button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -291,134 +192,71 @@
     let styleActuel = 1;
     let socket = null;
 
-    fetch('/api/me')
-      .then(res => res.json())
-      .then(user => {
-        if (!user || !user.pseudo) {
-          window.location.href = '/';
-          return;
-        }
-        pseudoGlobal = user.pseudo;
-        apiKeyGlobal = user.apiKey;
-        baseUrl = window.location.origin;
+    fetch('/api/me').then(res => res.json()).then(user => {
+      if (!user || !user.pseudo) return window.location.href = '/';
+      pseudoGlobal = user.pseudo;
+      apiKeyGlobal = user.apiKey;
+      baseUrl = window.location.origin;
 
-        document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
-        document.getElementById('input-pseudo').value = user.pseudo;
-        document.getElementById('input-apikey').value = user.apiKey || '';
-
-        verifierStatutLive(user.pseudo);
-        setInterval(() => verifierStatutLive(user.pseudo), 3000);
-      })
-      .catch(() => {
-        window.location.href = '/';
-      });
+      document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
+      verifierStatutLive(user.pseudo);
+    });
 
     function verifierStatutLive(pseudo) {
-      fetch('/api/live-status/' + encodeURIComponent(pseudo))
-        .then(res => res.json())
-        .then(statusData => {
-          const dot = document.getElementById('status-dot');
-          const display = document.getElementById('user-pseudo-display');
-          
-          if (statusData.online) {
-            dot.className = 'dot online';
-            display.textContent = `@${pseudo} — Online`;
-          } else {
-            dot.className = 'dot offline';
-            display.textContent = `@${pseudo} — Offline`;
-          }
-        }).catch(() => {
-          const dot = document.getElementById('status-dot');
-          const display = document.getElementById('user-pseudo-display');
-          dot.className = 'dot offline';
-          display.textContent = `@${pseudo} — Offline`;
-        });
+      fetch('/api/live-status/' + encodeURIComponent(pseudo)).then(r => r.json()).then(s => {
+        const dot = document.getElementById('status-dot');
+        dot.className = s.online ? 'dot online' : 'dot offline';
+        document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'Online' : 'Offline'}`;
+      });
     }
 
     function ouvrirModalLayout() {
       typeActuel = 'layout';
       document.getElementById('modal-title').innerHTML = `🧩 Layout Multi-Widgets OBS`;
       document.getElementById('style-selector-group').style.display = 'block';
-      const extraDiv = document.getElementById('modal-extra-action');
-
-      extraDiv.innerHTML = `
+      document.getElementById('modal-extra-action').innerHTML = `
         <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px;">
-          <label style="text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo);">Sélectionnez les widgets à inclure :</label>
+          <label style="text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo);">Sélectionnez les widgets :</label>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
             <label><input type="checkbox" class="layout-cb" value="donateurs" checked> Top Donateurs</label>
             <label><input type="checkbox" class="layout-cb" value="objectif" checked> Objectif de Live</label>
             <label><input type="checkbox" class="layout-cb" value="coffre" checked> Jeu du Coffre-Fort</label>
             <label><input type="checkbox" class="layout-cb" value="bestgift" checked> Best Gift</label>
           </div>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="mettreAJourLienLayout()">Mettre à jour le lien groupé</button>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="mettreAJourLienModal()">Actualiser le lien</button>
         </div>
       `;
-
       document.getElementById('modal-overlay').style.display = 'flex';
-      mettreAJourLienLayout();
-    }
-
-    function mettreAJourLienLayout() {
-      const checkboxes = document.querySelectorAll('.layout-cb:checked');
-      const widgets = Array.from(checkboxes).map(cb => cb.value).join(',');
-      const lien = `${baseUrl}/layout/${pseudoGlobal}?widgets=${widgets}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
-      document.getElementById('modal-obs-url').textContent = lien;
-      document.getElementById('modal-demo-link').href = lien + '&demo=1';
+      mettreAJourLienModal();
     }
 
     function ouvrirPersonnalisation(type, titre, icone) {
       typeActuel = type;
       styleActuel = 1;
-      document.getElementById('modal-title').innerHTML = `${icone} Personnaliser : ${titre}`;
+      document.getElementById('modal-title').innerHTML = `${icone} ${titre}`;
       mettreAJourSelectionStyleUI();
 
-      const styleGroup = document.getElementById('style-selector-group');
       const extraDiv = document.getElementById('modal-extra-action');
-
       if (type === 'encheres') {
-        styleGroup.style.display = 'block';
-        extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block; box-sizing: border-box;">Ouvrir le panneau de contrôle des enchères →</a>`;
+        extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block;">Ouvrir le panneau d'enchères →</a>`;
       } else if (type === 'objectif') {
-        styleGroup.style.display = 'block';
         extraDiv.innerHTML = `
-          <div class="form-group">
-            <label>Métrique suivie</label>
-            <select id="objectif-metrique-input">
-              <option value="diamants">Pièces (💎)</option>
-              <option value="likes">Likes (❤️)</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-top: 10px;">
-            <label>Valeur cible</label>
-            <input type="number" id="objectif-cible-input" min="1" value="1000">
-          </div>
-          <div class="form-group" style="margin-top: 10px;">
-            <label>Texte affiché sur l'overlay</label>
-            <input type="text" id="objectif-label-input" value="🎯 Objectif du live">
-          </div>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Démarrer l'objectif sur ce live</button>
+          <div class="form-group"><label>Métrique</label><select id="objectif-metrique-input"><option value="diamants">Pièces (💎)</option><option value="likes">Likes (❤️)</option></select></div>
+          <div class="form-group" style="margin-top: 10px;"><label>Cible</label><input type="number" id="objectif-cible-input" value="1000"></div>
+          <div class="form-group" style="margin-top: 10px;"><label>Texte</label><input type="text" id="objectif-label-input" value="🎯 Objectif"></div>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Lancer l'objectif</button>
         `;
       } else if (type === 'coffre') {
-        styleGroup.style.display = 'block';
         extraDiv.innerHTML = `
           <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;">
-            <h3 style="font-size: 14px; margin-bottom: 8px;">1. Configurer un nouveau coffre</h3>
-            <div class="form-group">
-              <label>Mot ou Chiffre secret</label>
-              <input type="text" id="coffre-secret-input" placeholder="ex: 777 ou victoires">
-            </div>
-            <div class="form-group" style="margin-top: 8px;">
-              <label>Récompense offerte</label>
-              <input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo Offert">
-            </div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="lancerCoffreFort()">Lancer le jeu du coffre</button>
+            <h3>1. Configurer le coffre</h3>
+            <div class="form-group"><label>Mot / Chiffre secret</label><input type="text" id="coffre-secret-input" placeholder="ex: 777"></div>
+            <div class="form-group" style="margin-top: 8px;"><label>Récompense</label><input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo"></div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="lancerCoffreFort()">Lancer le jeu</button>
           </div>
-
           <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
-            <h3 style="font-size: 14px; margin-bottom: 8px;">2. Dévoiler des indices</h3>
-            <div class="indices-controls">
-              <button class="btn btn-secondary" style="flex:1;" onclick="devoilerHasard()">🎲 Dévoiler une case au hasard</button>
-            </div>
+            <h3>2. Indices</h3>
+            <button class="btn btn-secondary" style="width:100%;" onclick="devoilerHasard()">🎲 Dévoiler au hasard</button>
             <div class="indices-controls" style="margin-top: 8px;">
               <input type="number" id="char-index-input" min="1" placeholder="N° Case">
               <button class="btn btn-secondary" style="flex:1;" onclick="devoilerIndex()">🔍 Dévoiler cette case</button>
@@ -426,110 +264,80 @@
           </div>
         `;
       } else {
-        styleGroup.style.display = 'block';
         extraDiv.innerHTML = '';
       }
 
       if (!socket && (type === 'objectif' || type === 'coffre')) {
         socket = io();
-        socket.on('connect', () => {
-          if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
-        });
+        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal }));
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
       mettreAJourLienModal();
     }
 
-    function fermerPersonnalisation() {
-      document.getElementById('modal-overlay').style.display = 'none';
-    }
-
-    function changerStyle(styleNum) {
-      styleActuel = styleNum;
-      mettreAJourSelectionStyleUI();
-      if (typeActuel === 'layout') mettreAJourLienLayout();
-      else mettreAJourLienModal();
-    }
-
+    function fermerPersonnalisation() { document.getElementById('modal-overlay').style.display = 'none'; }
+    function changerStyle(s) { styleActuel = s; mettreAJourSelectionStyleUI(); mettreAJourLienModal(); }
     function mettreAJourSelectionStyleUI() {
       for (let i = 1; i <= 3; i++) {
-        const opt = document.getElementById(`opt-style-${i}`);
-        if (i === styleActuel) opt.classList.add('selected');
-        else opt.classList.remove('selected');
+        document.getElementById(`opt-style-${i}`).className = i === styleActuel ? 'style-option selected' : 'style-option';
       }
-    }
-
-    function obtenirLienActuel() {
-      return `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
     }
 
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      document.getElementById('modal-obs-url').textContent = obtenirLienActuel();
-      document.getElementById('modal-demo-link').href = obtenirLienActuel() + '&demo=1';
+      let lien = '';
+      if (typeActuel === 'layout') {
+        const cb = document.querySelectorAll('.layout-cb:checked');
+        const widgets = Array.from(cb).map(c => c.value).join(',');
+        lien = `${baseUrl}/layout/${pseudoGlobal}?widgets=${widgets}&style=${styleActuel}`;
+      } else {
+        lien = `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&key=${encodeURIComponent(apiKeyGlobal)}&style=${styleActuel}`;
+      }
+      document.getElementById('modal-obs-url').textContent = lien;
+      document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
 
     function demarrerObjectif() {
-      if (!socket || !pseudoGlobal) return;
-      const cible = document.getElementById('objectif-cible-input').value;
-      const metrique = document.getElementById('objectif-metrique-input').value;
-      const label = document.getElementById('objectif-label-input').value;
-      socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible, metrique, label });
-      alert("Objectif défini !");
+      socket.emit('definirObjectif', {
+        pseudo: pseudoGlobal,
+        cible: document.getElementById('objectif-cible-input').value,
+        metrique: document.getElementById('objectif-metrique-input').value,
+        label: document.getElementById('objectif-label-input').value
+      });
+      alert("Objectif lancé !");
     }
 
     function lancerCoffreFort() {
-      if (!socket || !pseudoGlobal) socket = io();
-      const secret = document.getElementById('coffre-secret-input').value;
-      const recompense = document.getElementById('coffre-recompense-input').value;
-      if (!secret || !recompense) {
-        alert("Veuillez remplir le secret et la récompense !");
-        return;
-      }
-      socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
-      alert("Coffre-fort configuré et verrouillé !");
-    }
-
-    function devoilerHasard() {
       if (!socket) socket = io();
-      socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal });
-      alert("Une case a été dévoilée au hasard !");
+      socket.emit('configurerCoffre', {
+        pseudo: pseudoGlobal,
+        secret: document.getElementById('coffre-secret-input').value,
+        recompense: document.getElementById('coffre-recompense-input').value
+      });
+      alert("Coffre verrouillé !");
     }
 
+    function devoilerHasard() { socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal }); }
     function devoilerIndex() {
-      if (!socket) socket = io();
       const idx = document.getElementById('char-index-input').value;
-      if (!idx) return alert("Veuillez indiquer un numéro de case.");
-      socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index: idx });
-      alert(`La case n°${idx} a été dévoilée !`);
+      if (idx) socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index: idx });
     }
 
     function copierLienModal() {
-      const lien = obtenirLienActuel();
-      navigator.clipboard.writeText(lien).then(() => {
-        alert("Lien OBS copié dans le presse-papier !");
-      });
+      navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent);
+      alert("Lien copié !");
     }
 
     function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
     function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
-
     function sauvegarderProfil(e) {
       e.preventDefault();
-      const pseudo = document.getElementById('input-pseudo').value;
-      const apiKey = document.getElementById('input-apikey').value;
-
       fetch('/api/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pseudo, apiKey })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) location.reload();
-        else alert("Erreur lors de la mise à jour");
-      });
+        body: JSON.stringify({ pseudo: document.getElementById('input-pseudo').value, apiKey: document.getElementById('input-apikey').value })
+      }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
     }
   </script>
 </body>
