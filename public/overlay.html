@@ -412,7 +412,6 @@
 
     const socket = io();
 
-    // SÉCURITÉ ANTI-FIGEMENT : Réabonnement automatique si le socket se reconnecte après une coupure
     socket.on('connect', () => {
       if (pseudo && !isDemo) {
         socket.emit('rejoindre', { pseudo, apiKey });
@@ -589,62 +588,80 @@
       if (isDemo) {
         document.getElementById('global-vouch-count').textContent = '128';
         
-        // Simulation dynamique du compteur de vouchs en mode démo
+        // Simulation fluide et unique du compteur de vouchs (+1 de temps en temps)
         setInterval(() => {
           const countEl = document.getElementById('global-vouch-count');
           const currentVal = parseInt(countEl.textContent, 10) || 128;
-          if (Math.random() > 0.6) {
-            countEl.textContent = currentVal + 1;
-          }
-        }, 3000);
+          countEl.textContent = currentVal + 1;
+        }, 5000);
 
-        const dureeDemo = 15;
+        const dureeTimerDemo = 10; // secondes de timer classique
+        const dureeSnipeDemo = 5;  // secondes de snipe delay
 
-        function etatFauxEnchere(tempsRestantMs) {
-          return {
-            phase: 'timer', 
-            tempsRestant: tempsRestantMs, 
-            snipeMs: 5000, 
+        function lancerCycleDemo() {
+          gagnantEcran.style.display = 'none';
+          groupeChrono.style.display = 'flex';
+          classementEl.style.display = 'flex';
+
+          // Phase 1 : Timer classique
+          afficherEtat({
+            phase: 'timer',
+            tempsRestant: dureeTimerDemo * 1000,
+            snipeMs: dureeSnipeDemo * 1000,
             miseMinimale: 50,
             classement: [
               { nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', coins: 1200 },
               { nickname: 'Mia.Star', profilePictureUrl: 'https://ui-avatars.com/api/?name=Mia', coins: 800 }
             ],
             totalDiamantsEnchere: 2000
-          };
-        }
+          });
 
-        function lancerCycleDemo() {
-          gagnantEcran.style.display = 'none';
-          groupeChrono.style.display = 'flex';
-          classementEl.style.display = 'flex';
-          afficherEtat(etatFauxEnchere(dureeDemo * 1000));
-
+          // Passage automatique à la Phase 2 : Snipe delay après la fin du timer
           setTimeout(() => {
-            groupeChrono.style.display = 'none';
-            classementEl.style.display = 'none';
-            gagnantEcran.style.display = 'block';
-            ecranDetails.style.display = 'block';
-            document.getElementById('gagnant-avatar').src = 'https://ui-avatars.com/api/?name=Alex';
-            document.getElementById('gagnant-nom').textContent = 'Alex_Live';
-            document.getElementById('gagnant-total').textContent = '1 200 💎 envoyés';
-            document.getElementById('gagnant-chat-message').textContent = 'En attente du message...';
-            vouchStatusEl.style.display = 'inline-block';
-            vouchStatusEl.textContent = '⏳ En attente du "vouch" dans le chat';
-            vouchStatusEl.classList.remove('confirme');
+            afficherEtat({
+              phase: 'snipe',
+              tempsRestant: dureeSnipeDemo * 1000,
+              snipeMs: dureeSnipeDemo * 1000,
+              miseMinimale: 50,
+              classement: [
+                { nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', coins: 1200 },
+                { nickname: 'Mia.Star', profilePictureUrl: 'https://ui-avatars.com/api/?name=Mia', coins: 800 }
+              ],
+              totalDiamantsEnchere: 2000
+            });
 
+            // Fin de l'enchère après le temps de snipe
             setTimeout(() => {
-              document.getElementById('gagnant-chat-message').textContent = '"vouch"';
-              vouchStatusEl.textContent = '✅ Vouch confirmé';
-              vouchStatusEl.classList.add('confirme');
-              const countEl = document.getElementById('global-vouch-count');
-              countEl.textContent = (parseInt(countEl.textContent, 10) || 128) + 1;
-            }, 3000);
-          }, dureeDemo * 1000);
+              if (intervalleChrono) clearInterval(intervalleChrono);
+              groupeChrono.style.display = 'none';
+              classementEl.style.display = 'none';
+              gagnantEcran.style.display = 'block';
+              ecranDetails.style.display = 'block';
+              document.getElementById('gagnant-avatar').src = 'https://ui-avatars.com/api/?name=Alex';
+              document.getElementById('gagnant-nom').textContent = 'Alex_Live';
+              document.getElementById('gagnant-total').textContent = '1 200 💎 envoyés';
+              document.getElementById('gagnant-chat-message').textContent = 'En attente du message...';
+              vouchStatusEl.style.display = 'inline-block';
+              vouchStatusEl.textContent = '⏳ En attente du "vouch" dans le chat';
+              vouchStatusEl.classList.remove('confirme');
+
+              // Simulation du message "vouch" du gagnant après 3 secondes
+              setTimeout(() => {
+                document.getElementById('gagnant-chat-message').textContent = '"vouch"';
+                vouchStatusEl.textContent = '✅ Vouch confirmé';
+                vouchStatusEl.classList.add('confirme');
+                const countEl = document.getElementById('global-vouch-count');
+                countEl.textContent = (parseInt(countEl.textContent, 10) || 128) + 1;
+              }, 3000);
+
+            }, dureeSnipeDemo * 1000);
+
+          }, dureeTimerDemo * 1000);
         }
 
         lancerCycleDemo();
-        setInterval(lancerCycleDemo, (dureeDemo + 6) * 1000);
+        // Redémarre un nouveau cycle de démo complet toutes les 24 secondes
+        setInterval(lancerCycleDemo, 24000);
       }
     }
 
