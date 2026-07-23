@@ -16,18 +16,24 @@ const PORT = process.env.PORT || 3000;
 
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 
-// ----------------------------------------------------
-// POINT 13 : VALIDATION STRICTE DES VARIABLES D'ENVIRONNEMENT
-// ----------------------------------------------------
 const isProduction = process.env.NODE_ENV === 'production';
 
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
   throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
 }
 
-if (isProduction && (!process.env.OVERLAY_TOKEN_SECRET || process.env.OVERLAY_TOKEN_SECRET.length < 32)) {
-  console.warn("⚠️ ATTENTION : OVERLAY_TOKEN_SECRET est absent ou trop court en production. Un secret aléatoire fort va être généré, mais les tokens d'overlay existants seront invalidés au redémarrage.");
+if (
+  typeof process.env.OVERLAY_TOKEN_SECRET !== 'string' ||
+  process.env.OVERLAY_TOKEN_SECRET.length < 32
+) {
+  if (isProduction) {
+    throw new Error('FATAL ERROR: OVERLAY_TOKEN_SECRET doit contenir au moins 32 caractères en production.');
+  } else {
+    console.warn("⚠️ ATTENTION : OVERLAY_TOKEN_SECRET est absent ou trop court. Un secret aléatoire fort est généré pour le développement.");
+  }
 }
+
+const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 app.set('trust proxy', 1);
 
@@ -35,8 +41,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
-
-const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 const sessionMiddleware = session({
   name: '__Host-tokoverlay',
@@ -84,18 +88,27 @@ async function connectMongo() {
 }
 connectMongo();
 
+// VALIDATION STRICTE DU PSEUDO
 function normalizePseudo(value) {
-  if (typeof value !== 'string') return '';
-  return value.replace('@', '').trim().toLowerCase();
+  if (typeof value !== 'string') throw new Error('Pseudo invalide.');
+  const pseudo = value.replace(/^@/, '').trim().toLowerCase();
+  if (!/^[a-z0-9._-]{2,24}$/.test(pseudo)) {
+    throw new Error('Pseudo invalide.');
+  }
+  return pseudo;
 }
 
 function safeText(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
-function positiveInteger(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isSafeInteger(n) && n > 0 ? n : fallback;
+// VALIDATION STRICTE DES ENTIERS AVEC BORNES
+function strictInteger(value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  const number = typeof value === 'number' ? value : Number(value);
+  if (!Number.isSafeInteger(number) || number < min || number > max) {
+    throw new Error('Nombre invalide.');
+  }
+  return number;
 }
 
 function avatarFor(user = {}, nickname = 'Anonyme') {
@@ -172,10 +185,15 @@ app.post('/register', async (req, res) => {
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     email = safeText(email).toLowerCase();
-    const pseudoNettoye = normalizePseudo(pseudo);
+    let pseudoNettoye;
+    try {
+      pseudoNettoye = normalizePseudo(pseudo);
+    } catch {
+      return res.redirect('/?error=invalid_pseudo');
+    }
     const cleanApiKey = safeText(apiKey);
 
-    if (!pseudoNettoye || !cleanApiKey || !email || !password) {
+    if (!cleanApiKey || !email || !password) {
       return res.redirect('/?error=missing_fields');
     }
 
@@ -217,8 +235,15 @@ app.post('/login', async (req, res) => {
   let { pseudo, password } = req.body;
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
+    let pseudoNettoye;
+    try {
+      pseudoNettoye = normalizePseudo(pseudo);
+    } catch {
+      return res.redirect('/?error=wrong_credentials');
+    }
+
     const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
+    const user = await usersCollection.findOne({ pseudo: pseudoNettoye });
     if (user && typeof password === 'string' && await bcrypt.compare(password, user.password)) {
       
       await new Promise((resolve, reject) =>
@@ -260,10 +285,15 @@ app.post('/api/update-profile', async (req, res) => {
   let { pseudo, apiKey } = req.body;
   if (!req.session.user || !db) return res.status(401).json({ error: "Non autorisé" });
   try {
-    const nvPseudo = normalizePseudo(pseudo);
+    let nvPseudo;
+    try {
+      nvPseudo = normalizePseudo(pseudo);
+    } catch {
+      return res.status(400).json({ error: "Pseudo invalide." });
+    }
     const nvApiKey = safeText(apiKey);
 
-    if (!nvPseudo || !nvApiKey) {
+    if (!nvApiKey) {
       return res.status(400).json({ error: "Champs invalides." });
     }
 
@@ -311,15 +341,23 @@ app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'pu
 
 app.get('/encheres/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
-  const targetPseudo = normalizePseudo(req.params.username);
-  if (req.session.user.pseudo !== targetPseudo) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
+  try {
+    const targetPseudo = normalizePseudo(req.params.username);
+    if (req.session.user.pseudo !== targetPseudo) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
+  } catch {
+    return res.redirect('/');
+  }
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
 app.get('/statistiques/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
-  const targetPseudo = normalizePseudo(req.params.username);
-  if (req.session.user.pseudo !== targetPseudo) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
+  try {
+    const targetPseudo = normalizePseudo(req.params.username);
+    if (req.session.user.pseudo !== targetPseudo) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
+  } catch {
+    return res.redirect('/');
+  }
   res.sendFile(path.join(__dirname, 'public', 'statistiques.html'));
 });
 
@@ -330,9 +368,13 @@ app.get('/admin-live/:username', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
   }
 
-  const targetPseudo = normalizePseudo(req.params.username);
-  if (req.session.user.pseudo !== targetPseudo) {
-    return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
+  try {
+    const targetPseudo = normalizePseudo(req.params.username);
+    if (req.session.user.pseudo !== targetPseudo) {
+      return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
+    }
+  } catch {
+    return res.redirect('/');
   }
   
   res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
@@ -379,45 +421,53 @@ app.get('/vip-room', (req, res) => {
 // ----------------------------------------------------
 
 app.get('/api/historique/:pseudo', async (req, res) => {
-  const pseudo = normalizePseudo(req.params.pseudo);
-  if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
-  if (!db) return res.json({ lives: [], encheres: [] });
-
   try {
+    const pseudo = normalizePseudo(req.params.pseudo);
+    if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
+    if (!db) return res.json({ lives: [], encheres: [] });
+
     const lives = await db.collection('historique_lives').find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
     const encheres = await db.collection('historique_encheres').find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
     res.json({ lives, encheres });
-  } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
+  } catch {
+    res.status(400).json({ error: "Requête invalide." });
   }
 });
 
 app.get('/api/live-status/:pseudo', async (req, res) => {
-  const pseudo = normalizePseudo(req.params.pseudo);
-  
-  if (!req.session.user || !canManage(req.session.user, pseudo)) {
-    return res.status(403).json({ error: "Accès refusé." });
-  }
+  try {
+    const pseudo = normalizePseudo(req.params.pseudo);
+    
+    if (!req.session.user || !canManage(req.session.user, pseudo)) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
 
-  if (!connexionsActives[pseudo] && db) {
-    const user = await db.collection('users').findOne({ pseudo });
-    if (user) demarrerEcouteLive(pseudo, user.apiKey);
+    if (!connexionsActives[pseudo] && db) {
+      const user = await db.collection('users').findOne({ pseudo });
+      if (user) demarrerEcouteLive(pseudo, user.apiKey);
+    }
+    const data = connexionsActives[pseudo];
+    const isOnline = data && data.connection && data.connection.isConnected;
+    res.json({ online: !!isOnline });
+  } catch {
+    res.status(400).json({ error: "Requête invalide." });
   }
-  const data = connexionsActives[pseudo];
-  const isOnline = data && data.connection && data.connection.isConnected;
-  res.json({ online: !!isOnline });
 });
 
-app.get('/api/live-stats/:pseudo', (req, res) => {
-  const pseudo = normalizePseudo(req.params.pseudo);
-  if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
-  
-  const data = connexionsActives[pseudo];
-  if (!data) return res.json({ totalDiamonds: 0, totalLikes: 0 });
-  res.json({
-    totalDiamonds: Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0),
-    totalLikes: Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0)
-  });
+app.get('/api/live-stats/:pseudo', async (req, res) => {
+  try {
+    const pseudo = normalizePseudo(req.params.pseudo);
+    if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
+    
+    const data = connexionsActives[pseudo];
+    if (!data) return res.json({ totalDiamonds: 0, totalLikes: 0 });
+    res.json({
+      totalDiamonds: Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0),
+      totalLikes: Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0)
+    });
+  } catch {
+    res.status(400).json({ error: "Requête invalide." });
+  }
 });
 
 // ----------------------------------------------------
@@ -783,152 +833,170 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS
+// GESTION DES WEBSOCKETS (Sécurisées par tokens uniquement)
 // ----------------------------------------------------
 
 io.on('connection', socket => {
   socket.on('disconnect', () => {});
 
-  socket.on('rejoindre', async ({ pseudo, apiKey, token }) => {
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!pseudoNettoye) return;
+  socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
+    try {
+      const { pseudo, token } = payload;
+      let pseudoNettoye;
+      try {
+        pseudoNettoye = normalizePseudo(pseudo);
+      } catch {
+        return ack({ ok: false, error: 'Pseudo invalide.' });
+      }
 
-    const utilisateurConnecte = socket.request.session?.user;
-    const estAdmin = isAdmin(utilisateurConnecte);
-    const estProprietaireConnecte = canManage(utilisateurConnecte, pseudoNettoye);
-    const tokenValide = verifyOverlayToken(token, pseudoNettoye);
+      const utilisateurConnecte = socket.request.session?.user;
+      const allowed = canManage(utilisateurConnecte, pseudoNettoye)
+        || verifyOverlayToken(token, pseudoNettoye);
 
-    if (db) {
+      if (!allowed) {
+        return ack({ ok: false, error: 'Authentification invalide.' });
+      }
+
+      if (!db) return ack({ ok: false, error: 'Base de données indisponible.' });
       const utilisateur = await db.collection('users').findOne({ pseudo: pseudoNettoye });
       if (!utilisateur) {
-        socket.emit('erreurConnexion', 'Streamer inconnu.');
-        return;
+        return ack({ ok: false, error: 'Streamer inconnu.' });
       }
 
-      const cleFournie = safeText(apiKey);
-      const cleValideEnBase = utilisateur.apiKey && utilisateur.apiKey === cleFournie;
-
-      if (!estAdmin && !estProprietaireConnecte && !tokenValide && !cleValideEnBase) {
-        socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
-        return;
-      }
-      
       socket.join(`streamer:${pseudoNettoye}`);
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
-    } else {
-      socket.join(`streamer:${pseudoNettoye}`);
-      demarrerEcouteLive(pseudoNettoye, apiKey);
-    }
-    
-    const data = connexionsActives[pseudoNettoye];
-    if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
-    if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
-    if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
-    if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-    socket.emit('initVouch', { vouches: vouchesGlobalCount });
-  });
-
-  socket.on('configurerRoue', ({ pseudo, options }) => {
-    const user = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(user, pseudoNettoye)) return;
-    const data = connexionsActives[pseudoNettoye];
-    if (data && Array.isArray(options)) {
-      data.roue.options = options.map(opt => safeText(opt)).filter(Boolean);
+      ack({ ok: true });
+      
+      const data = connexionsActives[pseudoNettoye];
+      if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
+      if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
+      if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
+      if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      socket.emit('initVouch', { vouches: vouchesGlobalCount });
+    } catch {
+      ack({ ok: false, error: 'Requête invalide.' });
     }
   });
 
-  socket.on('forcerTournerRoue', ({ pseudo }) => {
-    const user = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(user, pseudoNettoye)) return;
-    const data = connexionsActives[pseudoNettoye];
-    if (data && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
-      const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
-    }
+  socket.on('configurerRoue', (payload = {}) => {
+    try {
+      const { pseudo, options } = payload;
+      const user = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(user, pseudoNettoye)) return;
+      const data = connexionsActives[pseudoNettoye];
+      if (data && Array.isArray(options)) {
+        data.roue.options = options.map(opt => safeText(opt)).filter(Boolean);
+      }
+    } catch {}
   });
 
-  socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
-    const utilisateurConnecte = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
-
-    const duree = parseInt(dureeSecondes, 10);
-    const snipe = parseInt(snipeSecondes, 10);
-    const min = parseInt(miseMinimale, 10) || 0;
-
-    if (!Number.isSafeInteger(duree) || duree <= 0 || !Number.isSafeInteger(snipe) || snipe < 0 || !Number.isSafeInteger(min) || min < 0) return;
-
-    if (connexionsActives[pseudoNettoye]) demarrerEnchere(pseudoNettoye, duree, snipe, min);
+  socket.on('forcerTournerRoue', (payload = {}) => {
+    try {
+      const { pseudo } = payload;
+      const user = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(user, pseudoNettoye)) return;
+      const data = connexionsActives[pseudoNettoye];
+      if (data && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
+        const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
+        io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+      }
+    } catch {}
   });
 
-  socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
-    const utilisateurConnecte = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
-    const data = connexionsActives[pseudoNettoye];
-    if (!data) return;
+  socket.on('demarrerEnchere', (payload = {}) => {
+    try {
+      const { pseudo, dureeSecondes, snipeSecondes, miseMinimale } = payload;
+      const utilisateurConnecte = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
 
-    const cibleNombre = parseInt(cible, 10);
-    if (!Number.isSafeInteger(cibleNombre) || cibleNombre <= 0) return;
+      const duree = strictInteger(dureeSecondes, { min: 5, max: 86400 });
+      const snipe = strictInteger(snipeSecondes, { min: 1, max: 3600 });
+      const min = strictInteger(miseMinimale, { min: 0, max: 1000000 });
 
-    data.objectif = {
-      cible: cibleNombre,
-      metrique: metrique === 'likes' ? 'likes' : 'diamants',
-      label: safeText(label, 'Objectif du live').slice(0, 60)
-    };
-    io.to(`streamer:${pseudoNettoye}`).emit('updateObjectif', etatObjectif(pseudoNettoye));
+      if (connexionsActives[pseudoNettoye]) demarrerEnchere(pseudoNettoye, duree, snipe, min);
+    } catch {}
   });
 
-  socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
-    const utilisateurConnecte = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
-    const data = connexionsActives[pseudoNettoye];
-    if (!data) return;
+  socket.on('definirObjectif', (payload = {}) => {
+    try {
+      const { pseudo, cible, metrique, label } = payload;
+      const utilisateurConnecte = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+      const data = connexionsActives[pseudoNettoye];
+      if (!data) return;
 
-    const cleanSecret = safeText(secret);
-    if (!cleanSecret || cleanSecret.length > 30) return;
+      const cibleNombre = strictInteger(cible, { min: 1, max: 10000000 });
 
-    data.coffre = {
-      actif: true,
-      secret: cleanSecret,
-      devoiles: new Array(cleanSecret.length).fill(false),
-      recompense: safeText(recompense, '').slice(0, 50),
-      gagnant: null,
-      dernierMessageGagnant: ''
-    };
-    io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      data.objectif = {
+        cible: cibleNombre,
+        metrique: metrique === 'likes' ? 'likes' : 'diamants',
+        label: safeText(label, 'Objectif du live').slice(0, 60)
+      };
+      io.to(`streamer:${pseudoNettoye}`).emit('updateObjectif', etatObjectif(pseudoNettoye));
+    } catch {}
   });
 
-  socket.on('devoilerCharHasard', ({ pseudo }) => {
-    const utilisateurConnecte = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
-    const coffre = connexionsActives[pseudoNettoye]?.coffre;
-    if (!coffre || !coffre.actif) return;
+  socket.on('configurerCoffre', (payload = {}) => {
+    try {
+      const { pseudo, secret, recompense } = payload;
+      const utilisateurConnecte = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+      const data = connexionsActives[pseudoNettoye];
+      if (!data) return;
 
-    const indicesNonDevoiles = coffre.devoiles.map((dev, idx) => dev ? -1 : idx).filter(idx => idx !== -1);
-    if (indicesNonDevoiles.length > 0) {
-      const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
-      coffre.devoiles[idxChoisi] = true;
+      const cleanSecret = safeText(secret);
+      if (!cleanSecret || cleanSecret.length > 30) return;
+
+      data.coffre = {
+        actif: true,
+        secret: cleanSecret,
+        devoiles: new Array(cleanSecret.length).fill(false),
+        recompense: safeText(recompense, '').slice(0, 50),
+        gagnant: null,
+        dernierMessageGagnant: ''
+      };
       io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-    }
+    } catch {}
   });
 
-  socket.on('devoilerCharIndex', ({ pseudo, index }) => {
-    const utilisateurConnecte = socket.request.session?.user;
-    const pseudoNettoye = normalizePseudo(pseudo);
-    if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
-    const coffre = connexionsActives[pseudoNettoye]?.coffre;
-    if (!coffre || !coffre.actif) return;
+  socket.on('devoilerCharHasard', (payload = {}) => {
+    try {
+      const { pseudo } = payload;
+      const utilisateurConnecte = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+      const coffre = connexionsActives[pseudoNettoye]?.coffre;
+      if (!coffre || !coffre.actif) return;
 
-    const idxArr = parseInt(index, 10) - 1;
-    if (Number.isSafeInteger(idxArr) && idxArr >= 0 && idxArr < coffre.devoiles.length) {
-      coffre.devoiles[idxArr] = true;
-      io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-    }
+      const indicesNonDevoiles = coffre.devoiles.map((dev, idx) => dev ? -1 : idx).filter(idx => idx !== -1);
+      if (indicesNonDevoiles.length > 0) {
+        const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
+        coffre.devoiles[idxChoisi] = true;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      }
+    } catch {}
+  });
+
+  socket.on('devoilerCharIndex', (payload = {}) => {
+    try {
+      const { pseudo, index } = payload;
+      const utilisateurConnecte = socket.request.session?.user;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(utilisateurConnecte, pseudoNettoye)) return;
+      const coffre = connexionsActives[pseudoNettoye]?.coffre;
+      if (!coffre || !coffre.actif) return;
+
+      const idxArr = strictInteger(index, { min: 1, max: 100 }) - 1;
+      if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
+        coffre.devoiles[idxArr] = true;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      }
+    } catch {}
   });
 });
 
