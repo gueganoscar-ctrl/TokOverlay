@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const TikTokModule = require('tiktok-live-connector');
 const path = require('path');
 const session = require('express-session');
-const MongoStore = require('connect-mongo'); // Ajout pour la persistance des sessions
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 
@@ -153,10 +153,18 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/')));
 
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
+
 app.get('/encheres/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
+});
+
+// CORRECTIF : Route admin-live restaurée
+app.get('/admin-live/:username', (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  if (req.session.user.pseudo !== req.params.username) return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
+  res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
 });
 
 app.get('/api/historique/:pseudo', async (req, res) => {
@@ -211,12 +219,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
     debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
-    // NOUVEAU : Drapeaux pour grouper les envois (Throttling)
+    // Drapeaux pour grouper les envois (Throttling)
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
 
-  // NOUVEAU : Boucle d'envoi toutes les 2 secondes pour économiser les ressources
+  // Boucle d'envoi toutes les 2 secondes pour économiser les ressources
   const boucleActualisation = setInterval(() => {
     if (!connexionsActives[pseudo]) {
       clearInterval(boucleActualisation);
@@ -224,29 +232,25 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
     const p = data.pendingUpdates;
 
-    // Si on a eu de nouveaux likes dans les 2 dernières secondes
     if (p.likers) {
       io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
       p.likers = false;
     }
-    // Si on a eu de nouveaux cadeaux dans les 2 dernières secondes
     if (p.gifters) {
       io.to(pseudo).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
       p.gifters = false;
     }
-    // Si les stats globales (total diamants/likes) ont bougé
     if (p.stats) {
       const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
       const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
       io.to(pseudo).emit('updateStatsLive', { totalDiamonds, totalLikes });
       p.stats = false;
     }
-    // Si l'objectif a bougé
     if (p.objectif && data.objectif) {
       io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
       p.objectif = false;
     }
-  }, 2000); // 2000 millisecondes = 2 secondes
+  }, 2000); 
 
   connection.connect().catch(err => {
     io.to(pseudo).emit('erreurConnexion', "Impossible de se connecter au live.");
@@ -258,7 +262,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     console.error(`[TikTok] Erreur fatale pour ${pseudo}:`, err.message || err);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); // On coupe la boucle si erreur
+    clearInterval(boucleActualisation); 
     delete connexionsActives[pseudo];
   });
 
@@ -270,7 +274,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
     data.likers[id].likes += d.count || 1;
     
-    // Au lieu d'envoyer instantanément au client, on active les drapeaux
     data.pendingUpdates.likers = true;
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
@@ -289,16 +292,13 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
     data.gifters[id].coins += totalPieces;
     
-    // ⚡ INSTANTANÉ : Les enchères restent en temps réel direct ! ⚡
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
     
-    // ⚡ INSTANTANÉ : Le Best Gift reste en temps réel ! ⚡
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
       io.to(pseudo).emit('updateBestGift', data.bestGift); 
     }
 
-    // 🐢 DIFFÉRÉ : Classements classiques, objectifs et stats
     data.pendingUpdates.gifters = true;
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
@@ -314,24 +314,30 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
+    // CORRECTIF : Gestion améliorée du coffre (tolérance accents/majuscules et bonne émission)
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
-      if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
+      const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      if (msgNettoye === secretNettoye) {
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
-        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo)); // Instantané
+        
+        io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo)); 
+        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo)); 
       }
     } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
       data.coffre.dernierMessageGagnant = message;
-      io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); // Instantané
+      io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); 
     }
 
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
-      io.to(pseudo).emit('updateMessageGagnant', { message }); // Instantané
+      io.to(pseudo).emit('updateMessageGagnant', { message });
 
       if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
         data.vouchFait = true;
         incrementerVouchGlobal();
-        io.to(pseudo).emit('vouchConfirme', {}); // Instantané
+        io.to(pseudo).emit('vouchConfirme', {});
       }
     }
   });
@@ -339,14 +345,14 @@ function demarrerEcouteLive(pseudo, apiKey) {
   connection.on('disconnect', () => {
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); // Nettoyage
+    clearInterval(boucleActualisation); 
     delete connexionsActives[pseudo];
   });
   
   connection.on('streamEnd', () => {
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); // Nettoyage
+    clearInterval(boucleActualisation); 
     delete connexionsActives[pseudo];
   });
 }
