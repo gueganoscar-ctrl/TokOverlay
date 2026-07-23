@@ -145,7 +145,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
   const data = {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
-    debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null
+    debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
+    coffre: { actif: false, secret: '', recompense: '', gagnant: null }
   };
   connexionsActives[pseudo] = data;
 
@@ -196,9 +197,24 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
   connection.on('chat', d => {
     const id = d.user?.displayId || 'inconnu';
+    const nickname = d.user?.nickname || 'Anonyme';
+    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     const message = d.comment || '';
+
+    // Diffuser le message pour la zone de chat dédiée du coffre-fort
+    io.to(pseudo).emit('nouveauMessageChat', { nickname, message, avatar });
+
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
+    }
+
+    // Logique du mini-jeu du coffre-fort
+    if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
+      if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
+        data.coffre.gagnant = { nickname, avatar, message };
+        data.coffre.actif = false;
+        io.to(pseudo).emit('coffreOuvert', data.coffre);
+      }
     }
 
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
@@ -389,6 +405,7 @@ io.on('connection', socket => {
     if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
     if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
     if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudo));
+    if (data && data.coffre) socket.emit('updateCoffre', data.coffre);
     socket.emit('initVouch', { vouches: vouchesGlobalCount });
   });
 
@@ -419,6 +436,24 @@ io.on('connection', socket => {
       label: (label || '').trim().slice(0, 60) || 'Objectif du live'
     };
     io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+  });
+
+  socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
+    const utilisateurConnecte = socket.request.session?.user;
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) {
+      socket.emit('erreurConnexion', "Non autorisé à configurer le coffre pour ce compte.");
+      return;
+    }
+    const data = connexionsActives[pseudo];
+    if (!data) return;
+
+    data.coffre = {
+      actif: true,
+      secret: secret.trim(),
+      recompense: recompense.trim(),
+      gagnant: null
+    };
+    io.to(pseudo).emit('updateCoffre', data.coffre);
   });
 });
 

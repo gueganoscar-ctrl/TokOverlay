@@ -185,6 +185,18 @@
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
+      <!-- Coffre-Fort Interactif -->
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">🔐</div>
+            <h3>Jeu du Coffre-Fort</h3>
+          </div>
+          <p>Le chat doit deviner un mot ou un chiffre secret pour gagner une récompense.</p>
+        </div>
+        <span class="click-hint">Configurer le coffre & Obtenir le lien →</span>
+      </div>
+
       <!-- Enchères -->
       <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
         <div class="widget-top">
@@ -306,28 +318,25 @@
       });
 
     function verifierStatutLive(pseudo) {
-      fetch('/api/live-stats/' + encodeURIComponent(pseudo))
+      fetch('/api/live-status/' + encodeURIComponent(pseudo))
         .then(res => res.json())
-        .then(data => {
+        .then(statusData => {
           const dot = document.getElementById('status-dot');
           const display = document.getElementById('user-pseudo-display');
           
-          // On interroge l'API dédiée pour savoir si le live est en ligne
-          fetch('/api/live-status/' + encodeURIComponent(pseudo))
-            .then(r => r.json())
-            .then(statusData => {
-              if (statusData.online) {
-                dot.className = 'dot online';
-                display.textContent = `@${pseudo} — Online`;
-              } else {
-                dot.className = 'dot offline';
-                display.textContent = `@${pseudo} — Offline`;
-              }
-            }).catch(() => {
-              dot.className = 'dot offline';
-              display.textContent = `@${pseudo} — Offline`;
-            });
-        }).catch(() => {});
+          if (statusData.online) {
+            dot.className = 'dot online';
+            display.textContent = `@${pseudo} — Online`;
+          } else {
+            dot.className = 'dot offline';
+            display.textContent = `@${pseudo} — Offline`;
+          }
+        }).catch(() => {
+          const dot = document.getElementById('status-dot');
+          const display = document.getElementById('user-pseudo-display');
+          dot.className = 'dot offline';
+          display.textContent = `@${pseudo} — Offline`;
+        });
     }
 
     function ouvrirPersonnalisation(type, titre, icone) {
@@ -357,6 +366,24 @@
             <input type="text" id="objectif-label-input" value="🎯 Objectif du live">
           </div>
           <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Démarrer l'objectif sur ce live</button>
+        `;
+        if (!socket) {
+          socket = io();
+          socket.on('connect', () => {
+            if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+          });
+        }
+      } else if (type === 'coffre') {
+        extraDiv.innerHTML = `
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Chiffre ou mot secret à deviner</label>
+            <input type="text" id="coffre-secret-input" placeholder="ex: 777 ou victoires">
+          </div>
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Récompense offerte</label>
+            <input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo Offert">
+          </div>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerCoffreFort()">Lancer le jeu du coffre</button>
         `;
         if (!socket) {
           socket = io();
@@ -410,6 +437,18 @@
       const label = document.getElementById('objectif-label-input').value;
       socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible, metrique, label });
       alert("Objectif défini ! L'overlay affichera la progression en direct dès que le live sera actif.");
+    }
+
+    function lancerCoffreFort() {
+      if (!socket || !pseudoGlobal) return;
+      const secret = document.getElementById('coffre-secret-input').value;
+      const recompense = document.getElementById('coffre-recompense-input').value;
+      if (!secret || !recompense) {
+        alert("Veuillez remplir le secret et la récompense !");
+        return;
+      }
+      socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
+      alert("Coffre-fort configuré et verrouillé en direct sur l'overlay !");
     }
 
     function copierLienModal() {
