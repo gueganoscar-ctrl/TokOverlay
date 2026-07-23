@@ -77,7 +77,6 @@
     .close-btn { background: none; border: none; color: #a1a1aa; font-size: 20px; cursor: pointer; }
     .close-btn:hover { color: white; }
 
-    /* Grille de sélection des styles dans la modale */
     .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .style-option {
       background: #1c1b26; border: 2px solid #29283a; border-radius: 14px; padding: 14px;
@@ -136,7 +135,7 @@
       </div>
     </header>
 
-    <div class="section-header">Widgets pour OBS / TikTok Live Studio (Clique sur une carte)</div>
+    <div class="section-header">Widgets pour OBS / TikTok Live Studio</div>
 
     <div class="grid-widgets">
 
@@ -186,6 +185,18 @@
           <p>Gère tes enchères en direct et configure ton overlay de salon.</p>
         </div>
         <span class="click-hint" style="color: var(--cyan);">Configurer l'overlay & Ouvrir le panneau →</span>
+      </div>
+
+      <!-- Panneau Admin Live -->
+      <div class="widget-card card" onclick="window.location.href='/admin-live.html'">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">📊</div>
+            <h3>Panneau Admin Live</h3>
+          </div>
+          <p>Suivi en direct de tes statistiques globales de live, estimation de tes gains et alertes d'activité récentes.</p>
+        </div>
+        <span class="click-hint" style="color: var(--text-lo);">Ouvrir le dashboard live →</span>
       </div>
 
     </div>
