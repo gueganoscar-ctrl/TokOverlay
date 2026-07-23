@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP Room - Admin TokOverlay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0b0e14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">👑 VIP Room — Super Administration</h1>
+        <p class="text-sm text-gray-400 mt-1">Suivi en direct de l'utilisation de TokOverlay et des diamants générés.</p>
+      </div>
+      <a href="/choix.html" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm transition">← Retour au Dashboard</a>
+    </div>
+
+    <!-- Statistiques Globales -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <div class="text-gray-400 text-sm font-bold uppercase">Streamers Inscrits</div>
+        <div id="stat-total-streamers" class="text-3xl font-extrabold text-teal-400 mt-2">0</div>
+      </div>
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <div class="text-gray-400 text-sm font-bold uppercase">Streamers en Live Actuellement</div>
+        <div id="stat-total-live" class="text-3xl font-extrabold text-green-400 mt-2">0</div>
+      </div>
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <div class="text-gray-400 text-sm font-bold uppercase">Total Diamants Générés (Global)</div>
+        <div id="stat-total-diamants" class="text-3xl font-extrabold text-pink-400 mt-2">0 💎</div>
+      </div>
+    </div>
+
+    <!-- Tableau des Streamers -->
+    <div class="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+      <div class="p-5 border-b border-gray-800 font-bold text-gray-300">Liste des utilisateurs et flux actifs</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-950/50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+              <th class="p-4">Streamer</th>
+              <th class="p-4">Email</th>
+              <th class="th-center p-4">Statut Live</th>
+              <th class="p-4">Diamants (Live Actuel)</th>
+              <th class="p-4">Diamants (Total Global)</th>
+            </tr>
+          </thead>
+          <tbody id="streamers-table-body" class="divide-y divide-gray-800 text-sm">
+            <tr>
+              <td colspan="5" class="p-6 text-center text-gray-500">Chargement des données...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function chargerStatsVIP() {
+      fetch('/api/admin/stats-globales')
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert("Accès refusé");
+            window.location.href = '/choix.html';
+            return;
+          }
+
+          const streamers = data.streamers;
+          document.getElementById('stat-total-streamers').textContent = streamers.length;
+
+          let enLiveCount = 0;
+          let totalDiamantsGlobalAcc = 0;
+
+          const tbody = document.getElementById('streamers-table-body');
+          tbody.innerHTML = '';
+
+          streamers.forEach(s => {
+            if (s.enLigne) enLiveCount++;
+            totalDiamantsGlobalAcc += s.totalDiamantsGlobal;
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-800/50 transition";
+            tr.innerHTML = `
+              <td class="p-4 font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full ${s.enLigne ? 'bg-green-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-gray-600'}"></span>
+                @${s.pseudo}
+              </td>
+              <td class="p-4 text-gray-400">${s.email}</td>
+              <td class="p-4">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${s.enLigne ? 'bg-green-950 text-green-300 border border-green-800' : 'bg-gray-800 text-gray-400'}">
+                  ${s.enLigne ? '🟢 EN LIVE' : '⚪ HORS LIGNE'}
+                </span>
+              </td>
+              <td class="p-4 font-semibold text-teal-300">${s.diamantsSessionActuelle.toLocaleString()} 💎</td>
+              <td class="p-4 font-bold text-pink-400">${s.totalDiamantsGlobal.toLocaleString()} 💎</td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          document.getElementById('stat-total-live').textContent = enLiveCount;
+          document.getElementById('stat-total-diamants').textContent = totalDiamantsGlobalAcc.toLocaleString() + ' 💎';
+        })
+        .catch(err => console.error("Erreur chargement VIP :", err));
+    }
+
+    // Charger au démarrage puis actualiser toutes les 5 secondes
+    chargerStatsVIP();
+    setInterval(chargerStatsVIP, 5000);
+  </script>
+</body>
+</html>

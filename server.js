@@ -98,7 +98,7 @@ app.post('/register', async (req, res) => {
     }
 
     const passwordHache = await bcrypt.hash(password, 10);
-    const newUser = { pseudo: pseudoNettoye, apiKey: apiKey.trim(), email, password: passwordHache };
+    const newUser = { pseudo: pseudoNettoye, apiKey: apiKey.trim(), email, password: passwordHache, totalDiamantsGlobal: 0 };
     await usersCollection.insertOne(newUser);
     req.session.user = { pseudo: newUser.pseudo, apiKey: newUser.apiKey, email: newUser.email };
     res.redirect('/choix.html');
@@ -169,6 +169,47 @@ app.get('/chat/:username', (req, res) => {
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/chat/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
+
+// ----------------------------------------------------
+// ROUTES VIP / SUPER ADMIN
+// ----------------------------------------------------
+app.get('/api/admin/stats-globales', async (req, res) => {
+  // ⚠️ Remplace 'slacezzz' par ton pseudo exact d'administrateur
+  if (!req.session.user || req.session.user.pseudo !== 'slacezzz') {
+    return res.status(403).json({ error: "Accès refusé. Réservé à l'administrateur." });
+  }
+  if (!db) return res.json({ streamers: [] });
+
+  try {
+    const streamers = await db.collection('users').find({}).project({ password: 0, apiKey: 0 }).toArray();
+    
+    const resultat = streamers.map(s => {
+      const liveData = connexionsActives[s.pseudo];
+      const isOnline = liveData && liveData.connection && liveData.connection.isConnected;
+      const diamantsSessionActuelle = liveData ? Object.values(liveData.gifters).reduce((sum, g) => sum + g.coins, 0) : 0;
+      
+      return {
+        pseudo: s.pseudo,
+        email: s.email,
+        totalDiamantsGlobal: s.totalDiamantsGlobal || 0,
+        diamantsSessionActuelle,
+        enLigne: !!isOnline
+      };
+    });
+
+    res.json({ streamers: resultat });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get('/vip-room', (req, res) => {
+  if (!req.session.user || req.session.user.pseudo !== 'slacezzz') {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'vip.html'));
+});
+// ----------------------------------------------------
 
 app.get('/api/historique/:pseudo', async (req, res) => {
   const pseudo = req.params.pseudo;
@@ -292,6 +333,15 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
     data.gifters[id].coins += totalPieces;
     
+    // Cumul des diamants globaux dans la base MongoDB pour la VIP Room
+    if (db) {
+      db.collection('users').updateOne(
+        { pseudo: pseudo },
+        { $inc: { totalDiamantsGlobal: totalPieces } },
+        { upsert: true }
+      ).catch(err => console.error("Erreur cumul diamants globaux :", err));
+    }
+    
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
     
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
@@ -304,7 +354,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
-  // GESTION DU CHAT EXACTEMENT SUR LA BASE QUI MARCHAIT
+  // GESTION DU CHAT SÛRE ET VALIDÉE
   connection.on('chat', d => {
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
@@ -312,15 +362,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     const message = d.comment || d.text || d.message || d.msg || d.content || '';
 
-    // Envoi vers le panneau de chat en direct / debug
     io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
-    // Mise à jour de l'enchère
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Gestion du Coffre-Fort
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -338,7 +385,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); 
     }
 
-    // Gestion des enchères et du Vouch
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
       io.to(pseudo).emit('updateMessageGagnant', { message });
 
