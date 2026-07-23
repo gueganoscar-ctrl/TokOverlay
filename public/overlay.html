@@ -226,16 +226,20 @@
     .carte-podium.podium-1 { border-color: rgba(255, 190, 61, 0.4); background: rgba(255, 190, 61, 0.06); }
     .carte-podium.podium-1 .valeur { color: var(--gold); }
 
-    #ecran-instruction-vouch { text-align: center; padding: 10px 0; }
-    .titre-alerte { font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .texte-instruction { font-size: 13px; color: #a1a1aa; line-height: 1.5; }
-    .texte-instruction span { display: block; font-family: 'JetBrains Mono', monospace; font-size: 26px; color: var(--cyan); font-weight: 800; margin: 6px 0; }
-
     #ecran-details-gagnant { text-align: center; }
     #ecran-details-gagnant img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); margin-bottom: 8px; }
     .titre-gagnant { font-size: 10px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
     .nom-gagnant { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 2px; }
     .total-gagnant { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
+
+    .vouch-status {
+      display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 5px 12px; border-radius: 20px; margin-bottom: 12px;
+      background: rgba(255, 190, 61, 0.12); border: 1px solid rgba(255, 190, 61, 0.35); color: var(--gold);
+    }
+    .vouch-status.confirme {
+      background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.35); color: var(--success);
+    }
 
     .winner-chat-box { background: #18181f; border: 1px solid #29283a; border-radius: 10px; padding: 10px; margin-top: 8px; text-align: left; }
     .winner-chat-title { font-size: 10px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 4px; }
@@ -328,18 +332,16 @@
     <div id="enchere-classement"></div>
 
     <div id="enchere-gagnant-ecran" style="display:none;">
-      <div id="ecran-instruction-vouch" style="display:none;">
-        <div class="titre-alerte">Enchère terminée</div>
-        <div class="texte-instruction">Le gagnant doit écrire <span>"vouch"</span> dans le chat</div>
-      </div>
-      <div id="ecran-details-gagnant" style="display:none;">
-        <div class="titre-gagnant">Gagnant</div>
+      <div id="ecran-details-gagnant">
+        <div class="titre-gagnant">🏆 Gagnant</div>
         <img id="gagnant-avatar" src="" alt="">
         <div class="nom-gagnant" id="gagnant-nom"></div>
         <div class="total-gagnant" id="gagnant-total"></div>
 
+        <div class="vouch-status" id="vouch-status">⏳ En attente du "vouch" dans le chat</div>
+
         <div class="winner-chat-box">
-          <div class="winner-chat-title">💬 Message dans le chat :</div>
+          <div class="winner-chat-title">💬 Dernier message dans le chat :</div>
           <div class="winner-chat-msg" id="gagnant-chat-message">En attente du message...</div>
         </div>
       </div>
@@ -471,15 +473,14 @@
       const messageAttente = document.getElementById('message-attente-enchere');
       const classementEl = document.getElementById('enchere-classement');
       const gagnantEcran = document.getElementById('enchere-gagnant-ecran');
-      const ecranInstruction = document.getElementById('ecran-instruction-vouch');
       const ecranDetails = document.getElementById('ecran-details-gagnant');
+      const vouchStatusEl = document.getElementById('vouch-status');
       const alerteEgaliteEl = document.getElementById('alerte-egalite');
 
       panel.style.display = 'block';
 
       let phaseActuelle = 'timer';
       let intervalleChrono = null;
-      let timerInstruction = null;
 
       function mettreAJourPhase(finTimestamp) {
         const restant = Math.max(finTimestamp - Date.now(), 0);
@@ -502,7 +503,6 @@
       function afficherEtat(etat) {
         if (!etat) return;
         if (messageAttente) messageAttente.remove();
-        if (timerInstruction) clearTimeout(timerInstruction);
 
         gagnantEcran.style.display = 'none';
         groupeChrono.style.display = 'flex';
@@ -538,30 +538,40 @@
         groupeChrono.style.display = 'none';
         classementEl.style.display = 'none';
         gagnantEcran.style.display = 'block';
+        ecranDetails.style.display = 'block';
 
         if (gagnant) {
+          document.getElementById('gagnant-avatar').style.display = '';
           document.getElementById('gagnant-avatar').src = gagnant.profilePictureUrl;
           document.getElementById('gagnant-nom').textContent = gagnant.nickname;
           document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
 
-          const messageChatFinal = gagnant.dernierMessageChat || gagnant.messageChat || "A écrit dans le chat pour valider son gain !";
-          document.getElementById('gagnant-chat-message').textContent = `"${messageChatFinal}"`;
+          const messageChatFinal = gagnant.dernierMessageChat || gagnant.messageChat;
+          document.getElementById('gagnant-chat-message').textContent = messageChatFinal ? `"${messageChatFinal}"` : 'En attente du message...';
 
-          ecranInstruction.style.display = 'block';
-          ecranDetails.style.display = 'none';
-
-          timerInstruction = setTimeout(() => {
-            ecranInstruction.style.display = 'none';
-            ecranDetails.style.display = 'block';
-          }, 5000);
+          vouchStatusEl.style.display = 'inline-block';
+          vouchStatusEl.textContent = '⏳ En attente du "vouch" dans le chat';
+          vouchStatusEl.classList.remove('confirme');
         } else {
-          ecranInstruction.style.display = 'none';
-          ecranDetails.style.display = 'block';
+          vouchStatusEl.style.display = 'none';
           document.getElementById('gagnant-avatar').style.display = 'none';
           document.getElementById('gagnant-nom').textContent = 'Aucun don valide';
           document.getElementById('gagnant-total').textContent = '';
           document.getElementById('gagnant-chat-message').textContent = 'Aucun message';
         }
+      });
+
+      // Message du gagnant retransmis en direct après la fin de l'enchère
+      socket.on('updateMessageGagnant', ({ message }) => {
+        if (gagnantEcran.style.display === 'block') {
+          document.getElementById('gagnant-chat-message').textContent = `"${message}"`;
+        }
+      });
+
+      // Confirmation que le gagnant a bien écrit "vouch"
+      socket.on('vouchConfirme', () => {
+        vouchStatusEl.textContent = '✅ Vouch confirmé';
+        vouchStatusEl.classList.add('confirme');
       });
 
       socket.on('initVouch', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
@@ -596,12 +606,20 @@
             groupeChrono.style.display = 'none';
             classementEl.style.display = 'none';
             gagnantEcran.style.display = 'block';
+            ecranDetails.style.display = 'block';
             document.getElementById('gagnant-avatar').src = 'https://ui-avatars.com/api/?name=Alex';
             document.getElementById('gagnant-nom').textContent = 'Alex_Live';
             document.getElementById('gagnant-total').textContent = '1 200 💎 envoyés';
-            document.getElementById('gagnant-chat-message').textContent = '"vouch"';
-            ecranInstruction.style.display = 'none';
-            ecranDetails.style.display = 'block';
+            document.getElementById('gagnant-chat-message').textContent = 'En attente du message...';
+            vouchStatusEl.style.display = 'inline-block';
+            vouchStatusEl.textContent = '⏳ En attente du "vouch" dans le chat';
+            vouchStatusEl.classList.remove('confirme');
+
+            setTimeout(() => {
+              document.getElementById('gagnant-chat-message').textContent = '"vouch"';
+              vouchStatusEl.textContent = '✅ Vouch confirmé';
+              vouchStatusEl.classList.add('confirme');
+            }, 3000);
           }, dureeDemo * 1000);
         }
 

@@ -194,11 +194,15 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Vouch : le gagnant de la dernière enchère confirme en écrivant "vouch" dans le chat
-    if (data.derniereGagnantId && !data.vouchFait && id === data.derniereGagnantId
-        && message.trim().toLowerCase() === 'vouch') {
-      data.vouchFait = true;
-      incrementerVouchGlobal();
+    // Message du gagnant après la fin de l'enchère : retransmis en direct à l'overlay
+    if (data.derniereGagnantId && id === data.derniereGagnantId) {
+      io.to(pseudo).emit('updateMessageGagnant', { message });
+
+      if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
+        data.vouchFait = true;
+        incrementerVouchGlobal();
+        io.to(pseudo).emit('vouchConfirme', {});
+      }
     }
   });
 
