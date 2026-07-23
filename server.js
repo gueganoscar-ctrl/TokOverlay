@@ -16,7 +16,6 @@ const PORT = process.env.PORT || 3000;
 
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 
-// Sécurité : Configuration obligatoire des secrets en production
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
   throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
 }
@@ -30,7 +29,6 @@ app.use('/img', express.static(path.join(__dirname, 'img')));
 
 const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
-// Configuration sécurisée des sessions (HttpOnly, SameSite, Secure, MongoStore)
 const sessionMiddleware = session({
   name: '__Host-tokoverlay',
   secret: process.env.SESSION_SECRET,
@@ -157,7 +155,7 @@ async function incrementerVouchGlobal() {
 }
 
 // ----------------------------------------------------
-// ROUTES D'AUTHENTIFICATION & PROFIL (Sécurisées contre fixation de session)
+// ROUTES D'AUTHENTIFICATION & PROFIL
 // ----------------------------------------------------
 
 app.post('/register', async (req, res) => {
@@ -188,7 +186,6 @@ app.post('/register', async (req, res) => {
     };
     await usersCollection.insertOne(newUser);
     
-    // Régénération de session pour éviter la fixation
     await new Promise((resolve, reject) =>
       req.session.regenerate((error) => error ? reject(error) : resolve())
     );
@@ -210,7 +207,6 @@ app.post('/login', async (req, res) => {
     const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
     if (user && await bcrypt.compare(password, user.password)) {
       
-      // Régénération de session après authentification réussie
       await new Promise((resolve, reject) =>
         req.session.regenerate((error) => error ? reject(error) : resolve())
       );
@@ -278,7 +274,6 @@ app.post('/api/update-profile', async (req, res) => {
   }
 });
 
-// Sécurisation de la déconnexion via POST (protection anti-CSRF)
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('__Host-tokoverlay');
@@ -380,8 +375,14 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   }
 });
 
+// POINT 8 CORRIGÉ : Route live-status sécurisée (exige authentification & autorisation)
 app.get('/api/live-status/:pseudo', async (req, res) => {
   const pseudo = normalizePseudo(req.params.pseudo);
+  
+  if (!req.session.user || !canManage(req.session.user, pseudo)) {
+    return res.status(403).json({ error: "Accès refusé." });
+  }
+
   if (!connexionsActives[pseudo] && db) {
     const user = await db.collection('users').findOne({ pseudo });
     if (user) demarrerEcouteLive(pseudo, user.apiKey);
