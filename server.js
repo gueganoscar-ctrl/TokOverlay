@@ -162,10 +162,15 @@ app.post('/register', async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
-    email = email.trim().toLowerCase();
+    email = safeText(email).toLowerCase();
     const pseudoNettoye = normalizePseudo(pseudo);
-    const usersCollection = db.collection('users');
+    const cleanApiKey = safeText(apiKey);
 
+    if (!pseudoNettoye || !cleanApiKey || !email || !password) {
+      return res.redirect('/?error=missing_fields');
+    }
+
+    const usersCollection = db.collection('users');
     const existingUser = await usersCollection.findOne({
       $or: [{ email }, { pseudo: pseudoNettoye }]
     });
@@ -178,7 +183,7 @@ app.post('/register', async (req, res) => {
     const passwordHache = await bcrypt.hash(password, 10);
     const newUser = { 
       pseudo: pseudoNettoye, 
-      apiKey: apiKey.trim(), 
+      apiKey: cleanApiKey, 
       email, 
       password: passwordHache, 
       role: 'streamer',
@@ -205,7 +210,7 @@ app.post('/login', async (req, res) => {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     const usersCollection = db.collection('users');
     const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && typeof password === 'string' && await bcrypt.compare(password, user.password)) {
       
       await new Promise((resolve, reject) =>
         req.session.regenerate((error) => error ? reject(error) : resolve())
@@ -247,7 +252,7 @@ app.post('/api/update-profile', async (req, res) => {
   if (!req.session.user || !db) return res.status(401).json({ error: "Non autorisé" });
   try {
     const nvPseudo = normalizePseudo(pseudo);
-    const nvApiKey = (apiKey || '').trim();
+    const nvApiKey = safeText(apiKey);
 
     if (!nvPseudo || !nvApiKey) {
       return res.status(400).json({ error: "Champs invalides." });
@@ -297,13 +302,15 @@ app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'pu
 
 app.get('/encheres/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
-  if (req.session.user.pseudo !== req.params.username) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
+  const targetPseudo = normalizePseudo(req.params.username);
+  if (req.session.user.pseudo !== targetPseudo) return res.redirect('/encheres/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
 app.get('/statistiques/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
-  if (req.session.user.pseudo !== req.params.username) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
+  const targetPseudo = normalizePseudo(req.params.username);
+  if (req.session.user.pseudo !== targetPseudo) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'statistiques.html'));
 });
 
@@ -314,7 +321,8 @@ app.get('/admin-live/:username', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
   }
 
-  if (req.session.user.pseudo !== req.params.username) {
+  const targetPseudo = normalizePseudo(req.params.username);
+  if (req.session.user.pseudo !== targetPseudo) {
     return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
   }
   
@@ -375,7 +383,6 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   }
 });
 
-// POINT 8 CORRIGÉ : Route live-status sécurisée (exige authentification & autorisation)
 app.get('/api/live-status/:pseudo', async (req, res) => {
   const pseudo = normalizePseudo(req.params.pseudo);
   
@@ -749,7 +756,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS
+// GESTION DES WEBSOCKETS AVEC VALIDATION STRICTE DES TYPES
 // ----------------------------------------------------
 
 io.on('connection', socket => {
@@ -769,7 +776,7 @@ io.on('connection', socket => {
         return;
       }
 
-      const cleFournie = (apiKey || '').trim();
+      const cleFournie = safeText(apiKey);
       const cleValideEnBase = utilisateur.apiKey && utilisateur.apiKey === cleFournie;
 
       if (!estAdmin && !estProprietaireConnecte && !tokenValide && !cleValideEnBase) {
@@ -798,7 +805,7 @@ io.on('connection', socket => {
     if (!canManage(user, pseudoNettoye)) return;
     const data = connexionsActives[pseudoNettoye];
     if (data && Array.isArray(options)) {
-      data.roue.options = options;
+      data.roue.options = options.map(opt => safeText(opt)).filter(Boolean);
     }
   });
 
@@ -822,7 +829,7 @@ io.on('connection', socket => {
     const snipe = parseInt(snipeSecondes, 10);
     const min = parseInt(miseMinimale, 10) || 0;
 
-    if (isNaN(duree) || duree <= 0 || isNaN(snipe) || snipe < 0 || isNaN(min) || min < 0) return;
+    if (!Number.isSafeInteger(duree) || duree <= 0 || !Number.isSafeInteger(snipe) || snipe < 0 || !Number.isSafeInteger(min) || min < 0) return;
 
     if (connexionsActives[pseudoNettoye]) demarrerEnchere(pseudoNettoye, duree, snipe, min);
   });
@@ -835,7 +842,7 @@ io.on('connection', socket => {
     if (!data) return;
 
     const cibleNombre = parseInt(cible, 10);
-    if (!cibleNombre || cibleNombre <= 0) return;
+    if (!Number.isSafeInteger(cibleNombre) || cibleNombre <= 0) return;
 
     data.objectif = {
       cible: cibleNombre,
@@ -853,13 +860,13 @@ io.on('connection', socket => {
     if (!data) return;
 
     const cleanSecret = safeText(secret);
-    if (!cleanSecret) return;
+    if (!cleanSecret || cleanSecret.length > 30) return;
 
     data.coffre = {
       actif: true,
       secret: cleanSecret,
       devoiles: new Array(cleanSecret.length).fill(false),
-      recompense: safeText(recompense, ''),
+      recompense: safeText(recompense, '').slice(0, 50),
       gagnant: null,
       dernierMessageGagnant: ''
     };
@@ -889,7 +896,7 @@ io.on('connection', socket => {
     if (!coffre || !coffre.actif) return;
 
     const idxArr = parseInt(index, 10) - 1;
-    if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
+    if (Number.isSafeInteger(idxArr) && idxArr >= 0 && idxArr < coffre.devoiles.length) {
       coffre.devoiles[idxArr] = true;
       io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     }
