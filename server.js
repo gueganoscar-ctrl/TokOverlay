@@ -158,7 +158,13 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
-// ROUTE ADMIN MODIFIÉE : slacezzz peut observer n'importe quel streamer
+// Nouvelle route pour la page Statistiques / Graphiques
+app.get('/statistiques/:username', (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  if (req.session.user.pseudo !== req.params.username) return res.redirect('/statistiques/' + encodeURIComponent(req.session.user.pseudo));
+  res.sendFile(path.join(__dirname, 'public', 'statistiques.html'));
+});
+
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   
@@ -574,13 +580,11 @@ io.on('connection', socket => {
       const utilisateur = await db.collection('users').findOne({ pseudo });
       const adminConnecte = socket.request.session?.user?.pseudo === 'slacezzz';
       
-      // Si c'est l'admin slacezzz qui supervise, on l'autorise à se connecter au socket du streamer cible même s'il n'a pas sa clé API exacte
       if (!adminConnecte && (!utilisateur || utilisateur.apiKey !== apiKey)) {
         socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
         return;
       }
       
-      // Récupération de la clé API du streamer cible si l'admin se connecte à lui sans sa clé
       const cleApiUtilisee = (adminConnecte && utilisateur) ? utilisateur.apiKey : apiKey;
       socket.join(pseudo);
       demarrerEcouteLive(pseudo, cleApiUtilisee);

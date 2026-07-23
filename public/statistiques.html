@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistiques & Historique - TokOverlay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inclusion de Chart.js pour les graphiques -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0b0e14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-5xl mx-auto">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">📊 Statistiques de tes Lives</h1>
+        <p class="text-sm text-gray-400 mt-1">Analyse l'historique et les performances de tes derniers streams.</p>
+      </div>
+      <a href="/choix.html" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm transition">← Retour au Dashboard</a>
+    </div>
+
+    <!-- Section Graphique -->
+    <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 mb-8 shadow-xl">
+      <h2 class="text-lg font-bold mb-4 text-teal-400">Évolution des Diamants (5 derniers lives)</h2>
+      <div class="relative h-72 w-full">
+        <canvas id="chartDiamants"></canvas>
+      </div>
+    </div>
+
+    <!-- Tableau Historique Détaillé -->
+    <div class="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+      <div class="p-5 border-b border-gray-800 font-bold text-gray-300">Détails des sessions précédentes</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-950/50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+              <th class="p-4">Date de fin</th>
+              <th class="p-4">Diamants Récoltés</th>
+              <th class="p-4">Total Likes</th>
+              <th class="p-4">Top Donateur</th>
+            </tr>
+          </thead>
+          <tbody id="historique-table-body" class="divide-y divide-gray-800 text-sm">
+            <tr>
+              <td colspan="4" class="p-6 text-center text-gray-500">Chargement des statistiques...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(user => {
+        if (!user || !user.pseudo) {
+          window.location.href = '/';
+          return;
+        }
+
+        // Récupérer l'historique des lives de l'utilisateur connecté
+        fetch(`/api/historique/${user.pseudo}`)
+          .then(res => res.json())
+          .then(data => {
+            const lives = data.lives || [];
+            const tbody = document.getElementById('historique-table-body');
+            
+            if (lives.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">Aucun historique de live enregistré pour le moment.</td></tr>`;
+              return;
+            }
+
+            tbody.innerHTML = '';
+            
+            // Inverser pour afficher du plus ancien au plus récent sur le graphique
+            const livesOrdreChronologique = [...lives].reverse();
+            const labels = livesOrdreChronologique.map(l => new Date(l.fin).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+            const diamantsData = livesOrdreChronologique.map(l => l.totalDiamants);
+
+            // Remplir le tableau (du plus récent au plus ancien)
+            lives.forEach(l => {
+              const dateFin = new Date(l.fin).toLocaleString('fr-FR');
+              const topDonateurText = l.topDonateur ? `${l.topDonateur.nickname} (${l.topDonateur.coins} 💎)` : 'Aucun';
+
+              const tr = document.createElement('tr');
+              tr.className = "hover:bg-gray-800/50 transition";
+              tr.innerHTML = `
+                <td class="p-4 text-white font-medium">${dateFin}</td>
+                <td class="p-4 font-bold text-pink-400">${l.totalDiamants.toLocaleString()} 💎</td>
+                <td class="p-4 text-teal-300">${l.totalLikes.toLocaleString()} ❤️</td>
+                <td class="p-4 text-gray-300">${topDonateurText}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+
+            // Générer le graphique Chart.js
+            const ctx = document.getElementById('chartDiamants').getContext('2d');
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Diamants',
+                  data: diamantsData,
+                  borderColor: '#22d3ee',
+                  backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                  borderWidth: 3,
+                  fill: true,
+                  tension: 0.3,
+                  pointBackgroundColor: '#22d3ee'
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#9ca3af' }
+                  },
+                  x: { 
+                    grid: { display: false },
+                    ticks: { color: '#9ca3af' }
+                  }
+                }
+              }
+            });
+          });
+      });
+  </script>
+</body>
+</html>
