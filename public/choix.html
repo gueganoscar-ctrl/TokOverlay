@@ -265,11 +265,18 @@
       });
 
     function verifierStatutLive(pseudo) {
-      fetch('/api/live-status/' + encodeURIComponent(pseudo)).then(r => r.json()).then(s => {
-        const dot = document.getElementById('status-dot');
-        dot.className = s.online ? 'dot online' : 'dot offline';
-        document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'Online' : 'Offline'}`;
-      });
+      fetch('/api/live-status/' + encodeURIComponent(pseudo))
+        .then(r => r.json())
+        .then(s => {
+          const dot = document.getElementById('status-dot');
+          dot.className = s.online ? 'dot online' : 'dot offline';
+          document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'Online' : 'Offline'}`;
+        })
+        .catch(() => {
+          const dot = document.getElementById('status-dot');
+          dot.className = 'dot offline';
+          document.getElementById('user-pseudo-display').textContent = `@${pseudo} — Offline`;
+        });
     }
 
     function allerAuxStatistiques() { if (pseudoGlobal) window.location.href = `/statistiques/${pseudoGlobal}`; }
