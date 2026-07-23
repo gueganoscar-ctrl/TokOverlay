@@ -89,7 +89,6 @@ app.post('/register', async (req, res) => {
     const pseudoNettoye = pseudo.replace('@', '').trim();
     const usersCollection = db.collection('users');
 
-    // Sécurité : Vérification de l'unicité de l'email ET du pseudo
     const existingUser = await usersCollection.findOne({
       $or: [{ email }, { pseudo: pseudoNettoye }]
     });
@@ -160,14 +159,12 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
-// Route admin-live
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
 });
 
-// NOUVELLE ROUTE : Panneau de débogage du Chat
 app.get('/chat/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/chat/' + encodeURIComponent(req.session.user.pseudo));
@@ -199,7 +196,6 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
   res.json({ online: !!isOnline });
 });
 
-// Sécurité : Route protégée pour les statistiques
 app.get('/api/live-stats/:pseudo', (req, res) => {
   const pseudo = req.params.pseudo;
   if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
@@ -226,12 +222,10 @@ function demarrerEcouteLive(pseudo, apiKey) {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
     debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
-    // Drapeaux pour grouper les envois (Throttling)
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
 
-  // Boucle d'envoi toutes les 2 secondes pour économiser les ressources
   const boucleActualisation = setInterval(() => {
     if (!connexionsActives[pseudo]) {
       clearInterval(boucleActualisation);
@@ -311,33 +305,28 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
+  // ANALYSE DU CHAT UNIFIÉE POUR TOUS LES MODULES (Coffre, Enchères, Vouch, Radar)
   connection.on('chat', d => {
-    // 🚨 INSPECTION TOTALE : On affiche tout l'objet reçu dans la console Render pour voir où est caché le texte
-    console.log("STRUCTURE CHAT REÇUE DE TIKTOK :", JSON.stringify(d, null, 2));
-
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     
-    // On teste un maximum de variantes de propriétés
-    const message = d.comment || d.text || d.message || d.msg || d.content || '';
+    // Extraction parfaite validée par le radar
+    const message = d.comment || d.text || d.message || d.msg || '';
 
+    // Envoi en direct vers le panneau de débogage / chat
     io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
-    // Espion pour le débogage (visible dans Render)
-    console.log(`[CHAT DEBUG] ${nickname} a écrit : "${message}"`);
-    
-    // Mise à jour de l'historique de l'enchère
+    // Mise à jour de l'enchère en cours
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Gestion du Coffre-Fort
+    // Gestion du Coffre-Fort (déblocage automatique par le chat)
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
-      // On s'assure que le message n'est pas vide avant de comparer
       if (msgNettoye !== "" && msgNettoye === secretNettoye) {
         console.log(`🎉 [COFFRE] VICTOIRE ! ${nickname} a ouvert le coffre !`);
         data.coffre.gagnant = { id, nickname, avatar };
@@ -351,7 +340,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); 
     }
 
-    // Gestion des enchères (Le Vouch)
+    // Gestion des enchères et du Vouch
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
       io.to(pseudo).emit('updateMessageGagnant', { message });
 
@@ -539,7 +528,6 @@ io.on('connection', socket => {
 
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo });
-      // Sécurité : Vérification stricte de l'existence et de l'authenticité de la clé
       if (!utilisateur || utilisateur.apiKey !== apiKey) {
         socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
         return;
@@ -561,7 +549,6 @@ io.on('connection', socket => {
     const utilisateurConnecte = socket.request.session?.user;
     if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
 
-    // Qualité & Sécurité : Validation stricte des entrées numériques
     const duree = parseInt(dureeSecondes, 10);
     const snipe = parseInt(snipeSecondes, 10);
     const min = parseInt(miseMinimale, 10) || 0;
