@@ -7,6 +7,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,9 @@ app.use('/img', express.static(path.join(__dirname, 'img')));
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   throw new Error("FATAL ERROR: SESSION_SECRET est manquant dans l'environnement de production !");
 }
+
+// Clé secrète pour signer les jetons OBS (générée automatiquement si absente)
+const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'tokoverlay_secret_key_change_it',
@@ -51,7 +55,6 @@ async function connectMongo() {
     db = client.db('tokoverlay_db');
     console.log("✅ Connecté à MongoDB Atlas avec succès !");
 
-    // Création des index uniques pour empêcher les doublons de pseudos et emails
     await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
     await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
 
@@ -63,7 +66,7 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Fonctions utilitaires de sécurité et normalisation
+// Fonctions de normalisation et de sécurité
 function normalizePseudo(value) {
   if (typeof value !== 'string') return '';
   return value.replace('@', '').trim().toLowerCase();
@@ -75,6 +78,40 @@ function isAdmin(user) {
 
 function canManage(user, pseudo) {
   return Boolean(user && (isAdmin(user) || user.pseudo === pseudo));
+}
+
+// Gestion des jetons sécurisés pour les overlays OBS
+function signOverlayToken(pseudo) {
+  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7); // Valide 7 jours
+  const payload = Buffer.from(JSON.stringify({ pseudo, expiresAt })).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', OVERLAY_TOKEN_SECRET)
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyOverlayToken(token, expectedPseudo) {
+  if (typeof token !== 'string') return false;
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return false;
+
+  const expected = crypto
+    .createHmac('sha256', OVERLAY_TOKEN_SECRET)
+    .update(payload)
+    .digest('base64url');
+
+  if (
+    signature.length !== expected.length ||
+    !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+  ) return false;
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return data.pseudo === expectedPseudo && data.expiresAt > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 async function incrementerVouchGlobal() {
@@ -125,7 +162,7 @@ app.post('/register', async (req, res) => {
     };
     await usersCollection.insertOne(newUser);
     
-    req.session.user = { id: newUser._id, pseudo: newUser.pseudo, apiKey: newUser.apiKey, email: newUser.email, role: newUser.role };
+    req.session.user = { id: newUser._id, pseudo: newUser.pseudo, email: newUser.email, role: newUser.role };
     res.redirect('/choix.html');
   } catch (err) {
     res.status(500).send("Erreur serveur lors de l'inscription.");
@@ -139,7 +176,7 @@ app.post('/login', async (req, res) => {
     const usersCollection = db.collection('users');
     const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
     if (user && await bcrypt.compare(password, user.password)) {
-      req.session.user = { id: user._id, pseudo: user.pseudo, apiKey: user.apiKey, email: user.email, role: user.role || 'streamer' };
+      req.session.user = { id: user._id, pseudo: user.pseudo, email: user.email, role: user.role || 'streamer' };
       return res.redirect('/choix.html');
     }
     res.redirect('/?error=wrong_credentials');
@@ -148,12 +185,28 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.get('/api/me', (req, res) => {
-  if (req.session.user) res.json(req.session.user);
-  else res.status(401).json({ error: 'Non connecté' });
+// Sécurité : Ne renvoie plus la clé API brute dans /api/me
+app.get('/api/me', async (req, res) => {
+  if (!req.session.user || !db) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const userDb = await db.collection('users').findOne({ email: req.session.user.email });
+    if (!userDb) return res.status(401).json({ error: 'Utilisateur introuvable' });
+
+    // Génération d'un token sécurisé pour les liens OBS du client
+    const overlayToken = signOverlayToken(userDb.pseudo);
+
+    res.json({
+      id: userDb._id,
+      pseudo: userDb.pseudo,
+      email: userDb.email,
+      role: userDb.role || 'streamer',
+      overlayToken: overlayToken
+    });
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// ROUTE MISE À JOUR PROFIL SÉCURISÉE (Anti-conflit de pseudo)
 app.post('/api/update-profile', async (req, res) => {
   let { pseudo, apiKey } = req.body;
   if (!req.session.user || !db) return res.status(401).json({ error: "Non autorisé" });
@@ -165,7 +218,6 @@ app.post('/api/update-profile', async (req, res) => {
       return res.status(400).json({ error: "Champs invalides." });
     }
 
-    // Vérifier si un autre utilisateur possède déjà ce pseudo
     const conflict = await db.collection('users').findOne({
       pseudo: nvPseudo,
       email: { $ne: req.session.user.email }
@@ -181,7 +233,6 @@ app.post('/api/update-profile', async (req, res) => {
     );
     
     req.session.user.pseudo = nvPseudo;
-    req.session.user.apiKey = nvApiKey;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
@@ -622,22 +673,31 @@ function terminerEnchere(pseudo) {
 // ----------------------------------------------------
 
 io.on('connection', socket => {
-  socket.on('rejoindre', async ({ pseudo, apiKey }) => {
+  // Sécurité Socket : Connexion validée soit par le propriétaire connecté, soit par un Token OBS valide
+  socket.on('rejoindre', async ({ pseudo, apiKey, token }) => {
     const pseudoNettoye = normalizePseudo(pseudo);
     if (!pseudoNettoye) return;
 
     const utilisateurConnecte = socket.request.session?.user;
     const estAdmin = isAdmin(utilisateurConnecte);
+    const estProprietaireConnecte = canManage(utilisateurConnecte, pseudoNettoye);
+    const tokenValide = verifyOverlayToken(token, pseudoNettoye);
 
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo: pseudoNettoye });
-      
-      if (!estAdmin && (!utilisateur || utilisateur.apiKey !== apiKey)) {
-        socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
+      if (!utilisateur) {
+        socket.emit('erreurConnexion', 'Streamer inconnu.');
+        return;
+      }
+
+      // Autorisation acceptée si : Admin / Propriétaire avec clé API / Token OBS valide
+      if (!estAdmin && !tokenValide && (!estProprietaireConnecte || utilisateur.apiKey !== apiKey)) {
+        socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
         return;
       }
       
-      const cleApiUtilisee = (estAdmin && utilisateur) ? utilisateur.apiKey : apiKey;
+      // Récupération sécurisée de la vraie clé TikTok depuis la base de données
+      const cleApiUtilisee = utilisateur.apiKey;
       socket.join(pseudoNettoye);
       demarrerEcouteLive(pseudoNettoye, cleApiUtilisee);
     } else {
