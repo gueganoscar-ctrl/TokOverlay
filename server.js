@@ -298,11 +298,9 @@ function programmerTransitionOuFin(pseudo) {
   if (enchere.minuteur) clearTimeout(enchere.minuteur);
   const delai = Math.max(enchere.finTimestamp - Date.now(), 0);
   
-  // Robustesse : sécurité anti-blocage (si le délai est aberrant, on force 1s)
   const delaiSecurise = (isNaN(delai) || delai < 0) ? 1000 : delai;
 
   enchere.minuteur = setTimeout(() => {
-    // Vérification de sécurité au déclenchement du timeout
     const currentData = connexionsActives[pseudo];
     if (!currentData || !currentData.enchere || !currentData.enchere.actif) return;
 
@@ -440,6 +438,13 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
   }
+});
+
+app.get('/api/live-status/:pseudo', (req, res) => {
+  const pseudo = req.params.pseudo;
+  const data = connexionsActives[pseudo];
+  const isOnline = data && data.connection && data.connection.isConnected;
+  res.json({ online: !!isOnline });
 });
 
 app.get('/api/live-stats/:pseudo', (req, res) => {

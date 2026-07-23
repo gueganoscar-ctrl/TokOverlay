@@ -24,7 +24,9 @@
       padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-lo);
       width: fit-content;
     }
-    .user-badge .dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
+    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; }
+    .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
+    .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.5); }
 
     .header-actions { display: flex; gap: 12px; }
 
@@ -36,7 +38,6 @@
 
     .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
 
-    /* Cartes cliquables */
     .widget-card {
       padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
       transition: transform 0.2s ease, border-color 0.2s ease;
@@ -58,9 +59,6 @@
 
     .click-hint { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; }
 
-    /* ==========================================
-       FENÊTRE MODALE DE PERSONNALISATION
-       ========================================== */
     #modal-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
       align-items: center; justify-content: center; z-index: 100; padding: 20px;
@@ -125,7 +123,7 @@
           <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 22px;">TokOverlay</h1>
         </div>
         <div class="user-badge">
-          <span class="dot"></span>
+          <span class="dot offline" id="status-dot"></span>
           <span id="user-pseudo-display">Connexion...</span>
         </div>
       </div>
@@ -299,10 +297,38 @@
         document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = user.apiKey || '';
+
+        verifierStatutLive(user.pseudo);
+        setInterval(() => verifierStatutLive(user.pseudo), 3000);
       })
       .catch(() => {
         window.location.href = '/';
       });
+
+    function verifierStatutLive(pseudo) {
+      fetch('/api/live-stats/' + encodeURIComponent(pseudo))
+        .then(res => res.json())
+        .then(data => {
+          const dot = document.getElementById('status-dot');
+          const display = document.getElementById('user-pseudo-display');
+          
+          // On interroge l'API dédiée pour savoir si le live est en ligne
+          fetch('/api/live-status/' + encodeURIComponent(pseudo))
+            .then(r => r.json())
+            .then(statusData => {
+              if (statusData.online) {
+                dot.className = 'dot online';
+                display.textContent = `@${pseudo} — Online`;
+              } else {
+                dot.className = 'dot offline';
+                display.textContent = `@${pseudo} — Offline`;
+              }
+            }).catch(() => {
+              dot.className = 'dot offline';
+              display.textContent = `@${pseudo} — Offline`;
+            });
+        }).catch(() => {});
+    }
 
     function ouvrirPersonnalisation(type, titre, icone) {
       typeActuel = type;
@@ -334,7 +360,9 @@
         `;
         if (!socket) {
           socket = io();
-          socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+          socket.on('connect', () => {
+            if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+          });
         }
       } else {
         extraDiv.innerHTML = '';
