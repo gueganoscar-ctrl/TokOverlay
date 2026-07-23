@@ -65,9 +65,27 @@ async function connectMongo() {
 }
 connectMongo();
 
+// Fonctions utilitaires de normalisation et de sécurité robuste
 function normalizePseudo(value) {
   if (typeof value !== 'string') return '';
   return value.replace('@', '').trim().toLowerCase();
+}
+
+function safeText(value, fallback = '') {
+  return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function positiveInteger(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n > 0 ? n : fallback;
+}
+
+function avatarFor(user = {}, nickname = 'Anonyme') {
+  const avatarList = user?.avatarThumb?.urlList;
+  if (Array.isArray(avatarList) && avatarList.length > 0 && typeof avatarList[0] === 'string') {
+    return avatarList[0];
+  }
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
 }
 
 function isAdmin(user) {
@@ -347,7 +365,7 @@ app.get('/api/live-stats/:pseudo', (req, res) => {
 });
 
 // ----------------------------------------------------
-// GESTION DU LIVE TIKTOK (TIKTOK LIVE CONNECTOR SÉCURISÉE)
+// GESTION DU LIVE TIKTOK (SÉCURISÉE & ROBUSTE)
 // ----------------------------------------------------
 
 const connexionsActives = {};
@@ -434,30 +452,38 @@ function demarrerEcouteLive(pseudo, apiKey) {
     arreterEcouteLive(pseudo, data, 'error');
   });
 
-  connection.on('like', d => {
+  // Handler Like sécurisé avec parsing robuste
+  connection.on('like', (d = {}) => {
     if (data.closed) return;
-    const id = d.user?.displayId || 'inconnu';
-    const nickname = d.user?.nickname || 'Anonyme';
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+    const user = d.user && typeof d.user === 'object' ? d.user : {};
+    const id = safeText(user.displayId || user.uniqueId, `unknown:${Math.random()}`);
+    const nickname = safeText(user.nickname, 'Anonyme');
+    const likes = positiveInteger(d.count, 1);
+    const avatar = avatarFor(user, nickname);
     
     if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
-    data.likers[id].likes += d.count || 1;
+    data.likers[id].likes += likes;
     
     data.pendingUpdates.likers = true;
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
   });
 
-  connection.on('gift', d => {
+  // Handler Gift sécurisé avec parsing robuste
+  connection.on('gift', (d = {}) => {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
-    const id = d.user?.displayId || d.uniqueId || 'inconnu';
-    const nickname = d.user?.nickname || d.nickname || 'Anonyme';
-    const totalPieces = (d.gift?.diamondCount || 0) * (d.repeatCount || 1);
+    const user = d.user && typeof d.user === 'object' ? d.user : {};
+    const id = safeText(user.displayId || d.uniqueId || user.userId, 'inconnu');
+    const nickname = safeText(user.nickname || d.nickname, 'Anonyme');
+    
+    const diamondCount = positiveInteger(d.gift?.diamondCount, 0);
+    const repeatCount = positiveInteger(d.repeatCount, 1);
+    const totalPieces = diamondCount * repeatCount;
     if (totalPieces === 0) return;
     
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    const giftIcon = d.gift?.icon?.urlList?.[0] || 'https://via.placeholder.com/60';
+    const avatar = avatarFor(user, nickname);
+    const giftIcon = safeText(d.gift?.icon?.urlList?.[0], 'https://via.placeholder.com/60');
 
     if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
     data.gifters[id].coins += totalPieces;
@@ -472,7 +498,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
-    if (totalPieces >= 10 && data.roue && data.roue.options.length > 0) {
+    if (totalPieces >= 10 && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
       io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
@@ -487,12 +513,14 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
-  connection.on('chat', d => {
+  // Handler Chat sécurisé avec parsing robuste
+  connection.on('chat', (d = {}) => {
     if (data.closed) return;
-    const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
-    const nickname = d.nickname || d.user?.nickname || 'Anonyme';
-    const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    const message = d.comment || d.text || d.message || d.msg || d.content || '';
+    const user = d.user && typeof d.user === 'object' ? d.user : {};
+    const id = safeText(d.uniqueId || d.userId || user.displayId || user.userId, 'inconnu');
+    const nickname = safeText(d.nickname || user.nickname, 'Anonyme');
+    const avatar = avatarFor(user, nickname);
+    const message = safeText(d.comment || d.text || d.message || d.msg || d.content, '');
 
     io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname, avatar, message });
 
@@ -501,8 +529,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
 
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
-      const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
       if (msgNettoye !== "" && msgNettoye === secretNettoye) {
         data.coffre.gagnant = { id, nickname, avatar };
@@ -519,7 +547,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
       io.to(`streamer:${pseudo}`).emit('updateMessageGagnant', { message });
 
-      if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
+      if (!data.vouchFait && message.toLowerCase() === 'vouch') {
         data.vouchFait = true;
         incrementerVouchGlobal();
         io.to(`streamer:${pseudo}`).emit('vouchConfirme', {});
@@ -684,7 +712,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS (SÉCURISÉS + FALLBACK COMPATIBILITÉ)
+// GESTION DES WEBSOCKETS
 // ----------------------------------------------------
 
 io.on('connection', socket => {
@@ -707,7 +735,6 @@ io.on('connection', socket => {
       const cleFournie = (apiKey || '').trim();
       const cleValideEnBase = utilisateur.apiKey && utilisateur.apiKey === cleFournie;
 
-      // Autorisation acceptée si admin, proprio session, token valide OU clé API valide fournie
       if (!estAdmin && !estProprietaireConnecte && !tokenValide && !cleValideEnBase) {
         socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
         return;
@@ -743,7 +770,7 @@ io.on('connection', socket => {
     const pseudoNettoye = normalizePseudo(pseudo);
     if (!canManage(user, pseudoNettoye)) return;
     const data = connexionsActives[pseudoNettoye];
-    if (data && data.roue && data.roue.options.length > 0) {
+    if (data && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
       io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
     }
@@ -776,7 +803,7 @@ io.on('connection', socket => {
     data.objectif = {
       cible: cibleNombre,
       metrique: metrique === 'likes' ? 'likes' : 'diamants',
-      label: (label || '').trim().slice(0, 60) || 'Objectif du live'
+      label: safeText(label, 'Objectif du live').slice(0, 60)
     };
     io.to(`streamer:${pseudoNettoye}`).emit('updateObjectif', etatObjectif(pseudoNettoye));
   });
@@ -788,12 +815,14 @@ io.on('connection', socket => {
     const data = connexionsActives[pseudoNettoye];
     if (!data) return;
 
-    const cleanSecret = secret.trim();
+    const cleanSecret = safeText(secret);
+    if (!cleanSecret) return;
+
     data.coffre = {
       actif: true,
       secret: cleanSecret,
       devoiles: new Array(cleanSecret.length).fill(false),
-      recompense: recompense.trim(),
+      recompense: safeText(recompense, ''),
       gagnant: null,
       dernierMessageGagnant: ''
     };
