@@ -588,11 +588,24 @@
 
       if (isDemo) {
         document.getElementById('global-vouch-count').textContent = '128';
+        
+        // Simulation dynamique du compteur de vouchs en mode démo
+        setInterval(() => {
+          const countEl = document.getElementById('global-vouch-count');
+          const currentVal = parseInt(countEl.textContent, 10) || 128;
+          if (Math.random() > 0.6) {
+            countEl.textContent = currentVal + 1;
+          }
+        }, 3000);
+
         const dureeDemo = 15;
 
         function etatFauxEnchere(tempsRestantMs) {
           return {
-            phase: 'timer', tempsRestant: tempsRestantMs, snipeMs: 5000, miseMinimale: 50,
+            phase: 'timer', 
+            tempsRestant: tempsRestantMs, 
+            snipeMs: 5000, 
+            miseMinimale: 50,
             classement: [
               { nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', coins: 1200 },
               { nickname: 'Mia.Star', profilePictureUrl: 'https://ui-avatars.com/api/?name=Mia', coins: 800 }
@@ -624,6 +637,8 @@
               document.getElementById('gagnant-chat-message').textContent = '"vouch"';
               vouchStatusEl.textContent = '✅ Vouch confirmé';
               vouchStatusEl.classList.add('confirme');
+              const countEl = document.getElementById('global-vouch-count');
+              countEl.textContent = (parseInt(countEl.textContent, 10) || 128) + 1;
             }, 3000);
           }, dureeDemo * 1000);
         }
