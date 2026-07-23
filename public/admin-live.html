@@ -93,13 +93,11 @@
     const socket = io();
     let utilisateurGlobal = null;
     
-    // Centralisation : Taux de conversion défini une seule fois
     const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
 
-    // SÉCURITÉ ANTI-FIGEMENT : Réabonnement automatique du socket si la connexion est coupée puis rétablie
     socket.on('connect', () => {
       if (utilisateurGlobal && utilisateurGlobal.pseudo) {
-        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, apiKey: utilisateurGlobal.apiKey });
+        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, token: utilisateurGlobal.overlayToken });
       }
     });
 
@@ -111,9 +109,9 @@
           return;
         }
         utilisateurGlobal = user;
-        document.getElementById('user-info').innerText = `Suivi en direct pour @${user.pseudo}`;
+        document.getElementById('user-info').textContent = `Suivi en direct pour @${user.pseudo}`;
 
-        socket.emit('rejoindre', { pseudo: user.pseudo, apiKey: user.apiKey });
+        socket.emit('rejoindre', { pseudo: user.pseudo, token: user.overlayToken });
 
         function afficherAlerte(texte) {
           document.getElementById('latest-alert').textContent = texte;
@@ -127,7 +125,6 @@
         });
         socket.on('erreurConnexion', msg => afficherAlerte(msg));
 
-        // Fonction d'affichage des statistiques
         function actualiserStatsUI(stats) {
           const diamonds = stats.totalDiamonds || 0;
           const likes = stats.totalLikes || 0;
@@ -138,13 +135,11 @@
           document.getElementById('stat-earnings').textContent = `Est. Live + Bonus Hebdo : €${estimatedEur.toFixed(2)} EUR`;
         }
 
-        // Chargement initial des statistiques lors du chargement de la page
         fetch('/api/live-stats/' + encodeURIComponent(user.pseudo))
           .then(res => res.json())
           .then(stats => actualiserStatsUI(stats))
           .catch(() => {});
 
-        // Performance : Écoute en temps réel des statistiques (remplace le polling setInterval)
         socket.on('updateStatsLive', stats => actualiserStatsUI(stats));
 
         chargerHistorique(user.pseudo);
@@ -157,38 +152,67 @@
       return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
+    // Fonction sécurisée anti-XSS pour injecter l'historique sans innerHTML
     function chargerHistorique(pseudo) {
       fetch('/api/historique/' + encodeURIComponent(pseudo))
         .then(res => res.json())
         .then(({ lives, encheres }) => {
           const conteneurLives = document.getElementById('historique-lives');
+          conteneurLives.innerHTML = '';
           if (!lives || lives.length === 0) {
-            conteneurLives.innerHTML = '<div class="historique-vide">Aucun live terminé pour le moment.</div>';
+            const divVide = document.createElement('div');
+            divVide.className = 'historique-vide';
+            divVide.textContent = 'Aucun live terminé pour le moment.';
+            conteneurLives.appendChild(divVide);
           } else {
-            conteneurLives.innerHTML = lives.map(live => `
-              <div class="historique-item">
-                <div class="ligne-haut">
-                  <span>💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}</span>
-                  <span>${formaterDate(live.fin)}</span>
-                </div>
-                <div class="ligne-bas">${live.topDonateur ? 'Top donateur : ' + live.topDonateur.nickname + ' (' + live.topDonateur.coins.toLocaleString() + ' 💎)' : 'Aucun don reçu'}</div>
-              </div>
-            `).join('');
+            lives.forEach(live => {
+              const item = document.createElement('div');
+              item.className = 'historique-item';
+
+              const ligneHaut = document.createElement('div');
+              ligneHaut.className = 'ligne-haut';
+              const spanStats = document.createElement('span');
+              spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
+              const spanDate = document.createElement('span');
+              spanDate.textContent = formaterDate(live.fin);
+              ligneHaut.append(spanStats, spanDate);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+              ligneBas.textContent = live.topDonateur ? `Top donateur : ${live.topDonateur.nickname} (${live.topDonateur.coins.toLocaleString()} 💎)` : 'Aucun don reçu';
+
+              item.append(ligneHaut, ligneBas);
+              conteneurLives.appendChild(item);
+            });
           }
 
           const conteneurEncheres = document.getElementById('historique-encheres');
+          conteneurEncheres.innerHTML = '';
           if (!encheres || encheres.length === 0) {
-            conteneurEncheres.innerHTML = '<div class="historique-vide">Aucune enchère terminée pour le moment.</div>';
+            const divVide = document.createElement('div');
+            divVide.className = 'historique-vide';
+            divVide.textContent = 'Aucune enchère terminée pour le moment.';
+            conteneurEncheres.appendChild(divVide);
           } else {
-            conteneurEncheres.innerHTML = encheres.map(e => `
-              <div class="historique-item">
-                <div class="ligne-haut">
-                  <span>${e.gagnant ? '🏆 ' + e.gagnant.nickname : 'Aucun gagnant'}</span>
-                  <span>${formaterDate(e.date)}</span>
-                </div>
-                <div class="ligne-bas">${e.gagnant ? e.gagnant.coins.toLocaleString() + ' 💎' : ''} · Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎</div>
-              </div>
-            `).join('');
+            encheres.forEach(e => {
+              const item = document.createElement('div');
+              item.className = 'historique-item';
+
+              const ligneHaut = document.createElement('div');
+              ligneHaut.className = 'ligne-haut';
+              const spanGagnant = document.createElement('span');
+              spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
+              const spanDate = document.createElement('span');
+              spanDate.textContent = formaterDate(e.date);
+              ligneHaut.append(spanGagnant, spanDate);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+              ligneBas.textContent = `${e.gagnant ? e.gagnant.coins.toLocaleString() + ' 💎' : ''} · Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
+
+              item.append(ligneHaut, ligneBas);
+              conteneurEncheres.appendChild(item);
+            });
           }
         })
         .catch(() => {});

@@ -48,6 +48,7 @@
     .label-phase { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
     .chrono { font-size: 42px; font-weight: 800; line-height: 1; margin-bottom: 8px; color: var(--text-hi); }
     .chrono.phase-snipe { color: var(--fuchsia); }
+    .chrono.phase-timer { color: var(--text-hi); }
     .mise-min { font-size: 13px; color: var(--text-lo); margin: 0 0 12px; font-weight: 600; }
 
     .auction-earnings { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--success); display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
@@ -118,8 +119,8 @@
             <p class="mise-min" id="mise-min-affichee"></p>
 
             <div class="auction-earnings" id="enchere-gain">
-              <span>0 💎</span>
-              <span>€0.00 EUR</span>
+              <span id="gain-diamants">0 💎</span>
+              <span id="gain-euros">€0.00 EUR</span>
             </div>
 
             <p id="statut-texte" style="font-size: 13px; color: var(--text-faint); margin: 0; font-weight: 500;">En attente de dons...</p>
@@ -135,10 +136,8 @@
     const pseudo = window.location.pathname.split('/')[2];
     document.querySelector('#pseudo-badge .badge-pseudo').textContent = '@' + pseudo;
 
-    // Centralisation de la constante de conversion
     const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
 
-    // Remplacement de document.execCommand par la Clipboard API moderne
     document.getElementById('copier-btn').addEventListener('click', () => {
       const champ = document.getElementById('url-champ');
       navigator.clipboard.writeText(champ.value).then(() => {
@@ -184,19 +183,18 @@
       document.getElementById('mise-min-affichee').textContent = `Mise minimale : ${etat.miseMinimale.toLocaleString()} 💎`;
 
       const diamantsEnchere = etat.totalDiamantsEnchere || 0;
-      const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR; // Utilisation de la constante centralisée
+      const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR;
 
-      document.getElementById('enchere-gain').innerHTML = `
-        <span>${diamantsEnchere.toLocaleString()} 💎</span>
-        <span>€${eurosEnchere.toFixed(2)} EUR</span>
-      `;
+      // Utilisation de textContent sécurisé pour éviter toute injection XSS
+      document.getElementById('gain-diamants').textContent = `${diamantsEnchere.toLocaleString()} 💎`;
+      document.getElementById('gain-euros').textContent = `€${eurosEnchere.toFixed(2)} EUR`;
 
       const liste = document.getElementById('classement-live');
       liste.innerHTML = '';
       etat.classement.forEach((u, index) => {
         const li = document.createElement('li');
         const rangEtNom = document.createElement('span');
-        rangEtNom.textContent = `#${index + 1} ${u.nickname}`; // textContent protège contre XSS
+        rangEtNom.textContent = `#${index + 1} ${u.nickname}`;
         const montant = document.createElement('span');
         montant.textContent = `${u.coins.toLocaleString()} 💎`;
         li.append(rangEtNom, montant);
@@ -210,17 +208,20 @@
         return res.json();
       })
       .then(user => {
-        if (!user || !user.apiKey) {
-          alert("Clé API manquante.");
+        if (!user || !user.pseudo) {
+          alert("Utilisateur non connecté.");
           window.location.href = '/';
           return;
         }
 
-        const apiKey = user.apiKey;
-        document.getElementById('url-champ').value = `${window.location.origin}/overlay/${pseudo}?type=encheres&key=${apiKey}`;
+        // Utilisation du jeton sécurisé (overlayToken) au lieu de l'ancienne clé en clair
+        const overlayToken = user.overlayToken || '';
+        document.getElementById('url-champ').value = `${window.location.origin}/overlay/${pseudo}?type=encheres&token=${encodeURIComponent(overlayToken)}`;
 
         const socket = io();
-        socket.emit('rejoindre', { pseudo, apiKey });
+        socket.on('connect', () => {
+          socket.emit('rejoindre', { pseudo, token: overlayToken });
+        });
 
         document.getElementById('demarrer-btn').addEventListener('click', () => {
           const dureeSecondes = parseInt(document.getElementById('duree-input').value, 10);
@@ -247,12 +248,10 @@
             : "Enchère terminée, aucun don valide.";
 
           const diamantsEnchere = data.totalDiamantsEnchere || 0;
-          const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR; // Utilisation de la constante centralisée
+          const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR;
 
-          document.getElementById('enchere-gain').innerHTML = `
-            <span>Total : ${diamantsEnchere.toLocaleString()} 💎</span>
-            <span>€${eurosEnchere.toFixed(2)} EUR</span>
-          `;
+          document.getElementById('gain-diamants').textContent = `Total : ${diamantsEnchere.toLocaleString()} 💎`;
+          document.getElementById('gain-euros').textContent = `€${eurosEnchere.toFixed(2)} EUR`;
         });
 
         socket.on('erreurConnexion', msg => {
@@ -262,7 +261,7 @@
         });
       })
       .catch(() => {
-        alert("Clé API manquante.");
+        alert("Session expirée ou non connecté.");
         window.location.href = '/';
       });
   </script>

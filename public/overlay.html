@@ -425,7 +425,7 @@
     const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
-    const apiKey = params.get('key');
+    const token = params.get('token');
     const style = params.get('style') || '1';
     const isDemo = params.get('demo') === '1';
 
@@ -486,7 +486,7 @@
 
     socket.on('connect', () => {
       if (pseudo && !isDemo) {
-        socket.emit('rejoindre', { pseudo, apiKey });
+        socket.emit('rejoindre', { pseudo, token });
       }
     });
 
@@ -863,7 +863,7 @@
     }
 
     if (!isDemo && pseudo) {
-      socket.emit('rejoindre', { pseudo, apiKey });
+      socket.emit('rejoindre', { pseudo, token });
     }
   </script>
 </body>

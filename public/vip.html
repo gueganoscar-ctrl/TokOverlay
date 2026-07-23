@@ -80,26 +80,57 @@
           const tbody = document.getElementById('streamers-table-body');
           tbody.innerHTML = '';
 
+          if (!streamers || streamers.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 5;
+            td.className = "p-6 text-center text-gray-500";
+            td.textContent = "Aucun streamer inscrit.";
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+          }
+
           streamers.forEach(s => {
             if (s.enLigne) enLiveCount++;
-            totalDiamantsGlobalAcc += s.totalDiamantsGlobal;
+            totalDiamantsGlobalAcc += (s.totalDiamantsGlobal || 0);
 
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-800/50 transition";
-            tr.innerHTML = `
-              <td class="p-4 font-bold text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full ${s.enLigne ? 'bg-green-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-gray-600'}"></span>
-                @${s.pseudo}
-              </td>
-              <td class="p-4 text-gray-400">${s.email}</td>
-              <td class="p-4">
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${s.enLigne ? 'bg-green-950 text-green-300 border border-green-800' : 'bg-gray-800 text-gray-400'}">
-                  ${s.enLigne ? '🟢 EN LIVE' : '⚪ HORS LIGNE'}
-                </span>
-              </td>
-              <td class="p-4 font-semibold text-teal-300">${s.diamantsSessionActuelle.toLocaleString()} 💎</td>
-              <td class="p-4 font-bold text-pink-400">${s.totalDiamantsGlobal.toLocaleString()} 💎</td>
-            `;
+
+            // Colonne Streamer
+            const tdPseudo = document.createElement('td');
+            tdPseudo.className = "p-4 font-bold text-white flex items-center gap-2";
+            const spanDot = document.createElement('span');
+            spanDot.className = `w-2 h-2 rounded-full ${s.enLigne ? 'bg-green-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-gray-600'}`;
+            const spanText = document.createElement('span');
+            spanText.textContent = `@${s.pseudo}`;
+            tdPseudo.append(spanDot, spanText);
+
+            // Colonne Email
+            const tdEmail = document.createElement('td');
+            tdEmail.className = "p-4 text-gray-400";
+            tdEmail.textContent = s.email;
+
+            // Colonne Statut Live
+            const tdStatut = document.createElement('td');
+            tdStatut.className = "p-4";
+            const spanBadge = document.createElement('span');
+            spanBadge.className = `px-2.5 py-1 rounded-full text-xs font-bold ${s.enLigne ? 'bg-green-950 text-green-300 border border-green-800' : 'bg-gray-800 text-gray-400'}`;
+            spanBadge.textContent = s.enLigne ? '🟢 EN LIVE' : '⚪ HORS LIGNE';
+            tdStatut.appendChild(spanBadge);
+
+            // Colonne Diamants Session
+            const tdSession = document.createElement('td');
+            tdSession.className = "p-4 font-semibold text-teal-300";
+            tdSession.textContent = `${(s.diamantsSessionActuelle || 0).toLocaleString()} 💎`;
+
+            // Colonne Diamants Global
+            const tdGlobal = document.createElement('td');
+            tdGlobal.className = "p-4 font-bold text-pink-400";
+            tdGlobal.textContent = `${(s.totalDiamantsGlobal || 0).toLocaleString()} 💎`;
+
+            tr.append(tdPseudo, tdEmail, tdStatut, tdSession, tdGlobal);
             tbody.appendChild(tr);
           });
 
@@ -109,7 +140,6 @@
         .catch(err => console.error("Erreur chargement VIP :", err));
     }
 
-    // Charger au démarrage puis actualiser toutes les 5 secondes
     chargerStatsVIP();
     setInterval(chargerStatsVIP, 5000);
   </script>
