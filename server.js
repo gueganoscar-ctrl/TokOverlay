@@ -160,11 +160,18 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
-// Route admin-live restaurée et protégée
+// Route admin-live
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
   res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
+});
+
+// NOUVELLE ROUTE : Panneau de débogage du Chat
+app.get('/chat/:username', (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  if (req.session.user.pseudo !== req.params.username) return res.redirect('/chat/' + encodeURIComponent(req.session.user.pseudo));
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 
 app.get('/api/historique/:pseudo', async (req, res) => {
@@ -310,12 +317,15 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     
-    // 2. Extraction du message (cherche dans toutes les versions)
+    // 2. Extraction du message
     const message = d.comment || d.text || d.message || d.msg || '';
+
+    // Envoi du chat à notre panneau de débogage
+    io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
 
     // Espion pour le débogage (visible dans Render)
     console.log(`[CHAT DEBUG] ${nickname} a écrit : "${message}"`);
-
+    
     // Mise à jour de l'historique de l'enchère
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
