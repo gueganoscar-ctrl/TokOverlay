@@ -24,6 +24,19 @@
     .live-feed-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
     .live-feed-card h2 { font-size: 16px; display: flex; align-items: center; gap: 10px; }
     .alert-box { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-size: 14px; color: var(--cyan); display: flex; align-items: center; gap: 12px; }
+
+    .historique-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
+    .historique-card { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .historique-card h2 { font-size: 14px; }
+    .historique-liste { display: flex; flex-direction: column; gap: 8px; }
+    .historique-item {
+      background: var(--ink); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .historique-item .ligne-haut { display: flex; justify-content: space-between; font-weight: 700; color: var(--text-hi); }
+    .historique-item .ligne-bas { color: var(--text-faint); font-size: 11px; }
+    .historique-vide { color: var(--text-faint); font-size: 12px; text-align: center; padding: 10px 0; }
   </style>
 </head>
 <body class="app-bg">
@@ -56,6 +69,21 @@
       <h2>Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
+      </div>
+    </div>
+
+    <div class="historique-grid">
+      <div class="historique-card card">
+        <h2>📅 Historique des lives</h2>
+        <div class="historique-liste" id="historique-lives">
+          <div class="historique-vide">Chargement...</div>
+        </div>
+      </div>
+      <div class="historique-card card">
+        <h2>⚖️ Historique des enchères</h2>
+        <div class="historique-liste" id="historique-encheres">
+          <div class="historique-vide">Chargement...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -107,10 +135,52 @@
 
         rafraichirStats();
         setInterval(rafraichirStats, 2000);
+        chargerHistorique(user.pseudo);
       })
       .catch(() => {
         window.location.href = '/';
       });
+
+    function formaterDate(dateStr) {
+      return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function chargerHistorique(pseudo) {
+      fetch('/api/historique/' + encodeURIComponent(pseudo))
+        .then(res => res.json())
+        .then(({ lives, encheres }) => {
+          const conteneurLives = document.getElementById('historique-lives');
+          if (!lives || lives.length === 0) {
+            conteneurLives.innerHTML = '<div class="historique-vide">Aucun live terminé pour le moment.</div>';
+          } else {
+            conteneurLives.innerHTML = lives.map(live => `
+              <div class="historique-item">
+                <div class="ligne-haut">
+                  <span>💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}</span>
+                  <span>${formaterDate(live.fin)}</span>
+                </div>
+                <div class="ligne-bas">${live.topDonateur ? 'Top donateur : ' + live.topDonateur.nickname + ' (' + live.topDonateur.coins.toLocaleString() + ' 💎)' : 'Aucun don reçu'}</div>
+              </div>
+            `).join('');
+          }
+
+          const conteneurEncheres = document.getElementById('historique-encheres');
+          if (!encheres || encheres.length === 0) {
+            conteneurEncheres.innerHTML = '<div class="historique-vide">Aucune enchère terminée pour le moment.</div>';
+          } else {
+            conteneurEncheres.innerHTML = encheres.map(e => `
+              <div class="historique-item">
+                <div class="ligne-haut">
+                  <span>${e.gagnant ? '🏆 ' + e.gagnant.nickname : 'Aucun gagnant'}</span>
+                  <span>${formaterDate(e.date)}</span>
+                </div>
+                <div class="ligne-bas">${e.gagnant ? e.gagnant.coins.toLocaleString() + ' 💎' : ''} · Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎</div>
+              </div>
+            `).join('');
+          }
+        })
+        .catch(() => {});
+    }
   </script>
 </body>
 </html>

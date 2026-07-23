@@ -246,6 +246,39 @@
       font-weight: 800; font-size: 12px; padding: 8px; border-radius: 8px; margin-bottom: 10px; text-transform: uppercase; animation: pulse 1s infinite;
     }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    /* ==========================================
+       4. WIDGET OBJECTIF DE LIVE
+       ========================================== */
+    #objectif-panel {
+      width: 320px; padding: 18px 20px; border-radius: 16px;
+      background: var(--bg-dark); border: 1px solid #29283a;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    #objectif-label {
+      font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 800;
+      color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    #objectif-barre-fond {
+      width: 100%; height: 22px; background: #18181f; border: 1px solid #29283a;
+      border-radius: 999px; overflow: hidden; position: relative;
+    }
+    #objectif-barre-remplissage {
+      height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), var(--fuchsia));
+      transition: width 0.4s ease;
+    }
+    #objectif-texte {
+      margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+      color: #f4f4f5; display: flex; justify-content: space-between;
+    }
+    #objectif-texte .valeur-actuelle { color: var(--cyan); }
+    #objectif-texte .valeur-cible { color: #a1a1aa; }
+
+    body.style-2 #objectif-panel { border-radius: 8px; background: #121118; border-color: rgba(255, 190, 61, 0.3); }
+    body.style-2 #objectif-barre-remplissage { background: var(--gold); }
+    body.style-3 #objectif-panel { border: 2px solid var(--fuchsia); border-radius: 24px; box-shadow: 0 10px 40px rgba(254, 44, 85, 0.25); }
   </style>
 </head>
 <body>
@@ -260,6 +293,17 @@
   <div id="leaderboard" style="display:none;">
     <h3 id="titre-classement"></h3>
     <p class="message-attente" id="message-attente-simple">Connexion au live...</p>
+  </div>
+
+  <div id="objectif-panel" style="display:none;">
+    <div id="objectif-label">Objectif du live</div>
+    <div id="objectif-barre-fond">
+      <div id="objectif-barre-remplissage"></div>
+    </div>
+    <div id="objectif-texte">
+      <span class="valeur-actuelle" id="objectif-valeur-actuelle">0</span>
+      <span class="valeur-cible" id="objectif-valeur-cible">/ 0</span>
+    </div>
   </div>
 
   <div id="enchere-panel" style="display:none;">
@@ -309,6 +353,7 @@
     const type = params.get('type');
     const apiKey = params.get('key');
     const style = params.get('style') || '1';
+    const isDemo = params.get('demo') === '1';
 
     // Application automatique de la classe de style sur le body (style-1, style-2 ou style-3)
     document.body.className = `style-${style}`;
@@ -367,6 +412,10 @@
 
     if (type === 'bestgift') {
       document.getElementById('best-gift-container').style.display = 'flex';
+      if (isDemo) {
+        document.getElementById('bg-icon').src = 'https://via.placeholder.com/60';
+        document.getElementById('bg-pseudo').textContent = 'Mia.Star';
+      }
     }
 
     socket.on('updateBestGift', data => {
@@ -392,6 +441,24 @@
 
       socket.on(type === 'donateurs' ? 'updateTopGifters' : 'updateTopLikers', top3 => afficherClassementSimple(top3, type === 'donateurs' ? 'coins' : 'likes', type === 'donateurs' ? '💎 ' : '❤️ '));
       socket.on('erreurConnexion', msg => { if(messageAttente) { messageAttente.textContent = msg; messageAttente.className = 'message-erreur'; }});
+
+      if (isDemo) {
+        const cleDemo = type === 'donateurs' ? 'coins' : 'likes';
+        const emojiDemo = type === 'donateurs' ? '💎 ' : '❤️ ';
+        const nomsDemo = ['Alex_Live', 'Mia.Star', 'TokFan92'];
+
+        function genererFauxTop3() {
+          const top3 = nomsDemo.map((nom, i) => ({
+            nickname: nom,
+            profilePictureUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(nom)}&background=random`,
+            [cleDemo]: Math.floor(Math.random() * 3000) + (3 - i) * 1500
+          })).sort((a, b) => b[cleDemo] - a[cleDemo]);
+          afficherClassementSimple(top3, cleDemo, emojiDemo);
+        }
+
+        genererFauxTop3();
+        setInterval(genererFauxTop3, 4000);
+      }
     }
 
     if (type === 'encheres') {
@@ -461,7 +528,7 @@
 
       socket.on('egaliteEnchere', () => {
         alerteEgaliteEl.style.display = 'block';
-        setTimeout => { alerteEgaliteEl.style.display = 'none'; }, 5000;
+        setTimeout(() => { alerteEgaliteEl.style.display = 'none'; }, 5000);
       });
 
       socket.on('enchereTerminee', ({ gagnant }) => {
@@ -503,9 +570,78 @@
         countEl.textContent = data.vouches;
       });
       socket.on('erreurConnexion', msg => { if(messageAttente) { messageAttente.textContent = msg; messageAttente.className = 'message-erreur'; }});
+
+      if (isDemo) {
+        document.getElementById('global-vouch-count').textContent = '128';
+        const dureeDemo = 15; // secondes
+
+        function etatFauxEnchere(tempsRestantMs) {
+          return {
+            phase: 'timer', tempsRestant: tempsRestantMs, snipeMs: 5000, miseMinimale: 50,
+            classement: [
+              { nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', coins: 1200 },
+              { nickname: 'Mia.Star', profilePictureUrl: 'https://ui-avatars.com/api/?name=Mia', coins: 800 }
+            ],
+            totalDiamantsEnchere: 2000
+          };
+        }
+
+        function lancerCycleDemo() {
+          gagnantEcran.style.display = 'none';
+          groupeChrono.style.display = 'flex';
+          classementEl.style.display = 'flex';
+          afficherEtat(etatFauxEnchere(dureeDemo * 1000));
+
+          setTimeout(() => {
+            groupeChrono.style.display = 'none';
+            classementEl.style.display = 'none';
+            gagnantEcran.style.display = 'block';
+            document.getElementById('gagnant-avatar').src = 'https://ui-avatars.com/api/?name=Alex';
+            document.getElementById('gagnant-nom').textContent = 'Alex_Live';
+            document.getElementById('gagnant-total').textContent = '1 200 💎 envoyés';
+            document.getElementById('gagnant-chat-message').textContent = '"vouch"';
+            ecranInstruction.style.display = 'none';
+            ecranDetails.style.display = 'block';
+          }, dureeDemo * 1000);
+        }
+
+        lancerCycleDemo();
+        setInterval(lancerCycleDemo, (dureeDemo + 6) * 1000);
+      }
     }
 
-    socket.emit('rejoindre', { pseudo, apiKey });
+    if (type === 'objectif') {
+      const panel = document.getElementById('objectif-panel');
+      panel.style.display = 'block';
+
+      function afficherObjectif(etat) {
+        if (!etat) return;
+        document.getElementById('objectif-label').textContent = etat.label;
+        const pourcentage = Math.min(100, Math.round((etat.valeurActuelle / etat.cible) * 100));
+        document.getElementById('objectif-barre-remplissage').style.width = pourcentage + '%';
+
+        const emoji = etat.metrique === 'likes' ? '❤️' : '💎';
+        document.getElementById('objectif-valeur-actuelle').textContent = `${emoji} ${etat.valeurActuelle.toLocaleString()}`;
+        document.getElementById('objectif-valeur-cible').textContent = `/ ${etat.cible.toLocaleString()}`;
+      }
+
+      socket.on('updateObjectif', afficherObjectif);
+
+      if (isDemo) {
+        const cibleDemo = 5000;
+        let valeurDemo = 0;
+        const labelDemo = '🎯 Objectif : 5000 pièces';
+
+        afficherObjectif({ label: labelDemo, metrique: 'diamants', cible: cibleDemo, valeurActuelle: valeurDemo });
+        setInterval(() => {
+          valeurDemo += Math.floor(Math.random() * 400) + 100;
+          if (valeurDemo > cibleDemo) valeurDemo = 0;
+          afficherObjectif({ label: labelDemo, metrique: 'diamants', cible: cibleDemo, valeurActuelle: valeurDemo });
+        }, 2000);
+      }
+    }
+
+    if (!isDemo) socket.emit('rejoindre', { pseudo, apiKey });
   </script>
 </body>
 </html>

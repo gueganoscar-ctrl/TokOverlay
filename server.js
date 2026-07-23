@@ -33,6 +33,9 @@ io.use((socket, next) => {
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 
+// Compteur global de vouchs (partagé entre tous les utilisateurs de TokOverlay)
+let vouchesGlobalCount = 0;
+
 async function connectMongo() {
   if (!mongoUri) {
     console.error("❌ ERREUR : MONGO_URI absente des variables Render !");
@@ -43,11 +46,30 @@ async function connectMongo() {
     await client.connect();
     db = client.db('tokoverlay_db');
     console.log("✅ Connecté à MongoDB Atlas avec succès !");
+
+    const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
+    vouchesGlobalCount = compteur?.total || 0;
   } catch (err) {
     console.error("❌ Erreur de connexion MongoDB :", err);
   }
 }
 connectMongo();
+
+async function incrementerVouchGlobal() {
+  vouchesGlobalCount += 1;
+  if (db) {
+    try {
+      await db.collection('compteurs').updateOne(
+        { _id: 'vouches' },
+        { $inc: { total: 1 } },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.error("Erreur incrémentation vouch :", err);
+    }
+  }
+  io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
+}
 
 app.post('/register', async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
@@ -117,7 +139,10 @@ function demarrerEcouteLive(pseudo, apiKey) {
   if (connexionsActives[pseudo]) return;
 
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
-  const data = { connection, likers: {}, gifters: {}, enchere: null, bestGift: null };
+  const data = {
+    connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
+    debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null
+  };
   connexionsActives[pseudo] = data;
 
   connection.connect().catch(err => {
@@ -132,6 +157,9 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
     data.likers[id].likes += d.count || 1;
     io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
+    if (data.objectif && data.objectif.metrique === 'likes') {
+      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+    }
   });
 
   connection.on('gift', d => {
@@ -153,24 +181,59 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
       io.to(pseudo).emit('updateBestGift', data.bestGift);
     }
+
+    if (data.objectif && data.objectif.metrique === 'diamants') {
+      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+    }
   });
 
   connection.on('chat', d => {
     const id = d.user?.displayId || 'inconnu';
-    const message = d.comment;
+    const message = d.comment || '';
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
+    }
+
+    // Vouch : le gagnant de la dernière enchère confirme en écrivant "vouch" dans le chat
+    if (data.derniereGagnantId && !data.vouchFait && id === data.derniereGagnantId
+        && message.trim().toLowerCase() === 'vouch') {
+      data.vouchFait = true;
+      incrementerVouchGlobal();
     }
   });
 
   connection.on('disconnect', () => {
+    sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
   connection.on('streamEnd', () => {
+    sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
+}
+
+function sauvegarderHistoriqueLive(pseudo) {
+  const data = connexionsActives[pseudo];
+  if (!data || !db) return;
+
+  const gifters = Object.values(data.gifters);
+  const likers = Object.values(data.likers);
+  const totalDiamants = gifters.reduce((s, g) => s + g.coins, 0);
+  const totalLikes = likers.reduce((s, l) => s + l.likes, 0);
+  const topDonateur = gifters.sort((a, b) => b.coins - a.coins)[0] || null;
+
+  if (totalDiamants === 0 && totalLikes === 0) return; // rien à sauvegarder
+
+  db.collection('historique_lives').insertOne({
+    pseudo,
+    debut: data.debutLive,
+    fin: new Date(),
+    totalDiamants,
+    totalLikes,
+    topDonateur: topDonateur ? { nickname: topDonateur.nickname, coins: topDonateur.coins } : null
+  }).catch(err => console.error("Erreur sauvegarde historique live :", err));
 }
 
 function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
@@ -184,6 +247,20 @@ function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
   };
   programmerTransitionOuFin(pseudo);
   io.to(pseudo).emit('enchereDemarree', etatEnchere(pseudo));
+}
+
+function etatObjectif(pseudo) {
+  const data = connexionsActives[pseudo];
+  if (!data || !data.objectif) return null;
+  const valeurActuelle = data.objectif.metrique === 'likes'
+    ? Object.values(data.likers).reduce((s, l) => s + l.likes, 0)
+    : Object.values(data.gifters).reduce((s, g) => s + g.coins, 0);
+  return {
+    label: data.objectif.label,
+    metrique: data.objectif.metrique,
+    cible: data.objectif.cible,
+    valeurActuelle
+  };
 }
 
 function etatEnchere(pseudo) {
@@ -242,7 +319,23 @@ function terminerEnchere(pseudo) {
 
   enchere.actif = false;
   const gagnant = donsValides[0] || null;
-  
+
+  const data = connexionsActives[pseudo];
+  if (data) {
+    data.derniereGagnantId = gagnant?.id || null;
+    data.vouchFait = false;
+  }
+
+  if (db) {
+    db.collection('historique_encheres').insertOne({
+      pseudo,
+      date: new Date(),
+      gagnant: gagnant ? { nickname: gagnant.nickname, coins: gagnant.coins } : null,
+      totalDiamantsEnchere: enchere.totalDiamantsEnchere,
+      classement: donsValides.slice(0, 3).map(u => ({ nickname: u.nickname, coins: u.coins }))
+    }).catch(err => console.error("Erreur sauvegarde historique enchère :", err));
+  }
+
   io.to(pseudo).emit('enchereTerminee', { 
     gagnant, 
     classement: donsValides.slice(0, 3),
@@ -269,6 +362,8 @@ io.on('connection', socket => {
     const data = connexionsActives[pseudo];
     if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
     if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
+    if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudo));
+    socket.emit('initVouch', { vouches: vouchesGlobalCount });
   });
 
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
@@ -279,6 +374,44 @@ io.on('connection', socket => {
     }
     if (connexionsActives[pseudo]) demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale);
   });
+
+  socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
+    const utilisateurConnecte = socket.request.session?.user;
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) {
+      socket.emit('erreurConnexion', "Non autorisé à définir un objectif pour ce compte.");
+      return;
+    }
+    const data = connexionsActives[pseudo];
+    if (!data) return;
+
+    const cibleNombre = parseInt(cible, 10);
+    if (!cibleNombre || cibleNombre <= 0) return;
+
+    data.objectif = {
+      cible: cibleNombre,
+      metrique: metrique === 'likes' ? 'likes' : 'diamants',
+      label: (label || '').trim().slice(0, 60) || 'Objectif du live'
+    };
+    io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+  });
+});
+
+app.get('/api/historique/:pseudo', async (req, res) => {
+  const pseudo = req.params.pseudo;
+  if (!req.session.user || req.session.user.pseudo !== pseudo) {
+    return res.status(401).json({ error: "Non autorisé" });
+  }
+  if (!db) return res.json({ lives: [], encheres: [] });
+
+  try {
+    const lives = await db.collection('historique_lives')
+      .find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
+    const encheres = await db.collection('historique_encheres')
+      .find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
+    res.json({ lives, encheres });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 });
 
 app.get('/api/live-stats/:pseudo', (req, res) => {

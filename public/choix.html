@@ -175,6 +175,18 @@
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
+      <!-- Objectif de Live -->
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">🎯</div>
+            <h3>Objectif de Live</h3>
+          </div>
+          <p>Barre de progression vers un objectif de pièces ou de likes.</p>
+        </div>
+        <span class="click-hint">Personnaliser & Obtenir le lien →</span>
+      </div>
+
       <!-- Enchères -->
       <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
         <div class="widget-top">
@@ -234,6 +246,9 @@
           <span class="obs-url" id="modal-obs-url">Chargement...</span>
           <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLienModal()">Copier le lien</button>
         </div>
+        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline; align-self: flex-start;">
+          👁️ Voir un aperçu (mode démo, sans live réel)
+        </a>
       </div>
 
       <div id="modal-extra-action"></div>
@@ -261,12 +276,14 @@
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     let pseudoGlobal = '';
     let apiKeyGlobal = '';
     let baseUrl = '';
     let typeActuel = '';
     let styleActuel = 1;
+    let socket = null;
 
     fetch('/api/me')
       .then(res => res.json())
@@ -296,6 +313,29 @@
       const extraDiv = document.getElementById('modal-extra-action');
       if (type === 'encheres') {
         extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block; box-sizing: border-box;">Ouvrir le panneau de contrôle des enchères →</a>`;
+      } else if (type === 'objectif') {
+        extraDiv.innerHTML = `
+          <div class="form-group">
+            <label>Métrique suivie</label>
+            <select id="objectif-metrique-input">
+              <option value="diamants">Pièces (💎)</option>
+              <option value="likes">Likes (❤️)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Valeur cible</label>
+            <input type="number" id="objectif-cible-input" min="1" value="1000">
+          </div>
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Texte affiché sur l'overlay</label>
+            <input type="text" id="objectif-label-input" value="🎯 Objectif du live">
+          </div>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Démarrer l'objectif sur ce live</button>
+        `;
+        if (!socket) {
+          socket = io();
+          socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+        }
       } else {
         extraDiv.innerHTML = '';
       }
@@ -332,6 +372,16 @@
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
       document.getElementById('modal-obs-url').textContent = obtenirLienActuel();
+      document.getElementById('modal-demo-link').href = obtenirLienActuel() + '&demo=1';
+    }
+
+    function demarrerObjectif() {
+      if (!socket || !pseudoGlobal) return;
+      const cible = document.getElementById('objectif-cible-input').value;
+      const metrique = document.getElementById('objectif-metrique-input').value;
+      const label = document.getElementById('objectif-label-input').value;
+      socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible, metrique, label });
+      alert("Objectif défini ! L'overlay affichera la progression en direct dès que le live sera actif.");
     }
 
     function copierLienModal() {
