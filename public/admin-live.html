@@ -91,6 +91,14 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    let utilisateurGlobal = null;
+
+    // SÉCURITÉ ANTI-FIGEMENT : Réabonnement automatique du socket si la connexion est coupée puis rétablie
+    socket.on('connect', () => {
+      if (utilisateurGlobal && utilisateurGlobal.pseudo) {
+        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, apiKey: utilisateurGlobal.apiKey });
+      }
+    });
 
     fetch('/api/me')
       .then(res => res.json())
@@ -99,6 +107,7 @@
           window.location.href = '/';
           return;
         }
+        utilisateurGlobal = user;
         document.getElementById('user-info').innerText = `Suivi en direct pour @${user.pseudo}`;
 
         socket.emit('rejoindre', { pseudo: user.pseudo, apiKey: user.apiKey });

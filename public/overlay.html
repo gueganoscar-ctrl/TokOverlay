@@ -350,14 +350,14 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const pseudo = window.location.pathname.split('/')[2];
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
     const apiKey = params.get('key');
     const style = params.get('style') || '1';
     const isDemo = params.get('demo') === '1';
 
-    // Application automatique de la classe de style sur le body (style-1, style-2 ou style-3)
     document.body.className = `style-${style}`;
 
     function creerCarteJoueur(user, rank, cle, emoji) {
@@ -411,6 +411,13 @@
     }
 
     const socket = io();
+
+    // SÉCURITÉ ANTI-FIGEMENT : Réabonnement automatique si le socket se reconnecte après une coupure
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) {
+        socket.emit('rejoindre', { pseudo, apiKey });
+      }
+    });
 
     if (type === 'bestgift') {
       document.getElementById('best-gift-container').style.display = 'flex';
@@ -561,14 +568,12 @@
         }
       });
 
-      // Message du gagnant retransmis en direct après la fin de l'enchère
       socket.on('updateMessageGagnant', ({ message }) => {
         if (gagnantEcran.style.display === 'block') {
           document.getElementById('gagnant-chat-message').textContent = `"${message}"`;
         }
       });
 
-      // Confirmation que le gagnant a bien écrit "vouch"
       socket.on('vouchConfirme', () => {
         vouchStatusEl.textContent = '✅ Vouch confirmé';
         vouchStatusEl.classList.add('confirme');
@@ -583,7 +588,7 @@
 
       if (isDemo) {
         document.getElementById('global-vouch-count').textContent = '128';
-        const dureeDemo = 15; // secondes
+        const dureeDemo = 15;
 
         function etatFauxEnchere(tempsRestantMs) {
           return {
@@ -659,7 +664,9 @@
       }
     }
 
-    if (!isDemo) socket.emit('rejoindre', { pseudo, apiKey });
+    if (!isDemo && pseudo) {
+      socket.emit('rejoindre', { pseudo, apiKey });
+    }
   </script>
 </body>
 </html>

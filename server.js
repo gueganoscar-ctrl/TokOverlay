@@ -136,8 +136,12 @@ app.get('/encheres/:username', (req, res) => {
 const connexionsActives = {};
 
 function demarrerEcouteLive(pseudo, apiKey) {
-  if (connexionsActives[pseudo]) return;
+  if (connexionsActives[pseudo]) {
+    console.log(`ℹ️ [LIVE] Écoute déjà active pour @${pseudo}`);
+    return;
+  }
 
+  console.log(`🔌 [LIVE] Connexion à TikTok Live pour @${pseudo}...`);
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
   const data = {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
@@ -145,7 +149,10 @@ function demarrerEcouteLive(pseudo, apiKey) {
   };
   connexionsActives[pseudo] = data;
 
-  connection.connect().catch(err => {
+  connection.connect().then(() => {
+    console.log(`✅ [LIVE] Connecté avec succès au live de @${pseudo}`);
+  }).catch(err => {
+    console.error(`❌ [LIVE ERROR] Échec de connexion pour @${pseudo} :`, err.message);
     io.to(pseudo).emit('erreurConnexion', "Impossible de se connecter au live.");
     delete connexionsActives[pseudo];
   });
@@ -194,7 +201,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Message du gagnant après la fin de l'enchère : retransmis en direct à l'overlay
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
       io.to(pseudo).emit('updateMessageGagnant', { message });
 
@@ -207,11 +213,14 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('disconnect', () => {
+    console.warn(`⚠️ [LIVE] Déconnexion du live de @${pseudo}`);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
+  
   connection.on('streamEnd', () => {
+    console.log(`🛑 [LIVE] Fin du live de @${pseudo}`);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
@@ -228,7 +237,7 @@ function sauvegarderHistoriqueLive(pseudo) {
   const totalLikes = likers.reduce((s, l) => s + l.likes, 0);
   const topDonateur = gifters.sort((a, b) => b.coins - a.coins)[0] || null;
 
-  if (totalDiamants === 0 && totalLikes === 0) return; // rien à sauvegarder
+  if (totalDiamants === 0 && totalLikes === 0) return;
 
   db.collection('historique_lives').insertOne({
     pseudo,
@@ -249,6 +258,7 @@ function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
     finTimestamp: Date.now() + dureeSecondes * 1000, dons: {}, minuteur: null,
     totalDiamantsEnchere: 0
   };
+  console.log(`⚖️ [ENCHERE] Démarrage pour @${pseudo} (${dureeSecondes}s)`);
   programmerTransitionOuFin(pseudo);
   io.to(pseudo).emit('enchereDemarree', etatEnchere(pseudo));
 }
@@ -281,20 +291,32 @@ function etatEnchere(pseudo) {
 }
 
 function programmerTransitionOuFin(pseudo) {
-  const enchere = connexionsActives[pseudo]?.enchere;
-  if (!enchere) return;
+  const data = connexionsActives[pseudo];
+  if (!data || !data.enchere) return;
+  const enchere = data.enchere;
+  
   if (enchere.minuteur) clearTimeout(enchere.minuteur);
   const delai = Math.max(enchere.finTimestamp - Date.now(), 0);
+  
+  // Robustesse : sécurité anti-blocage (si le délai est aberrant, on force 1s)
+  const delaiSecurise = (isNaN(delai) || delai < 0) ? 1000 : delai;
+
   enchere.minuteur = setTimeout(() => {
+    // Vérification de sécurité au déclenchement du timeout
+    const currentData = connexionsActives[pseudo];
+    if (!currentData || !currentData.enchere || !currentData.enchere.actif) return;
+
     if (enchere.phase === 'timer') {
+      console.log(`⚡ [ENCHERE] Passage en phase Snipe pour @${pseudo}`);
       enchere.phase = 'snipe';
       enchere.finTimestamp = Date.now() + enchere.snipeMs;
       io.to(pseudo).emit('updateEnchere', etatEnchere(pseudo));
       programmerTransitionOuFin(pseudo);
     } else {
+      console.log(`🏁 [ENCHERE] Fin de l'enchère pour @${pseudo}`);
       terminerEnchere(pseudo);
     }
-  }, delai);
+  }, delaiSecurise);
 }
 
 function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
@@ -313,6 +335,7 @@ function terminerEnchere(pseudo) {
   const donsValides = Object.values(enchere.dons).filter(don => don.coins >= enchere.miseMinimale).sort((a, b) => b.coins - a.coins);
   
   if (donsValides.length >= 2 && donsValides[0].coins === donsValides[1].coins) {
+    console.log(`⚔️ [ENCHERE] Égalité détectée pour @${pseudo}, prolongation de 30s`);
     enchere.phase = 'timer';
     enchere.finTimestamp = Date.now() + 30000;
     io.to(pseudo).emit('egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
@@ -351,6 +374,7 @@ io.on('connection', socket => {
   socket.on('rejoindre', async ({ pseudo, apiKey }) => {
     if (!pseudo) return;
     socket.join(pseudo);
+    console.log(`🔗 [SOCKET] Un client a rejoint la room : @${pseudo}`);
 
     let cleAUtiliser = apiKey;
     if (db) {
