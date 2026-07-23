@@ -88,7 +88,6 @@ async function connectMongo() {
 }
 connectMongo();
 
-// VALIDATION STRICTE DU PSEUDO
 function normalizePseudo(value) {
   if (typeof value !== 'string') throw new Error('Pseudo invalide.');
   const pseudo = value.replace(/^@/, '').trim().toLowerCase();
@@ -102,7 +101,6 @@ function safeText(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
-// VALIDATION STRICTE DES ENTIERS AVEC BORNES
 function strictInteger(value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
   const number = typeof value === 'number' ? value : Number(value);
   if (!Number.isSafeInteger(number) || number < min || number > max) {
@@ -442,10 +440,6 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
       return res.status(403).json({ error: "Accès refusé." });
     }
 
-    if (!connexionsActives[pseudo] && db) {
-      const user = await db.collection('users').findOne({ pseudo });
-      if (user) demarrerEcouteLive(pseudo, user.apiKey);
-    }
     const data = connexionsActives[pseudo];
     const isOnline = data && data.connection && data.connection.isConnected;
     res.json({ online: !!isOnline });
@@ -520,8 +514,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     closed: false,
     historySaved: false,
     refreshTimer: null,
-    likers: {}, 
-    gifters: {}, 
+    likers: Object.create(null), 
+    gifters: Object.create(null), 
     enchere: null, 
     bestGift: null,
     debutLive: new Date(), 
@@ -722,7 +716,7 @@ function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
   const enchere = {
     actif: true, phase: 'timer',
     snipeMs: snipeSecondes * 1000, miseMinimale: miseMinimale || 0,
-    finTimestamp: Date.now() + dureeSecondes * 1000, dons: {}, minuteur: null,
+    finTimestamp: Date.now() + dureeSecondes * 1000, dons: Object.create(null), minuteur: null,
     totalDiamantsEnchere: 0
   };
   data.enchere = enchere;
@@ -833,7 +827,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS (Sécurisées par tokens uniquement)
+// GESTION DES WEBSOCKETS
 // ----------------------------------------------------
 
 io.on('connection', socket => {
@@ -886,7 +880,10 @@ io.on('connection', socket => {
       if (!canManage(user, pseudoNettoye)) return;
       const data = connexionsActives[pseudoNettoye];
       if (data && Array.isArray(options)) {
-        data.roue.options = options.map(opt => safeText(opt)).filter(Boolean);
+        data.roue.options = options
+          .slice(0, 20)
+          .map(opt => safeText(opt).slice(0, 80))
+          .filter(Boolean);
       }
     } catch {}
   });

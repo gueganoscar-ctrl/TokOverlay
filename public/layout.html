@@ -152,17 +152,16 @@
     const widgetsList = widgetsParam.split(',');
     const layoutMode = params.get('layout') || 'row';
     const style = params.get('style') || '1';
+    const token = params.get('token');
     const isDemo = params.get('demo') === '1';
 
     document.body.className = `style-${style} layout-${layoutMode}`;
 
-    // Activer l'affichage des widgets sélectionnés
     widgetsList.forEach(w => {
       const el = document.getElementById(`widget-${w}`);
       if (el) el.style.display = 'flex';
     });
 
-    // Sécurité: Refonte pour prévenir les failles XSS en utilisant le DOM natif
     function creerCarteJoueur(user, rank, emoji) {
       const carte = document.createElement('div');
       carte.className = `carte-joueur rank-${rank}`;
@@ -185,7 +184,7 @@
       
       const nickname = document.createElement('span');
       nickname.className = 'nickname';
-      nickname.textContent = user.nickname; // Echappement natif des chevrons et scripts XSS
+      nickname.textContent = user.nickname;
       
       const valeur = document.createElement('span');
       valeur.className = 'valeur';
@@ -199,7 +198,13 @@
 
     const socket = io();
     socket.on('connect', () => {
-      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, apiKey: params.get('key') });
+      if (pseudo && !isDemo) {
+        socket.emit('rejoindre', { pseudo, token }, response => {
+          if (response && !response.ok) {
+            console.error(response.error || 'Erreur de connexion WebSocket.');
+          }
+        });
+      }
     });
 
     socket.on('updateTopGifters', top3 => {
@@ -279,10 +284,10 @@
       document.getElementById('bg-pseudo').textContent = 'Mia.Star';
       
       const fakeGifters = document.getElementById('list-donateurs');
-      fakeGifters.appendChild(creerCarteJoueur({ nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', val: 1200 }, 1, '💎 '));
+      if (fakeGifters) fakeGifters.appendChild(creerCarteJoueur({ nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', val: 1200 }, 1, '💎 '));
       
       const fakeLikers = document.getElementById('list-likers');
-      fakeLikers.appendChild(creerCarteJoueur({ nickname: 'Max_Fan', profilePictureUrl: 'https://ui-avatars.com/api/?name=Max', val: 3450 }, 1, '❤️ '));
+      if (fakeLikers) fakeLikers.appendChild(creerCarteJoueur({ nickname: 'Max_Fan', profilePictureUrl: 'https://ui-avatars.com/api/?name=Max', val: 3450 }, 1, '❤️ '));
       
       document.getElementById('coffre-cases-grid').innerHTML = '<div class="case-char devoile">7</div><div class="case-char">?</div><div class="case-char">?</div>';
       document.getElementById('coffre-recompense-texte').textContent = 'Récompense : 1 Abo Offert';
