@@ -25,7 +25,6 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   throw new Error("FATAL ERROR: SESSION_SECRET est manquant dans l'environnement de production !");
 }
 
-// Clé secrète pour signer les jetons OBS (générée automatiquement si absente)
 const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 const sessionMiddleware = session({
@@ -66,7 +65,6 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Fonctions de normalisation et de sécurité
 function normalizePseudo(value) {
   if (typeof value !== 'string') return '';
   return value.replace('@', '').trim().toLowerCase();
@@ -80,9 +78,8 @@ function canManage(user, pseudo) {
   return Boolean(user && (isAdmin(user) || user.pseudo === pseudo));
 }
 
-// Gestion des jetons sécurisés pour les overlays OBS
 function signOverlayToken(pseudo) {
-  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7); // Valide 7 jours
+  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7);
   const payload = Buffer.from(JSON.stringify({ pseudo, expiresAt })).toString('base64url');
   const signature = crypto
     .createHmac('sha256', OVERLAY_TOKEN_SECRET)
@@ -185,14 +182,12 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Sécurité : Ne renvoie plus la clé API brute dans /api/me
 app.get('/api/me', async (req, res) => {
   if (!req.session.user || !db) return res.status(401).json({ error: 'Non connecté' });
   try {
     const userDb = await db.collection('users').findOne({ email: req.session.user.email });
     if (!userDb) return res.status(401).json({ error: 'Utilisateur introuvable' });
 
-    // Génération d'un token sécurisé pour les liens OBS du client
     const overlayToken = signOverlayToken(userDb.pseudo);
 
     res.json({
@@ -352,66 +347,95 @@ app.get('/api/live-stats/:pseudo', (req, res) => {
 });
 
 // ----------------------------------------------------
-// GESTION DU LIVE TIKTOK (TIKTOK LIVE CONNECTOR)
+// GESTION DU LIVE TIKTOK (TIKTOK LIVE CONNECTOR SÉCURISÉE)
 // ----------------------------------------------------
 
 const connexionsActives = {};
+
+function arreterEcouteLive(pseudo, data, reason) {
+  if (connexionsActives[pseudo] !== data || data.closed) return;
+
+  data.closed = true;
+  clearInterval(data.refreshTimer);
+
+  if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+  if (!data.historySaved) {
+    data.historySaved = true;
+    sauvegarderHistoriqueLive(pseudo, data);
+  }
+
+  try {
+    data.connection.removeAllListeners();
+    if (typeof data.connection.disconnect === 'function') {
+      data.connection.disconnect();
+    }
+  } catch {}
+
+  delete connexionsActives[pseudo];
+  io.to(`streamer:${pseudo}`).emit('liveArrete', { reason });
+}
 
 function demarrerEcouteLive(pseudo, apiKey) {
   if (connexionsActives[pseudo]) return;
 
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
   const data = {
-    connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
-    debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
+    connection,
+    closed: false,
+    historySaved: false,
+    refreshTimer: null,
+    likers: {}, 
+    gifters: {}, 
+    enchere: null, 
+    bestGift: null,
+    debutLive: new Date(), 
+    derniereGagnantId: null, 
+    vouchFait: false, 
+    objectif: null,
     roue: { active: false, options: ["Gage 1", "Gage 2", "100 Diamants", "Rien", "Boost x2"] },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
 
-  const boucleActualisation = setInterval(() => {
-    if (!connexionsActives[pseudo]) {
-      clearInterval(boucleActualisation);
+  data.refreshTimer = setInterval(() => {
+    if (connexionsActives[pseudo] !== data || data.closed) {
+      clearInterval(data.refreshTimer);
       return;
     }
     const p = data.pendingUpdates;
 
     if (p.likers) {
-      io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
+      io.to(`streamer:${pseudo}`).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
       p.likers = false;
     }
     if (p.gifters) {
-      io.to(pseudo).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
+      io.to(`streamer:${pseudo}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
       p.gifters = false;
     }
     if (p.stats) {
       const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
       const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
-      io.to(pseudo).emit('updateStatsLive', { totalDiamonds, totalLikes });
+      io.to(`streamer:${pseudo}`).emit('updateStatsLive', { totalDiamonds, totalLikes });
       p.stats = false;
     }
     if (p.objectif && data.objectif) {
-      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+      io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
       p.objectif = false;
     }
   }, 2000); 
 
-  connection.connect().catch(err => {
-    io.to(pseudo).emit('erreurConnexion', "Impossible de se connecter au live.");
-    clearInterval(boucleActualisation);
-    delete connexionsActives[pseudo];
+  connection.connect().catch(() => {
+    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live.");
+    arreterEcouteLive(pseudo, data, 'connect_error');
   });
 
-  connection.on('error', err => {
-    console.error(`[TikTok] Erreur fatale pour ${pseudo}:`, err.message || err);
-    sauvegarderHistoriqueLive(pseudo);
-    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); 
-    delete connexionsActives[pseudo];
+  connection.once('error', () => {
+    arreterEcouteLive(pseudo, data, 'error');
   });
 
   connection.on('like', d => {
+    if (data.closed) return;
     const id = d.user?.displayId || 'inconnu';
     const nickname = d.user?.nickname || 'Anonyme';
     const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
@@ -425,6 +449,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('gift', d => {
+    if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
     const id = d.user?.displayId || d.uniqueId || 'inconnu';
     const nickname = d.user?.nickname || d.nickname || 'Anonyme';
@@ -442,19 +467,19 @@ function demarrerEcouteLive(pseudo, apiKey) {
         { pseudo: pseudo },
         { $inc: { totalDiamantsGlobal: totalPieces } },
         { upsert: true }
-      ).catch(err => console.error("Erreur cumul diamants globaux :", err));
+      ).catch(() => {});
     }
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
     if (totalPieces >= 10 && data.roue && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(pseudo).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
+      io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
     
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
-      io.to(pseudo).emit('updateBestGift', data.bestGift); 
+      io.to(`streamer:${pseudo}`).emit('updateBestGift', data.bestGift); 
     }
 
     data.pendingUpdates.gifters = true;
@@ -463,13 +488,13 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('chat', d => {
+    if (data.closed) return;
     const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
     const nickname = d.nickname || d.user?.nickname || 'Anonyme';
     const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    
     const message = d.comment || d.text || d.message || d.msg || d.content || '';
 
-    io.to(pseudo).emit('chatEnDirect', { nickname, avatar, message });
+    io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname, avatar, message });
 
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
@@ -483,38 +508,27 @@ function demarrerEcouteLive(pseudo, apiKey) {
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
         
-        io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo)); 
-        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo)); 
+        io.to(`streamer:${pseudo}`).emit('updateCoffre', etatCoffrePublic(pseudo)); 
+        io.to(`streamer:${pseudo}`).emit('coffreOuvert', etatCoffrePublic(pseudo)); 
       }
     } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
       data.coffre.dernierMessageGagnant = message;
-      io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); 
+      io.to(`streamer:${pseudo}`).emit('updateMessageGagnantCoffre', { message }); 
     }
 
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
-      io.to(pseudo).emit('updateMessageGagnant', { message });
+      io.to(`streamer:${pseudo}`).emit('updateMessageGagnant', { message });
 
       if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
         data.vouchFait = true;
         incrementerVouchGlobal();
-        io.to(pseudo).emit('vouchConfirme', {});
+        io.to(`streamer:${pseudo}`).emit('vouchConfirme', {});
       }
     }
   });
 
-  connection.on('disconnect', () => {
-    sauvegarderHistoriqueLive(pseudo);
-    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); 
-    delete connexionsActives[pseudo];
-  });
-  
-  connection.on('streamEnd', () => {
-    sauvegarderHistoriqueLive(pseudo);
-    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    clearInterval(boucleActualisation); 
-    delete connexionsActives[pseudo];
-  });
+  connection.once('disconnect', () => arreterEcouteLive(pseudo, data, 'disconnect'));
+  connection.once('streamEnd', () => arreterEcouteLive(pseudo, data, 'streamEnd'));
 }
 
 function etatCoffrePublic(pseudo) {
@@ -532,8 +546,8 @@ function etatCoffrePublic(pseudo) {
   };
 }
 
-function sauvegarderHistoriqueLive(pseudo) {
-  const data = connexionsActives[pseudo];
+function sauvegarderHistoriqueLive(pseudo, customData = null) {
+  const data = customData || connexionsActives[pseudo];
   if (!data || !db) return;
 
   const gifters = Object.values(data.gifters);
@@ -551,20 +565,23 @@ function sauvegarderHistoriqueLive(pseudo) {
     totalDiamants,
     totalLikes,
     topDonateur: topDonateur ? { nickname: topDonateur.nickname, coins: topDonateur.coins } : null
-  }).catch(err => console.error("Erreur sauvegarde historique live :", err));
+  }).catch(() => {});
 }
 
 function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
   const data = connexionsActives[pseudo];
   if (!data) return;
-  data.enchere = {
+  if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+
+  const enchere = {
     actif: true, phase: 'timer',
     snipeMs: snipeSecondes * 1000, miseMinimale: miseMinimale || 0,
     finTimestamp: Date.now() + dureeSecondes * 1000, dons: {}, minuteur: null,
     totalDiamantsEnchere: 0
   };
-  programmerTransitionOuFin(pseudo);
-  io.to(pseudo).emit('enchereDemarree', etatEnchere(pseudo));
+  data.enchere = enchere;
+  programmerTransitionOuFin(pseudo, enchere);
+  io.to(`streamer:${pseudo}`).emit('enchereDemarree', etatEnchere(pseudo));
 }
 
 function etatObjectif(pseudo) {
@@ -594,28 +611,26 @@ function etatEnchere(pseudo) {
   };
 }
 
-function programmerTransitionOuFin(pseudo) {
+function programmerTransitionOuFin(pseudo, enchere) {
   const data = connexionsActives[pseudo];
-  if (!data || !data.enchere) return;
-  const enchere = data.enchere;
+  if (!data || !data.enchere || data.enchere !== enchere) return;
   
   if (enchere.minuteur) clearTimeout(enchere.minuteur);
   const delai = Math.max(enchere.finTimestamp - Date.now(), 0);
-  const delaiSecurise = (isNaN(delai) || delai < 0) ? 1000 : delai;
 
   enchere.minuteur = setTimeout(() => {
     const currentData = connexionsActives[pseudo];
-    if (!currentData || !currentData.enchere || !currentData.enchere.actif) return;
+    if (!currentData || currentData.enchere !== enchere || !enchere.actif) return;
 
     if (enchere.phase === 'timer') {
       enchere.phase = 'snipe';
       enchere.finTimestamp = Date.now() + enchere.snipeMs;
-      io.to(pseudo).emit('updateEnchere', etatEnchere(pseudo));
-      programmerTransitionOuFin(pseudo);
+      io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
+      programmerTransitionOuFin(pseudo, enchere);
     } else {
       terminerEnchere(pseudo);
     }
-  }, delaiSecurise);
+  }, isNaN(delai) || delai < 0 ? 1000 : delai);
 }
 
 function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
@@ -624,7 +639,7 @@ function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
   if (!enchere.dons[id]) enchere.dons[id] = { id, nickname, profilePictureUrl: avatar, coins: 0, dernierMessageChat: '' };
   enchere.dons[id].coins += totalPieces;
   enchere.totalDiamantsEnchere += totalPieces;
-  io.to(pseudo).emit('updateEnchere', etatEnchere(pseudo));
+  io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
 }
 
 function terminerEnchere(pseudo) {
@@ -636,9 +651,9 @@ function terminerEnchere(pseudo) {
   if (donsValides.length >= 2 && donsValides[0].coins === donsValides[1].coins) {
     enchere.phase = 'timer';
     enchere.finTimestamp = Date.now() + 30000;
-    io.to(pseudo).emit('egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
-    programmerTransitionOuFin(pseudo);
-    io.to(pseudo).emit('updateEnchere', etatEnchere(pseudo));
+    io.to(`streamer:${pseudo}`).emit('egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
+    programmerTransitionOuFin(pseudo, enchere);
+    io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
     return;
   }
 
@@ -658,10 +673,10 @@ function terminerEnchere(pseudo) {
       gagnant: gagnant ? { nickname: gagnant.nickname, coins: gagnant.coins } : null,
       totalDiamantsEnchere: enchere.totalDiamantsEnchere,
       classement: donsValides.slice(0, 3).map(u => ({ nickname: u.nickname, coins: u.coins }))
-    }).catch(err => console.error("Erreur sauvegarde historique enchère :", err));
+    }).catch(() => {});
   }
 
-  io.to(pseudo).emit('enchereTerminee', { 
+  io.to(`streamer:${pseudo}`).emit('enchereTerminee', { 
     gagnant, 
     classement: donsValides.slice(0, 3),
     totalDiamantsEnchere: enchere.totalDiamantsEnchere 
@@ -669,7 +684,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// GESTION DES WEBSOCKETS (CLIENT-SERVEUR)
+// GESTION DES WEBSOCKETS (SÉCURISÉS PAR ROOM PRÉFIXÉE)
 // ----------------------------------------------------
 
 io.on('connection', socket => {
@@ -689,21 +704,15 @@ io.on('connection', socket => {
         return;
       }
 
-      // Autorisation acceptée si : 
-      // 1. C'est l'admin
-      // 2. C'est le propriétaire connecté via sa session (dashboards, panels, etc.)
-      // 3. C'est un overlay OBS muni d'un jeton valide
-      // 4. (Fallback compatibilité) La clé API correspond
-      if (!estAdmin && !estProprietaireConnecte && !tokenValide && utilisateur.apiKey !== apiKey) {
+      if (!estAdmin && !tokenValide && (!estProprietaireConnecte || utilisateur.apiKey !== apiKey)) {
         socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
         return;
       }
       
-      const cleApiUtilisee = utilisateur.apiKey;
-      socket.join(pseudoNettoye);
-      demarrerEcouteLive(pseudoNettoye, cleApiUtilisee);
+      socket.join(`streamer:${pseudoNettoye}`);
+      demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
     } else {
-      socket.join(pseudoNettoye);
+      socket.join(`streamer:${pseudoNettoye}`);
       demarrerEcouteLive(pseudoNettoye, apiKey);
     }
     
@@ -732,7 +741,7 @@ io.on('connection', socket => {
     const data = connexionsActives[pseudoNettoye];
     if (data && data.roue && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(pseudoNettoye).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+      io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
     }
   });
 
@@ -765,7 +774,7 @@ io.on('connection', socket => {
       metrique: metrique === 'likes' ? 'likes' : 'diamants',
       label: (label || '').trim().slice(0, 60) || 'Objectif du live'
     };
-    io.to(pseudoNettoye).emit('updateObjectif', etatObjectif(pseudoNettoye));
+    io.to(`streamer:${pseudoNettoye}`).emit('updateObjectif', etatObjectif(pseudoNettoye));
   });
 
   socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
@@ -784,7 +793,7 @@ io.on('connection', socket => {
       gagnant: null,
       dernierMessageGagnant: ''
     };
-    io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+    io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
   });
 
   socket.on('devoilerCharHasard', ({ pseudo }) => {
@@ -798,7 +807,7 @@ io.on('connection', socket => {
     if (indicesNonDevoiles.length > 0) {
       const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
       coffre.devoiles[idxChoisi] = true;
-      io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     }
   });
 
@@ -812,7 +821,7 @@ io.on('connection', socket => {
     const idxArr = parseInt(index, 10) - 1;
     if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
       coffre.devoiles[idxArr] = true;
-      io.to(pseudoNettoye).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
     }
   });
 });
