@@ -33,7 +33,6 @@ io.use((socket, next) => {
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 
-// Compteur global de vouchs (partagé entre tous les utilisateurs de TokOverlay)
 let vouchesGlobalCount = 0;
 
 async function connectMongo() {
@@ -136,24 +135,17 @@ app.get('/encheres/:username', (req, res) => {
 const connexionsActives = {};
 
 function demarrerEcouteLive(pseudo, apiKey) {
-  if (connexionsActives[pseudo]) {
-    console.log(`ℹ️ [LIVE] Écoute déjà active pour @${pseudo}`);
-    return;
-  }
+  if (connexionsActives[pseudo]) return;
 
-  console.log(`🔌 [LIVE] Connexion à TikTok Live pour @${pseudo}...`);
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
   const data = {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
     debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
-    coffre: { actif: false, secret: '', recompense: '', gagnant: null }
+    coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' }
   };
   connexionsActives[pseudo] = data;
 
-  connection.connect().then(() => {
-    console.log(`✅ [LIVE] Connecté avec succès au live de @${pseudo}`);
-  }).catch(err => {
-    console.error(`❌ [LIVE ERROR] Échec de connexion pour @${pseudo} :`, err.message);
+  connection.connect().catch(err => {
     io.to(pseudo).emit('erreurConnexion', "Impossible de se connecter au live.");
     delete connexionsActives[pseudo];
   });
@@ -165,9 +157,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
     data.likers[id].likes += d.count || 1;
     io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
-    if (data.objectif && data.objectif.metrique === 'likes') {
-      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
-    }
+    if (data.objectif && data.objectif.metrique === 'likes') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
   });
 
   connection.on('gift', d => {
@@ -189,10 +179,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
       io.to(pseudo).emit('updateBestGift', data.bestGift);
     }
-
-    if (data.objectif && data.objectif.metrique === 'diamants') {
-      io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
-    }
+    if (data.objectif && data.objectif.metrique === 'diamants') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
   });
 
   connection.on('chat', d => {
@@ -201,20 +188,21 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     const message = d.comment || '';
 
-    // Diffuser le message pour la zone de chat dédiée du coffre-fort
-    io.to(pseudo).emit('nouveauMessageChat', { nickname, message, avatar });
-
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
-    // Logique du mini-jeu du coffre-fort
+    // Détection de la victoire du Coffre-Fort
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
-        data.coffre.gagnant = { nickname, avatar, message };
+        data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
-        io.to(pseudo).emit('coffreOuvert', data.coffre);
+        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo));
       }
+    } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
+      // Retransmettre uniquement les messages du gagnant du coffre
+      data.coffre.dernierMessageGagnant = message;
+      io.to(pseudo).emit('updateMessageGagnantCoffre', { message });
     }
 
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
@@ -229,18 +217,31 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('disconnect', () => {
-    console.warn(`⚠️ [LIVE] Déconnexion du live de @${pseudo}`);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
   
   connection.on('streamEnd', () => {
-    console.log(`🛑 [LIVE] Fin du live de @${pseudo}`);
     sauvegarderHistoriqueLive(pseudo);
     if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
     delete connexionsActives[pseudo];
   });
+}
+
+function etatCoffrePublic(pseudo) {
+  const coffre = connexionsActives[pseudo]?.coffre;
+  if (!coffre) return null;
+  return {
+    actif: coffre.actif,
+    longueur: coffre.secret.length,
+    devoiles: coffre.devoiles, // Ex: [true, false, false, true]
+    caracteres: coffre.secret.split('').map((char, index) => coffre.devoiles[index] ? char : '_'),
+    recompense: coffre.recompense,
+    gagnant: coffre.gagnant,
+    dernierMessageGagnant: coffre.dernierMessageGagnant,
+    secretComplet: coffre.gagnant ? coffre.secret : null
+  };
 }
 
 function sauvegarderHistoriqueLive(pseudo) {
@@ -274,7 +275,6 @@ function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
     finTimestamp: Date.now() + dureeSecondes * 1000, dons: {}, minuteur: null,
     totalDiamantsEnchere: 0
   };
-  console.log(`⚖️ [ENCHERE] Démarrage pour @${pseudo} (${dureeSecondes}s)`);
   programmerTransitionOuFin(pseudo);
   io.to(pseudo).emit('enchereDemarree', etatEnchere(pseudo));
 }
@@ -313,7 +313,6 @@ function programmerTransitionOuFin(pseudo) {
   
   if (enchere.minuteur) clearTimeout(enchere.minuteur);
   const delai = Math.max(enchere.finTimestamp - Date.now(), 0);
-  
   const delaiSecurise = (isNaN(delai) || delai < 0) ? 1000 : delai;
 
   enchere.minuteur = setTimeout(() => {
@@ -321,13 +320,11 @@ function programmerTransitionOuFin(pseudo) {
     if (!currentData || !currentData.enchere || !currentData.enchere.actif) return;
 
     if (enchere.phase === 'timer') {
-      console.log(`⚡ [ENCHERE] Passage en phase Snipe pour @${pseudo}`);
       enchere.phase = 'snipe';
       enchere.finTimestamp = Date.now() + enchere.snipeMs;
       io.to(pseudo).emit('updateEnchere', etatEnchere(pseudo));
       programmerTransitionOuFin(pseudo);
     } else {
-      console.log(`🏁 [ENCHERE] Fin de l'enchère pour @${pseudo}`);
       terminerEnchere(pseudo);
     }
   }, delaiSecurise);
@@ -349,7 +346,6 @@ function terminerEnchere(pseudo) {
   const donsValides = Object.values(enchere.dons).filter(don => don.coins >= enchere.miseMinimale).sort((a, b) => b.coins - a.coins);
   
   if (donsValides.length >= 2 && donsValides[0].coins === donsValides[1].coins) {
-    console.log(`⚔️ [ENCHERE] Égalité détectée pour @${pseudo}, prolongation de 30s`);
     enchere.phase = 'timer';
     enchere.finTimestamp = Date.now() + 30000;
     io.to(pseudo).emit('egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
@@ -388,16 +384,11 @@ io.on('connection', socket => {
   socket.on('rejoindre', async ({ pseudo, apiKey }) => {
     if (!pseudo) return;
     socket.join(pseudo);
-    console.log(`🔗 [SOCKET] Un client a rejoint la room : @${pseudo}`);
 
     let cleAUtiliser = apiKey;
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo });
-      if (!utilisateur) {
-        socket.emit('erreurConnexion', "Ce pseudo n'est pas enregistré sur TokOverlay.");
-        return;
-      }
-      cleAUtiliser = utilisateur.apiKey;
+      if (utilisateur) cleAUtiliser = utilisateur.apiKey;
     }
 
     demarrerEcouteLive(pseudo, cleAUtiliser);
@@ -405,25 +396,19 @@ io.on('connection', socket => {
     if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
     if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
     if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudo));
-    if (data && data.coffre) socket.emit('updateCoffre', data.coffre);
+    if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudo));
     socket.emit('initVouch', { vouches: vouchesGlobalCount });
   });
 
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) {
-      socket.emit('erreurConnexion', "Non autorisé à démarrer une enchère pour ce compte.");
-      return;
-    }
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
     if (connexionsActives[pseudo]) demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale);
   });
 
   socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) {
-      socket.emit('erreurConnexion', "Non autorisé à définir un objectif pour ce compte.");
-      return;
-    }
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
     const data = connexionsActives[pseudo];
     if (!data) return;
 
@@ -438,37 +423,63 @@ io.on('connection', socket => {
     io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
   });
 
+  // Lancement du coffre avec tableau de masquage des cases
   socket.on('configurerCoffre', ({ pseudo, secret, recompense }) => {
     const utilisateurConnecte = socket.request.session?.user;
-    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) {
-      socket.emit('erreurConnexion', "Non autorisé à configurer le coffre pour ce compte.");
-      return;
-    }
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
     const data = connexionsActives[pseudo];
     if (!data) return;
 
+    const cleanSecret = secret.trim();
     data.coffre = {
       actif: true,
-      secret: secret.trim(),
+      secret: cleanSecret,
+      devoiles: new Array(cleanSecret.length).fill(false),
       recompense: recompense.trim(),
-      gagnant: null
+      gagnant: null,
+      dernierMessageGagnant: ''
     };
-    io.to(pseudo).emit('updateCoffre', data.coffre);
+    io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+  });
+
+  // Dévoiler un caractère au hasard
+  socket.on('devoilerCharHasard', ({ pseudo }) => {
+    const utilisateurConnecte = socket.request.session?.user;
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    const coffre = connexionsActives[pseudo]?.coffre;
+    if (!coffre || !coffre.actif) return;
+
+    const indicesNonDevoiles = coffre.devoiles.map((dev, idx) => dev ? -1 : idx).filter(idx => idx !== -1);
+    if (indicesNonDevoiles.length > 0) {
+      const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
+      coffre.devoiles[idxChoisi] = true;
+      io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+    }
+  });
+
+  // Dévoiler un caractère à un index spécifique (1-indexed)
+  socket.on('devoilerCharIndex', ({ pseudo, index }) => {
+    const utilisateurConnecte = socket.request.session?.user;
+    if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
+    const coffre = connexionsActives[pseudo]?.coffre;
+    if (!coffre || !coffre.actif) return;
+
+    const idxArr = parseInt(index, 10) - 1;
+    if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
+      coffre.devoiles[idxArr] = true;
+      io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
+    }
   });
 });
 
 app.get('/api/historique/:pseudo', async (req, res) => {
   const pseudo = req.params.pseudo;
-  if (!req.session.user || req.session.user.pseudo !== pseudo) {
-    return res.status(401).json({ error: "Non autorisé" });
-  }
+  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
   if (!db) return res.json({ lives: [], encheres: [] });
 
   try {
-    const lives = await db.collection('historique_lives')
-      .find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
-    const encheres = await db.collection('historique_encheres')
-      .find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
+    const lives = await db.collection('historique_lives').find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
+    const encheres = await db.collection('historique_encheres').find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
     res.json({ lives, encheres });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });

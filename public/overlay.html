@@ -82,7 +82,6 @@
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
     }
 
-    /* --- STYLES LEADERBOARD --- */
     body.style-1 .carte-joueur {
       background: rgba(16, 15, 20, 0.85);
       border: 1px solid rgba(34, 229, 224, 0.3);
@@ -278,7 +277,7 @@
 
 
     /* ==========================================
-       5. WIDGET COFFRE-FORT & CHAT DÉDIÉ
+       5. WIDGET COFFRE-FORT & CASES MOTUS
        ========================================== */
     #coffre-panel {
       width: 320px; background: var(--bg-dark); border: 2px solid var(--gold); border-radius: 20px;
@@ -286,25 +285,31 @@
     }
     .coffre-header { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
     .coffre-icon { font-size: 28px; }
-    .coffre-recompense { font-size: 13px; color: #a1a1aa; font-weight: 600; background: #18181f; padding: 6px 12px; border-radius: 8px; border: 1px solid #29283a; }
-    
-    .chat-zone-dediee {
-      background: #15141b; border: 1px solid #29283a; border-radius: 12px; padding: 10px; max-height: 140px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; text-align: left;
+    .coffre-recompense { font-size: 12px; color: #a1a1aa; font-weight: 600; background: #18181f; padding: 6px 12px; border-radius: 8px; border: 1px solid #29283a; }
+
+    .coffre-cases-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+    .case-char {
+      width: 32px; height: 38px; background: #18181f; border: 2px solid #29283a; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; font-weight: 800; color: var(--gold); text-transform: uppercase;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
     }
-    .chat-msg-ligne { display: flex; align-items: center; gap: 8px; font-size: 12px; animation: fadeIn 0.2s ease-out; }
-    .chat-msg-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
-    .chat-msg-pseudo { font-weight: 700; color: var(--cyan); }
-    .chat-msg-texte { color: #f4f4f5; word-break: break-word; }
+    .case-char.devoile { border-color: var(--gold); background: rgba(255, 190, 61, 0.1); color: #ffffff; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-    .coffre-gagnant-box { background: rgba(52, 211, 153, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 12px; display: none; }
+    .coffre-gagnant-box { background: rgba(52, 211, 153, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 12px; display: none; text-align: center; }
     .coffre-gagnant-titre { font-size: 11px; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 4px; }
-    .coffre-gagnant-nom { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 800; color: white; }
+    .coffre-gagnant-profil { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .coffre-gagnant-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--success); }
+    .coffre-gagnant-nom { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: white; }
+
+    .gagnant-chat-container { background: #18181f; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: left; }
+    .gagnant-chat-title { font-size: 9px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 2px; }
+    .gagnant-chat-texte { font-size: 11px; color: #f4f4f5; font-style: italic; word-break: break-word; }
 
     body.style-2 #coffre-panel { border-radius: 8px; background: #121118; border-color: rgba(255, 190, 61, 0.4); }
     body.style-3 #coffre-panel { border-color: var(--fuchsia); box-shadow: 0 10px 30px rgba(254, 44, 85, 0.25); }
     body.style-3 .coffre-header { color: var(--fuchsia); }
+    body.style-3 .case-char { border-color: var(--fuchsia); color: var(--fuchsia); }
   </style>
 </head>
 <body>
@@ -340,14 +345,18 @@
     </div>
     <div class="coffre-recompense" id="coffre-recompense-texte">Récompense : --</div>
 
-    <div class="coffre-gagnant-box" id="coffre-gagnant-box">
-      <div class="coffre-gagnant-titre">🎉 Coffre Ouvert ! Gagnant :</div>
-      <div class="coffre-gagnant-nom" id="coffre-gagnant-nom">--</div>
-    </div>
+    <div class="coffre-cases-grid" id="coffre-cases-grid"></div>
 
-    <div style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase;">💬 Chat en direct (Propositions) :</div>
-    <div class="chat-zone-dediee" id="chat-zone-dediee">
-      <div style="color: #55555f; font-size: 11px; text-align: center; padding: 10px;">En attente de messages...</div>
+    <div class="coffre-gagnant-box" id="coffre-gagnant-box">
+      <div class="coffre-gagnant-titre">🎉 Coffre Ouvert !</div>
+      <div class="coffre-gagnant-profil">
+        <img class="coffre-gagnant-avatar" id="coffre-gagnant-avatar" src="" alt="">
+        <span class="coffre-gagnant-nom" id="coffre-gagnant-nom">--</span>
+      </div>
+      <div class="gagnant-chat-container">
+        <div class="gagnant-chat-title">💬 Message du gagnant :</div>
+        <div class="gagnant-chat-texte" id="coffre-gagnant-msg">En attente d'un message dans le chat...</div>
+      </div>
     </div>
   </div>
 
@@ -445,7 +454,7 @@
       const valeur = document.createElement('span');
       valeur.className = 'valeur';
       valeur.textContent = `${user.coins.toLocaleString()} 💎`;
-      info.append(nickname, valeur);
+      info.append(img, info);
 
       carte.append(img, info);
       return carte;
@@ -513,51 +522,69 @@
     if (type === 'coffre') {
       document.getElementById('coffre-panel').style.display = 'flex';
 
-      socket.on('updateCoffre', coffre => {
-        document.getElementById('coffre-icon-etat').textContent = '🔒';
-        document.getElementById('coffre-titre-texte').textContent = 'Coffre-Fort Verrouillé';
-        document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
-        document.getElementById('coffre-gagnant-box').style.display = 'none';
-      });
+      function afficherEtatCoffre(coffre) {
+        if (!coffre) return;
+        const grid = document.getElementById('coffre-cases-grid');
+        grid.innerHTML = '';
 
-      socket.on('coffreOuvert', coffre => {
-        document.getElementById('coffre-icon-etat').textContent = '🔓';
-        document.getElementById('coffre-titre-texte').textContent = 'Coffre Ouvert !';
-        document.getElementById('coffre-gagnant-box').style.display = 'block';
-        document.getElementById('coffre-gagnant-nom').textContent = `${coffre.gagnant.nickname} (Trouvé : "${coffre.secret}")`;
-      });
+        if (!coffre.gagnant) {
+          document.getElementById('coffre-icon-etat').textContent = '🔒';
+          document.getElementById('coffre-titre-texte').textContent = 'Coffre-Fort Verrouillé';
+          document.getElementById('coffre-gagnant-box').style.display = 'none';
 
-      socket.on('nouveauMessageChat', data => {
-        const zone = document.getElementById('chat-zone-dediee');
-        if (zone.children.length === 1 && zone.children[0].tagName === 'DIV' && zone.children[0].style.textAlign === 'center') {
-          zone.innerHTML = '';
-        }
-        const ligne = document.createElement('div');
-        ligne.className = 'chat-msg-ligne';
-        ligne.innerHTML = `
-          <img class="chat-msg-avatar" src="${data.avatar}">
-          <span class="chat-msg-pseudo">${data.nickname}:</span>
-          <span class="chat-msg-texte">${data.message}</span>
-        `;
-        zone.appendChild(ligne);
-        if (zone.children.length > 6) zone.removeChild(zone.children[0]);
-        zone.scrollTop = zone.scrollHeight;
-      });
-
-      if (isDemo) {
-        document.getElementById('coffre-recompense-texte').textContent = 'Récompense : 1 Abonnements Offert';
-        setTimeout(() => {
-          socket.emit('nouveauMessageChat', { nickname: 'Alex_Live', message: 'bonjour', avatar: 'https://ui-avatars.com/api/?name=Alex' });
-        }, 2000);
-        setTimeout(() => {
-          socket.emit('nouveauMessageChat', { nickname: 'Mia.Star', message: '777', avatar: 'https://ui-avatars.com/api/?name=Mia' });
-        }, 4000);
-        setTimeout(() => {
+          coffre.caracteres.forEach(char => {
+            const div = document.createElement('div');
+            div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
+            div.textContent = char !== '_' ? char : '?';
+            grid.appendChild(div);
+          });
+        } else {
           document.getElementById('coffre-icon-etat').textContent = '🔓';
           document.getElementById('coffre-titre-texte').textContent = 'Coffre Ouvert !';
           document.getElementById('coffre-gagnant-box').style.display = 'block';
-          document.getElementById('coffre-gagnant-nom').textContent = 'Mia.Star (Trouvé : "777")';
-        }, 6000);
+          
+          document.getElementById('coffre-gagnant-avatar').src = coffre.gagnant.avatar;
+          document.getElementById('coffre-gagnant-nom').textContent = coffre.gagnant.nickname;
+          if (coffre.dernierMessageGagnant) {
+            document.getElementById('coffre-gagnant-msg').textContent = `"${coffre.dernierMessageGagnant}"`;
+          }
+
+          const secret = coffre.secretComplet || '';
+          secret.split('').forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'case-char devoile';
+            div.textContent = char;
+            grid.appendChild(div);
+          });
+        }
+
+        document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
+      }
+
+      socket.on('updateCoffre', afficherEtatCoffre);
+      socket.on('coffreOuvert', afficherEtatCoffre);
+
+      socket.on('updateMessageGagnantCoffre', data => {
+        document.getElementById('coffre-gagnant-msg').textContent = `"${data.message}"`;
+      });
+
+      if (isDemo) {
+        afficherEtatCoffre({
+          actif: true,
+          recompense: '1 Abo Offert',
+          caracteres: ['7', '_', '_'],
+          gagnant: null
+        });
+
+        setTimeout(() => {
+          afficherEtatCoffre({
+            actif: false,
+            recompense: '1 Abo Offert',
+            secretComplet: '777',
+            gagnant: { nickname: 'Mia.Star', avatar: 'https://ui-avatars.com/api/?name=Mia' },
+            dernierMessageGagnant: 'Merci beaucoup pour le live !!'
+          });
+        }, 5000);
       }
     }
 

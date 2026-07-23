@@ -110,6 +110,9 @@
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo); }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+
+    .indices-controls { display: flex; gap: 10px; margin-top: 8px; }
+    .indices-controls input { width: 80px; text-align: center; }
   </style>
 </head>
 <body class="app-bg">
@@ -192,9 +195,9 @@
             <div class="widget-icon">🔐</div>
             <h3>Jeu du Coffre-Fort</h3>
           </div>
-          <p>Le chat doit deviner un mot ou un chiffre secret pour gagner une récompense.</p>
+          <p>Le chat doit deviner un mot ou un chiffre secret affiché sous forme de cases.</p>
         </div>
-        <span class="click-hint">Configurer le coffre & Obtenir le lien →</span>
+        <span class="click-hint">Configurer le coffre & Indices →</span>
       </div>
 
       <!-- Enchères -->
@@ -232,7 +235,7 @@
         <button class="close-btn" onclick="fermerPersonnalisation()">✕</button>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="style-selector-group">
         <label>Choisis ton style d'affichage :</label>
         <div class="styles-grid">
           <div class="style-option selected" id="opt-style-1" onclick="changerStyle(1)">
@@ -345,10 +348,14 @@
       document.getElementById('modal-title').innerHTML = `${icone} Personnaliser : ${titre}`;
       mettreAJourSelectionStyleUI();
 
+      const styleGroup = document.getElementById('style-selector-group');
       const extraDiv = document.getElementById('modal-extra-action');
+
       if (type === 'encheres') {
+        styleGroup.style.display = 'block';
         extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block; box-sizing: border-box;">Ouvrir le panneau de contrôle des enchères →</a>`;
       } else if (type === 'objectif') {
+        styleGroup.style.display = 'block';
         extraDiv.innerHTML = `
           <div class="form-group">
             <label>Métrique suivie</label>
@@ -367,32 +374,43 @@
           </div>
           <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Démarrer l'objectif sur ce live</button>
         `;
-        if (!socket) {
-          socket = io();
-          socket.on('connect', () => {
-            if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
-          });
-        }
       } else if (type === 'coffre') {
+        styleGroup.style.display = 'block';
         extraDiv.innerHTML = `
-          <div class="form-group" style="margin-top: 10px;">
-            <label>Chiffre ou mot secret à deviner</label>
-            <input type="text" id="coffre-secret-input" placeholder="ex: 777 ou victoires">
+          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;">
+            <h3 style="font-size: 14px; margin-bottom: 8px;">1. Configurer un nouveau coffre</h3>
+            <div class="form-group">
+              <label>Mot ou Chiffre secret</label>
+              <input type="text" id="coffre-secret-input" placeholder="ex: 777 ou victoires">
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label>Récompense offerte</label>
+              <input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo Offert">
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="lancerCoffreFort()">Lancer le jeu du coffre</button>
           </div>
-          <div class="form-group" style="margin-top: 10px;">
-            <label>Récompense offerte</label>
-            <input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo Offert">
+
+          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
+            <h3 style="font-size: 14px; margin-bottom: 8px;">2. Dévoiler des indices</h3>
+            <div class="indices-controls">
+              <button class="btn btn-secondary" style="flex:1;" onclick="devoilerHasard()">🎲 Dévoiler une case au hasard</button>
+            </div>
+            <div class="indices-controls" style="margin-top: 8px;">
+              <input type="number" id="char-index-input" min="1" placeholder="N° Case">
+              <button class="btn btn-secondary" style="flex:1;" onclick="devoilerIndex()">🔍 Dévoiler cette case</button>
+            </div>
           </div>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerCoffreFort()">Lancer le jeu du coffre</button>
         `;
-        if (!socket) {
-          socket = io();
-          socket.on('connect', () => {
-            if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
-          });
-        }
       } else {
+        styleGroup.style.display = 'block';
         extraDiv.innerHTML = '';
+      }
+
+      if (!socket && (type === 'objectif' || type === 'coffre')) {
+        socket = io();
+        socket.on('connect', () => {
+          if (pseudoGlobal) socket.emit('rejoindre', { pseudo: pseudoGlobal, apiKey: apiKeyGlobal });
+        });
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -440,7 +458,7 @@
     }
 
     function lancerCoffreFort() {
-      if (!socket || !pseudoGlobal) return;
+      if (!socket || !pseudoGlobal) socket = io();
       const secret = document.getElementById('coffre-secret-input').value;
       const recompense = document.getElementById('coffre-recompense-input').value;
       if (!secret || !recompense) {
@@ -449,6 +467,20 @@
       }
       socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
       alert("Coffre-fort configuré et verrouillé en direct sur l'overlay !");
+    }
+
+    function devoilerHasard() {
+      if (!socket) socket = io();
+      socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal });
+      alert("Une case a été dévoilée au hasard !");
+    }
+
+    function devoilerIndex() {
+      if (!socket) socket = io();
+      const idx = document.getElementById('char-index-input').value;
+      if (!idx) return alert("Veuillez indiquer un numéro de case.");
+      socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index: idx });
+      alert(`La case n°${idx} a été dévoilée !`);
     }
 
     function copierLienModal() {
