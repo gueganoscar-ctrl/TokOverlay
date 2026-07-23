@@ -1,0 +1,17 @@
+{
+  "name": "tokoverlay",
+  "version": "1.0.0",
+  "description": "Overlays et enchères en direct pour TikTok Live",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.19.2",
+    "express-session": "^1.19.0",
+    "mongodb": "^6.0.0",
+    "socket.io": "^4.7.5",
+    "tiktok-live-connector": "^2.4.0"
+  }
+}

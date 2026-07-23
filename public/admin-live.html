@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokOverlay - Panneau Admin Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
+    .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
+
+    .header-card { padding: 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    p.subtitle { color: var(--text-lo); font-size: 13px; margin: 4px 0 0; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .stat-title { font-size: 12px; font-weight: 600; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 30px; font-weight: 700; color: var(--text-hi); }
+    .stat-subtext { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+    .live-feed-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+    .live-feed-card h2 { font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    .alert-box { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-size: 14px; color: var(--cyan); display: flex; align-items: center; gap: 12px; }
+  </style>
+</head>
+<body class="app-bg">
+  <div class="container">
+    <div class="header-card card">
+      <div class="header-left">
+        <span class="live-dot"></span>
+        <div>
+          <h1>Panneau Admin Live</h1>
+          <p class="subtitle" id="user-info">Chargement de vos statistiques...</p>
+        </div>
+      </div>
+      <a href="/choix.html" class="btn btn-secondary">← Retour au dashboard</a>
+    </div>
+
+    <!-- Les blocs de stats (Pièces et Likes) -->
+    <div class="stats-grid">
+      <div class="stat-card card">
+        <span class="stat-title">Total Pièces (Gifts)</span>
+        <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
+        <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
+      </div>
+      <div class="stat-card card">
+        <span class="stat-title">Total Likes</span>
+        <span class="stat-value" id="stat-likes" style="color: var(--fuchsia);">0</span>
+      </div>
+    </div>
+
+    <div class="live-feed-card card">
+      <h2>Dernière Activité du Live</h2>
+      <div class="alert-box" id="latest-alert">
+        En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(user => {
+        if (!user || !user.pseudo) {
+          window.location.href = '/';
+          return;
+        }
+        document.getElementById('user-info').innerText = `Suivi en direct pour @${user.pseudo}`;
+
+        socket.emit('rejoindre', { pseudo: user.pseudo, apiKey: user.apiKey });
+
+        function afficherAlerte(texte) {
+          document.getElementById('latest-alert').textContent = texte;
+        }
+
+        socket.on('updateTopGifters', top3 => {
+          if (top3[0]) afficherAlerte(`💎 ${top3[0].nickname} est en tête des donateurs avec ${top3[0].coins.toLocaleString()} pièces`);
+        });
+        socket.on('updateTopLikers', top3 => {
+          if (top3[0]) afficherAlerte(`❤️ ${top3[0].nickname} est en tête des likes avec ${top3[0].likes.toLocaleString()} likes`);
+        });
+        socket.on('erreurConnexion', msg => afficherAlerte(msg));
+
+        function rafraichirStats() {
+          fetch('/api/live-stats/' + encodeURIComponent(user.pseudo))
+            .then(res => res.json())
+            .then(stats => {
+              const diamonds = stats.totalDiamonds || 0;
+              const likes = stats.totalLikes || 0;
+
+              const tauxUsd = 460.44 / 95927;
+              const tauxEur = tauxUsd * 0.88;
+              const estimatedEur = diamonds * tauxEur;
+
+              document.getElementById('stat-diamonds').textContent = diamonds.toLocaleString();
+              document.getElementById('stat-likes').textContent = likes.toLocaleString();
+              document.getElementById('stat-earnings').textContent = `Est. Live + Bonus Hebdo : €${estimatedEur.toFixed(2)} EUR`;
+            })
+            .catch(() => {});
+        }
+
+        rafraichirStats();
+        setInterval(rafraichirStats, 2000);
+      })
+      .catch(() => {
+        window.location.href = '/';
+      });
+  </script>
+</body>
+</html>

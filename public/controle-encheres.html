@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay — Contrôle de l'enchère</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body.app-bg { padding-top: 100px; display: flex; justify-content: center; align-items: flex-start; }
+
+    .navbar {
+      width: 100%; height: 70px; position: fixed; top: 0; left: 0; z-index: 100;
+      background: rgba(19, 19, 24, 0.75); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; padding: 0 40px;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; }
+    .nav-logo { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+
+    .card.main-card { padding: 36px; width: 100%; max-width: 850px; margin-bottom: 40px; }
+
+    .header-enchere { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+    .header-enchere h1 { font-size: 22px; margin-bottom: 4px; }
+    .header-enchere p { color: var(--text-faint); font-size: 13px; margin: 0; }
+
+    .badge-pseudo { color: var(--cyan); }
+
+    .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    @media (max-width: 768px) { .panel-grid { grid-template-columns: 1fr; gap: 24px; } }
+
+    .trois-colonnes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .champ-groupe { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px; transition: border-color 0.2s; }
+    .champ-groupe:focus-within { border-color: var(--cyan); }
+    .champ-groupe label { display: block; font-size: 10px; color: var(--text-faint); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .champ-groupe input { width: 100%; background: transparent; border: none; color: white; font-size: 16px; font-weight: 700; outline: none; padding: 0; font-family: 'JetBrains Mono', monospace; }
+
+    #demarrer-btn { width: 100%; padding: 14px; font-size: 14px; }
+
+    #url-overlay { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; }
+    #url-overlay p { margin: 0 0 8px; color: var(--text-lo); font-weight: 600; }
+    .url-flex { display: flex; gap: 8px; }
+    #url-champ { flex: 1; background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text-lo); font-size: 11px; outline: none; font-family: 'JetBrains Mono', monospace; }
+
+    .statut { padding: 20px; background: var(--ink); border: 1px solid var(--border); border-radius: 16px; height: 100%; display: flex; flex-direction: column; }
+    .statut-empty { color: var(--text-faint); font-size: 13px; font-weight: 500; text-align: center; margin: auto; }
+
+    .label-phase { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
+    .chrono { font-size: 42px; font-weight: 800; line-height: 1; margin-bottom: 8px; color: var(--text-hi); }
+    .chrono.phase-snipe { color: var(--fuchsia); }
+    .mise-min { font-size: 13px; color: var(--text-lo); margin: 0 0 12px; font-weight: 600; }
+
+    .auction-earnings { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--success); display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+
+    ol#classement-live { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    ol#classement-live li { background: var(--surface); border: 1px solid var(--border); padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; color: #e4e4e7; }
+    ol#classement-live li:first-child { border-color: rgba(255, 190, 61, 0.35); }
+  </style>
+</head>
+<body class="app-bg">
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <img src="/img/logo-encheres.png" alt="Logo" class="nav-logo">
+      <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 18px;">TokOverlay</h1>
+    </div>
+    <div class="nav-links">
+      <a href="/choix.html" class="btn btn-secondary">⬅ Tableau de bord</a>
+    </div>
+  </nav>
+
+  <div class="card main-card">
+    <div class="header-enchere">
+      <div>
+        <h1>Panneau Admin</h1>
+        <p>Gestion de la session d'enchères</p>
+      </div>
+      <span class="badge" id="pseudo-badge"><span class="badge-pseudo"></span></span>
+    </div>
+
+    <div class="panel-grid">
+      <div class="col-config">
+        <div class="trois-colonnes">
+          <div class="champ-groupe">
+            <label for="duree-input">Timer (s)</label>
+            <input type="number" id="duree-input" value="120" min="5">
+          </div>
+          <div class="champ-groupe">
+            <label for="snipe-input">Snipe (s)</label>
+            <input type="number" id="snipe-input" value="15" min="1">
+          </div>
+          <div class="champ-groupe">
+            <label for="mise-min-input">Min (💎)</label>
+            <input type="number" id="mise-min-input" value="50" min="0">
+          </div>
+        </div>
+
+        <button id="demarrer-btn" class="btn btn-primary">Lancer l'enchère TokOverlay</button>
+
+        <div id="url-overlay">
+          <p>Lien de l'Enchère à coller dans TikTok Live Studio :</p>
+          <div class="url-flex">
+            <input type="text" id="url-champ" readonly>
+            <button id="copier-btn" class="btn btn-secondary">Copier</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-statut">
+        <div class="statut" id="statut">
+          <div id="statut-attente" class="statut-empty">
+            Configurez et lancez une enchère pour voir le suivi en direct.
+          </div>
+
+          <div id="statut-actif" style="display:none;">
+            <div class="label-phase" id="label-phase">Timer</div>
+            <div class="chrono phase-timer" id="chrono">--</div>
+            <p class="mise-min" id="mise-min-affichee"></p>
+
+            <div class="auction-earnings" id="enchere-gain">
+              <span>0 💎</span>
+              <span>€0.00 EUR</span>
+            </div>
+
+            <p id="statut-texte" style="font-size: 13px; color: var(--text-faint); margin: 0; font-weight: 500;">En attente de dons...</p>
+            <ol id="classement-live"></ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pseudo = window.location.pathname.split('/')[2];
+    document.querySelector('#pseudo-badge .badge-pseudo').textContent = '@' + pseudo;
+
+    document.getElementById('copier-btn').addEventListener('click', () => {
+      const champ = document.getElementById('url-champ');
+      champ.select();
+      document.execCommand('copy');
+      document.getElementById('copier-btn').textContent = 'Copié !';
+      setTimeout(() => document.getElementById('copier-btn').textContent = 'Copier', 2000);
+    });
+
+    let phaseActuelle = 'timer';
+    let intervalleChrono = null;
+
+    function mettreAJourChrono(finTimestamp) {
+      const restant = Math.max(finTimestamp - Date.now(), 0);
+      const chronoEl = document.getElementById('chrono');
+      const labelEl = document.getElementById('label-phase');
+
+      chronoEl.textContent = Math.ceil(restant / 1000) + 's';
+
+      const enSnipe = (phaseActuelle === 'snipe');
+      chronoEl.classList.toggle('phase-snipe', enSnipe);
+      chronoEl.classList.toggle('phase-timer', !enSnipe);
+      labelEl.textContent = enSnipe ? 'Snipe delay' : 'Timer';
+
+      if (restant <= 0 && intervalleChrono) clearInterval(intervalleChrono);
+    }
+
+    function demarrerAffichageChrono(finTimestamp) {
+      if (intervalleChrono) clearInterval(intervalleChrono);
+      mettreAJourChrono(finTimestamp);
+      intervalleChrono = setInterval(() => mettreAJourChrono(finTimestamp), 250);
+    }
+
+    function afficherEtat(etat) {
+      if (!etat) return;
+      phaseActuelle = etat.phase;
+
+      document.getElementById('statut-attente').style.display = 'none';
+      document.getElementById('statut-actif').style.display = 'block';
+
+      const finTimestampLocal = Date.now() + etat.tempsRestant;
+      demarrerAffichageChrono(finTimestampLocal);
+
+      document.getElementById('mise-min-affichee').textContent = `Mise minimale : ${etat.miseMinimale.toLocaleString()} 💎`;
+
+      const diamantsEnchere = etat.totalDiamantsEnchere || 0;
+      const tauxEur = (460.44 / 95927) * 0.88;
+      const eurosEnchere = diamantsEnchere * tauxEur;
+
+      document.getElementById('enchere-gain').innerHTML = `
+        <span>${diamantsEnchere.toLocaleString()} 💎</span>
+        <span>€${eurosEnchere.toFixed(2)} EUR</span>
+      `;
+
+      const liste = document.getElementById('classement-live');
+      liste.innerHTML = '';
+      etat.classement.forEach((u, index) => {
+        const li = document.createElement('li');
+        const rangEtNom = document.createElement('span');
+        rangEtNom.textContent = `#${index + 1} ${u.nickname}`; // pseudo TikTok : jamais en innerHTML
+        const montant = document.createElement('span');
+        montant.textContent = `${u.coins.toLocaleString()} 💎`;
+        li.append(rangEtNom, montant);
+        liste.appendChild(li);
+      });
+    }
+
+    fetch('/api/me')
+      .then(res => {
+        if (!res.ok) throw new Error('non-connecté');
+        return res.json();
+      })
+      .then(user => {
+        if (!user || !user.apiKey) {
+          alert("Clé API manquante.");
+          window.location.href = '/';
+          return;
+        }
+
+        const apiKey = user.apiKey;
+        document.getElementById('url-champ').value = `${window.location.origin}/overlay/${pseudo}?type=encheres&key=${apiKey}`;
+
+        const socket = io();
+        socket.emit('rejoindre', { pseudo, apiKey });
+
+        document.getElementById('demarrer-btn').addEventListener('click', () => {
+          const dureeSecondes = parseInt(document.getElementById('duree-input').value, 10);
+          const snipeSecondes = parseInt(document.getElementById('snipe-input').value, 10);
+          const miseMinimale = parseInt(document.getElementById('mise-min-input').value, 10) || 0;
+
+          socket.emit('demarrerEnchere', { pseudo, dureeSecondes, snipeSecondes, miseMinimale });
+        });
+
+        socket.on('enchereDemarree', etat => {
+          document.getElementById('statut-texte').textContent = "Enchère en cours...";
+          afficherEtat(etat);
+        });
+
+        socket.on('updateEnchere', afficherEtat);
+
+        socket.on('enchereTerminee', data => {
+          if (intervalleChrono) clearInterval(intervalleChrono);
+          document.getElementById('chrono').textContent = "Terminé";
+
+          const gagnant = data.gagnant;
+          document.getElementById('statut-texte').textContent = gagnant
+            ? `🏆 Gagnant : ${gagnant.nickname} (${gagnant.coins.toLocaleString()} 💎)`
+            : "Enchère terminée, aucun don valide.";
+
+          const diamantsEnchere = data.totalDiamantsEnchere || 0;
+          const tauxEur = (460.44 / 95927) * 0.88;
+          const eurosEnchere = diamantsEnchere * tauxEur;
+
+          document.getElementById('enchere-gain').innerHTML = `
+            <span>Total : ${diamantsEnchere.toLocaleString()} 💎</span>
+            <span>€${eurosEnchere.toFixed(2)} EUR</span>
+          `;
+        });
+
+        socket.on('erreurConnexion', msg => {
+          document.getElementById('statut-attente').style.display = 'none';
+          document.getElementById('statut-actif').style.display = 'block';
+          document.getElementById('statut-texte').textContent = msg;
+        });
+      })
+      .catch(() => {
+        alert("Clé API manquante.");
+        window.location.href = '/';
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokOverlay - Tableau de bord</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body.app-bg { padding: 40px 20px; display: flex; justify-content: center; }
+
+    .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 32px; }
+
+    .dashboard-header {
+      padding: 24px 32px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .header-left { display: flex; flex-direction: column; gap: 8px; }
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--ink); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-lo);
+      width: fit-content;
+    }
+    .user-badge .dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
+
+    .header-actions { display: flex; gap: 12px; }
+
+    .section-header {
+      font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: -12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-header::before { content: ''; width: 3px; height: 14px; background: var(--fuchsia); border-radius: 2px; }
+
+    .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+
+    .widget-card {
+      padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .widget-card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+
+    .widget-top { display: flex; flex-direction: column; gap: 8px; }
+    .widget-icon-title { display: flex; align-items: center; gap: 12px; }
+    .widget-icon {
+      width: 42px; height: 42px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .widget-card h3 { font-size: 17px; }
+    .widget-card p { font-size: 13px; color: var(--text-lo); line-height: 1.5; margin: 0; }
+
+    .widget-card.accent-encheres { border-color: rgba(34, 229, 224, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #10202a 100%); }
+    .widget-card.accent-encheres .widget-icon { background: rgba(34, 229, 224, 0.1); border-color: rgba(34, 229, 224, 0.3); }
+
+    .obs-link-box {
+      background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .obs-url { font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
+
+    #modal-profil {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+      align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-content { padding: 30px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; }
+    .modal-content h2 { font-size: 18px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { text-transform: uppercase; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+  </style>
+</head>
+<body class="app-bg">
+
+  <div class="app-container">
+
+    <header class="dashboard-header card">
+      <div class="header-left">
+        <div class="brand-row">
+          <span class="live-dot"></span>
+          <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 22px;">TokOverlay</h1>
+        </div>
+        <div class="user-badge">
+          <span class="dot"></span>
+          <span id="user-pseudo-display">Connexion...</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="ouvrirModal()">⚙️ Modifier mon profil</button>
+        <a href="/logout" class="btn btn-danger">Déconnexion</a>
+      </div>
+    </header>
+
+    <div class="section-header">Widgets pour OBS / TikTok Live Studio</div>
+
+    <div class="grid-widgets">
+
+      <div class="widget-card card">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">💎</div>
+            <h3>Top Pièces (Donateurs)</h3>
+          </div>
+          <p>Affiche en temps réel le classement dynamique des spectateurs qui envoient le plus de pièces et cadeaux sur ton live.</p>
+        </div>
+        <div class="obs-link-box">
+          <span class="obs-url" id="url-donateurs">Chargement du lien...</span>
+          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('donateurs')">Copier</button>
+        </div>
+      </div>
+
+      <div class="widget-card card">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">❤️</div>
+            <h3>Top Likers</h3>
+          </div>
+          <p>Affiche le classement des spectateurs qui tapent le plus sur l'écran pour envoyer des likes pendant le live.</p>
+        </div>
+        <div class="obs-link-box">
+          <span class="obs-url" id="url-likers">Chargement du lien...</span>
+          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('likers')">Copier</button>
+        </div>
+      </div>
+
+      <div class="widget-card card">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">👑</div>
+            <h3>Widget Best Gift</h3>
+          </div>
+          <p>Affiche un encart permanent avec le meilleur cadeau du live, son icône et le pseudo du généreux donateur.</p>
+        </div>
+        <div class="obs-link-box">
+          <span class="obs-url" id="url-bestgift">Chargement du lien...</span>
+          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLien('bestgift')">Copier</button>
+        </div>
+      </div>
+
+      <div class="widget-card card accent-encheres">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">⚖️</div>
+            <h3>Panneau d'Enchères</h3>
+          </div>
+          <p>Gère et contrôle tes enchères en direct, configure les temps de snipe, les mises minimales et pilote tes widgets interactifs.</p>
+        </div>
+        <a id="btn-encheres-panel" href="#" class="btn btn-primary" style="width: 100%; padding: 12px;">Ouvrir le panneau de contrôle →</a>
+      </div>
+
+      <div class="widget-card card">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon">📊</div>
+            <h3>Panneau Admin Live</h3>
+          </div>
+          <p>Suivi en direct de tes statistiques globales de live, estimation de tes gains et alertes d'activité récentes.</p>
+        </div>
+        <a href="/admin-live.html" class="btn btn-secondary" style="width: 100%; padding: 12px;">Ouvrir le dashboard live →</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="modal-profil">
+    <div class="modal-content card">
+      <h2>Modifier vos identifiants</h2>
+      <form id="form-profil" onsubmit="sauvegarderProfil(event)">
+        <div class="form-group">
+          <label>Pseudo TikTok</label>
+          <input type="text" id="input-pseudo" required>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Clé API Live Connector</label>
+          <input type="text" id="input-apikey" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let pseudoGlobal = '';
+    let apiKeyGlobal = '';
+
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(user => {
+        if (!user || !user.pseudo) {
+          window.location.href = '/';
+          return;
+        }
+        pseudoGlobal = user.pseudo;
+        apiKeyGlobal = user.apiKey;
+        document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
+        document.getElementById('input-pseudo').value = user.pseudo;
+        document.getElementById('input-apikey').value = user.apiKey || '';
+
+        const baseUrl = window.location.origin;
+        document.getElementById('url-donateurs').textContent = `${baseUrl}/overlay/${user.pseudo}?type=donateurs&key=${encodeURIComponent(user.apiKey)}`;
+        document.getElementById('url-likers').textContent = `${baseUrl}/overlay/${user.pseudo}?type=likers&key=${encodeURIComponent(user.apiKey)}`;
+        document.getElementById('url-bestgift').textContent = `${baseUrl}/overlay/${user.pseudo}?type=bestgift&key=${encodeURIComponent(user.apiKey)}`;
+        document.getElementById('btn-encheres-panel').href = `/encheres/${user.pseudo}`;
+      })
+      .catch(() => {
+        window.location.href = '/';
+      });
+
+    function copierLien(type) {
+      const baseUrl = window.location.origin;
+      const lien = `${baseUrl}/overlay/${pseudoGlobal}?type=${type}&key=${encodeURIComponent(apiKeyGlobal)}`;
+
+      navigator.clipboard.writeText(lien).then(() => {
+        alert("Lien copié dans le presse-papier !");
+      });
+    }
+
+    function ouvrirModal() {
+      document.getElementById('modal-profil').style.display = 'flex';
+    }
+
+    function fermerModal() {
+      document.getElementById('modal-profil').style.display = 'none';
+    }
+
+    function sauvegarderProfil(e) {
+      e.preventDefault();
+      const pseudo = document.getElementById('input-pseudo').value;
+      const apiKey = document.getElementById('input-apikey').value;
+
+      fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pseudo, apiKey })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert("Erreur lors de la mise à jour");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
