@@ -92,6 +92,9 @@
   <script>
     const socket = io();
     let utilisateurGlobal = null;
+    
+    // Centralisation : Taux de conversion défini une seule fois
+    const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
 
     // SÉCURITÉ ANTI-FIGEMENT : Réabonnement automatique du socket si la connexion est coupée puis rétablie
     socket.on('connect', () => {
@@ -124,26 +127,26 @@
         });
         socket.on('erreurConnexion', msg => afficherAlerte(msg));
 
-        function rafraichirStats() {
-          fetch('/api/live-stats/' + encodeURIComponent(user.pseudo))
-            .then(res => res.json())
-            .then(stats => {
-              const diamonds = stats.totalDiamonds || 0;
-              const likes = stats.totalLikes || 0;
+        // Fonction d'affichage des statistiques
+        function actualiserStatsUI(stats) {
+          const diamonds = stats.totalDiamonds || 0;
+          const likes = stats.totalLikes || 0;
+          const estimatedEur = diamonds * TAUX_CONVERSION_EUR;
 
-              const tauxUsd = 460.44 / 95927;
-              const tauxEur = tauxUsd * 0.88;
-              const estimatedEur = diamonds * tauxEur;
-
-              document.getElementById('stat-diamonds').textContent = diamonds.toLocaleString();
-              document.getElementById('stat-likes').textContent = likes.toLocaleString();
-              document.getElementById('stat-earnings').textContent = `Est. Live + Bonus Hebdo : €${estimatedEur.toFixed(2)} EUR`;
-            })
-            .catch(() => {});
+          document.getElementById('stat-diamonds').textContent = diamonds.toLocaleString();
+          document.getElementById('stat-likes').textContent = likes.toLocaleString();
+          document.getElementById('stat-earnings').textContent = `Est. Live + Bonus Hebdo : €${estimatedEur.toFixed(2)} EUR`;
         }
 
-        rafraichirStats();
-        setInterval(rafraichirStats, 2000);
+        // Chargement initial des statistiques lors du chargement de la page
+        fetch('/api/live-stats/' + encodeURIComponent(user.pseudo))
+          .then(res => res.json())
+          .then(stats => actualiserStatsUI(stats))
+          .catch(() => {});
+
+        // Performance : Écoute en temps réel des statistiques (remplace le polling setInterval)
+        socket.on('updateStatsLive', stats => actualiserStatsUI(stats));
+
         chargerHistorique(user.pseudo);
       })
       .catch(() => {

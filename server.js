@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const TikTokModule = require('tiktok-live-connector');
 const path = require('path');
 const session = require('express-session');
+const MongoStore = require('connect-mongo'); // Ajout pour la persistance des sessions
 const bcrypt = require('bcrypt');
 const { MongoClient } = require('mongodb');
 
@@ -19,10 +20,16 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
+// Sécurité : Validation stricte du secret de session en production
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  throw new Error("FATAL ERROR: SESSION_SECRET est manquant dans l'environnement de production !");
+}
+
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'tokoverlay_secret_key_change_it',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  store: process.env.MONGO_URI ? MongoStore.create({ mongoUrl: process.env.MONGO_URI }) : new session.MemoryStore()
 });
 app.use(sessionMiddleware);
 
@@ -70,16 +77,30 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
+// ----------------------------------------------------
+// ROUTES D'AUTHENTIFICATION & PROFIL
+// ----------------------------------------------------
+
 app.post('/register', async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     email = email.trim().toLowerCase();
+    const pseudoNettoye = pseudo.replace('@', '').trim();
     const usersCollection = db.collection('users');
-    if (await usersCollection.findOne({ email })) return res.redirect('/?error=email_exists');
+
+    // Sécurité : Vérification de l'unicité de l'email ET du pseudo
+    const existingUser = await usersCollection.findOne({
+      $or: [{ email }, { pseudo: pseudoNettoye }]
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) return res.redirect('/?error=email_exists');
+      if (existingUser.pseudo === pseudoNettoye) return res.redirect('/?error=pseudo_exists');
+    }
 
     const passwordHache = await bcrypt.hash(password, 10);
-    const newUser = { pseudo: pseudo.replace('@', '').trim(), apiKey: apiKey.trim(), email, password: passwordHache };
+    const newUser = { pseudo: pseudoNettoye, apiKey: apiKey.trim(), email, password: passwordHache };
     await usersCollection.insertOne(newUser);
     req.session.user = { pseudo: newUser.pseudo, apiKey: newUser.apiKey, email: newUser.email };
     res.redirect('/choix.html');
@@ -125,6 +146,11 @@ app.post('/api/update-profile', async (req, res) => {
 });
 
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/')));
+
+// ----------------------------------------------------
+// ROUTES FRONT-END ET API
+// ----------------------------------------------------
+
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 app.get('/encheres/:username', (req, res) => {
@@ -133,7 +159,58 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
+app.get('/api/historique/:pseudo', async (req, res) => {
+  const pseudo = req.params.pseudo;
+  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
+  if (!db) return res.json({ lives: [], encheres: [] });
+
+  try {
+    const lives = await db.collection('historique_lives').find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
+    const encheres = await db.collection('historique_encheres').find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
+    res.json({ lives, encheres });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get('/api/live-status/:pseudo', async (req, res) => {
+  const pseudo = req.params.pseudo;
+  if (!connexionsActives[pseudo] && db) {
+    const user = await db.collection('users').findOne({ pseudo });
+    if (user) demarrerEcouteLive(pseudo, user.apiKey);
+  }
+  const data = connexionsActives[pseudo];
+  const isOnline = data && data.connection && data.connection.isConnected;
+  res.json({ online: !!isOnline });
+});
+
+// Sécurité : Route protégée pour les statistiques
+app.get('/api/live-stats/:pseudo', (req, res) => {
+  const pseudo = req.params.pseudo;
+  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
+  
+  const data = connexionsActives[pseudo];
+  if (!data) return res.json({ totalDiamonds: 0, totalLikes: 0 });
+  res.json({
+    totalDiamonds: Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0),
+    totalLikes: Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0)
+  });
+});
+
+// ----------------------------------------------------
+// GESTION DU LIVE TIKTOK (TIKTOK LIVE CONNECTOR)
+// ----------------------------------------------------
+
 const connexionsActives = {};
+
+// Optimisation : Diffusion centralisée via WebSockets
+function diffuserStatsLive(pseudo) {
+  const data = connexionsActives[pseudo];
+  if (!data) return;
+  const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
+  const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
+  io.to(pseudo).emit('updateStatsLive', { totalDiamonds, totalLikes });
+}
 
 function demarrerEcouteLive(pseudo, apiKey) {
   if (connexionsActives[pseudo]) return;
@@ -151,14 +228,24 @@ function demarrerEcouteLive(pseudo, apiKey) {
     delete connexionsActives[pseudo];
   });
 
+  // Robustesse : Nettoyage en cas d'erreur de la connexion
+  connection.on('error', err => {
+    console.error(`[TikTok] Erreur fatale pour ${pseudo}:`, err.message);
+    sauvegarderHistoriqueLive(pseudo);
+    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
+    delete connexionsActives[pseudo];
+  });
+
   connection.on('like', d => {
     const id = d.user?.displayId || 'inconnu';
     const nickname = d.user?.nickname || 'Anonyme';
     const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
     if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
     data.likers[id].likes += d.count || 1;
+    
     io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
     if (data.objectif && data.objectif.metrique === 'likes') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+    diffuserStatsLive(pseudo); // Remplacement du polling
   });
 
   connection.on('gift', d => {
@@ -173,6 +260,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
     if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
     data.gifters[id].coins += totalPieces;
+    
     io.to(pseudo).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
@@ -181,6 +269,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(pseudo).emit('updateBestGift', data.bestGift);
     }
     if (data.objectif && data.objectif.metrique === 'diamants') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
+    diffuserStatsLive(pseudo); // Remplacement du polling
   });
 
   connection.on('chat', d => {
@@ -379,18 +468,26 @@ function terminerEnchere(pseudo) {
   });
 }
 
+// ----------------------------------------------------
+// GESTION DES WEBSOCKETS (CLIENT-SERVEUR)
+// ----------------------------------------------------
+
 io.on('connection', socket => {
   socket.on('rejoindre', async ({ pseudo, apiKey }) => {
     if (!pseudo) return;
-    socket.join(pseudo);
 
-    let cleAUtiliser = apiKey;
     if (db) {
       const utilisateur = await db.collection('users').findOne({ pseudo });
-      if (utilisateur) cleAUtiliser = utilisateur.apiKey;
+      // Sécurité : Vérification stricte de l'existence et de l'authenticité de la clé
+      if (!utilisateur || utilisateur.apiKey !== apiKey) {
+        socket.emit('erreurConnexion', 'Accès refusé : Clé API ou pseudo invalide.');
+        return;
+      }
     }
 
-    demarrerEcouteLive(pseudo, cleAUtiliser);
+    socket.join(pseudo);
+    demarrerEcouteLive(pseudo, apiKey);
+    
     const data = connexionsActives[pseudo];
     if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudo));
     if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
@@ -402,7 +499,15 @@ io.on('connection', socket => {
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {
     const utilisateurConnecte = socket.request.session?.user;
     if (!utilisateurConnecte || utilisateurConnecte.pseudo !== pseudo) return;
-    if (connexionsActives[pseudo]) demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale);
+
+    // Qualité & Sécurité : Validation stricte des entrées numériques
+    const duree = parseInt(dureeSecondes, 10);
+    const snipe = parseInt(snipeSecondes, 10);
+    const min = parseInt(miseMinimale, 10) || 0;
+
+    if (isNaN(duree) || duree <= 0 || isNaN(snipe) || snipe < 0 || isNaN(min) || min < 0) return;
+
+    if (connexionsActives[pseudo]) demarrerEnchere(pseudo, duree, snipe, min);
   });
 
   socket.on('definirObjectif', ({ pseudo, cible, metrique, label }) => {
@@ -465,41 +570,6 @@ io.on('connection', socket => {
       coffre.devoiles[idxArr] = true;
       io.to(pseudo).emit('updateCoffre', etatCoffrePublic(pseudo));
     }
-  });
-});
-
-app.get('/api/historique/:pseudo', async (req, res) => {
-  const pseudo = req.params.pseudo;
-  if (!req.session.user || req.session.user.pseudo !== pseudo) return res.status(401).json({ error: "Non autorisé" });
-  if (!db) return res.json({ lives: [], encheres: [] });
-
-  try {
-    const lives = await db.collection('historique_lives').find({ pseudo }).sort({ fin: -1 }).limit(5).toArray();
-    const encheres = await db.collection('historique_encheres').find({ pseudo }).sort({ date: -1 }).limit(5).toArray();
-    res.json({ lives, encheres });
-  } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-app.get('/api/live-status/:pseudo', async (req, res) => {
-  const pseudo = req.params.pseudo;
-  if (!connexionsActives[pseudo] && db) {
-    const user = await db.collection('users').findOne({ pseudo });
-    if (user) demarrerEcouteLive(pseudo, user.apiKey);
-  }
-  const data = connexionsActives[pseudo];
-  const isOnline = data && data.connection && data.connection.isConnected;
-  res.json({ online: !!isOnline });
-});
-
-app.get('/api/live-stats/:pseudo', (req, res) => {
-  const pseudo = req.params.pseudo;
-  const data = connexionsActives[pseudo];
-  if (!data) return res.json({ totalDiamonds: 0, totalLikes: 0 });
-  res.json({
-    totalDiamonds: Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0),
-    totalLikes: Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0)
   });
 });
 

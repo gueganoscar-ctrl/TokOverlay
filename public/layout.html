@@ -162,13 +162,38 @@
       if (el) el.style.display = 'flex';
     });
 
+    // Sécurité: Refonte pour prévenir les failles XSS en utilisant le DOM natif
     function creerCarteJoueur(user, rank, emoji) {
       const carte = document.createElement('div');
       carte.className = `carte-joueur rank-${rank}`;
-      carte.innerHTML = `
-        <div class="avatar-container"><span class="crown">👑</span><img class="avatar" src="${user.profilePictureUrl}"></div>
-        <div class="info"><span class="nickname">${user.nickname}</span><span class="valeur">${emoji}${user.val.toLocaleString()}</span></div>
-      `;
+
+      const avatarContainer = document.createElement('div');
+      avatarContainer.className = 'avatar-container';
+      
+      const crown = document.createElement('span');
+      crown.className = 'crown';
+      crown.textContent = '👑';
+      
+      const img = document.createElement('img');
+      img.className = 'avatar';
+      img.src = user.profilePictureUrl;
+      
+      avatarContainer.append(crown, img);
+
+      const info = document.createElement('div');
+      info.className = 'info';
+      
+      const nickname = document.createElement('span');
+      nickname.className = 'nickname';
+      nickname.textContent = user.nickname; // Echappement natif des chevrons et scripts XSS
+      
+      const valeur = document.createElement('span');
+      valeur.className = 'valeur';
+      valeur.textContent = `${emoji}${user.val.toLocaleString()}`;
+      
+      info.append(nickname, valeur);
+      carte.append(avatarContainer, info);
+      
       return carte;
     }
 
@@ -252,8 +277,13 @@
     if (isDemo) {
       document.getElementById('bg-icon').src = 'https://via.placeholder.com/60';
       document.getElementById('bg-pseudo').textContent = 'Mia.Star';
-      document.getElementById('list-donateurs').innerHTML = '<div class="carte-joueur rank-1"><div class="avatar-container"><span class="crown">👑</span><img class="avatar" src="https://ui-avatars.com/api/?name=Alex"></div><div class="info"><span class="nickname">Alex_Live</span><span class="valeur">💎 1,200</span></div></div>';
-      document.getElementById('list-likers').innerHTML = '<div class="carte-joueur rank-1"><div class="avatar-container"><span class="crown">👑</span><img class="avatar" src="https://ui-avatars.com/api/?name=Max"></div><div class="info"><span class="nickname">Max_Fan</span><span class="valeur">❤️ 3,450</span></div></div>';
+      
+      const fakeGifters = document.getElementById('list-donateurs');
+      fakeGifters.appendChild(creerCarteJoueur({ nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex', val: 1200 }, 1, '💎 '));
+      
+      const fakeLikers = document.getElementById('list-likers');
+      fakeLikers.appendChild(creerCarteJoueur({ nickname: 'Max_Fan', profilePictureUrl: 'https://ui-avatars.com/api/?name=Max', val: 3450 }, 1, '❤️ '));
+      
       document.getElementById('coffre-cases-grid').innerHTML = '<div class="case-char devoile">7</div><div class="case-char">?</div><div class="case-char">?</div>';
       document.getElementById('coffre-recompense-texte').textContent = 'Récompense : 1 Abo Offert';
       document.getElementById('enchere-chrono').textContent = '30s';

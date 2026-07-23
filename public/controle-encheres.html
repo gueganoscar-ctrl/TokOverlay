@@ -135,12 +135,16 @@
     const pseudo = window.location.pathname.split('/')[2];
     document.querySelector('#pseudo-badge .badge-pseudo').textContent = '@' + pseudo;
 
+    // Centralisation de la constante de conversion
+    const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
+
+    // Remplacement de document.execCommand par la Clipboard API moderne
     document.getElementById('copier-btn').addEventListener('click', () => {
       const champ = document.getElementById('url-champ');
-      champ.select();
-      document.execCommand('copy');
-      document.getElementById('copier-btn').textContent = 'Copié !';
-      setTimeout(() => document.getElementById('copier-btn').textContent = 'Copier', 2000);
+      navigator.clipboard.writeText(champ.value).then(() => {
+        document.getElementById('copier-btn').textContent = 'Copié !';
+        setTimeout(() => document.getElementById('copier-btn').textContent = 'Copier', 2000);
+      });
     });
 
     let phaseActuelle = 'timer';
@@ -180,8 +184,7 @@
       document.getElementById('mise-min-affichee').textContent = `Mise minimale : ${etat.miseMinimale.toLocaleString()} 💎`;
 
       const diamantsEnchere = etat.totalDiamantsEnchere || 0;
-      const tauxEur = (460.44 / 95927) * 0.88;
-      const eurosEnchere = diamantsEnchere * tauxEur;
+      const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR; // Utilisation de la constante centralisée
 
       document.getElementById('enchere-gain').innerHTML = `
         <span>${diamantsEnchere.toLocaleString()} 💎</span>
@@ -193,7 +196,7 @@
       etat.classement.forEach((u, index) => {
         const li = document.createElement('li');
         const rangEtNom = document.createElement('span');
-        rangEtNom.textContent = `#${index + 1} ${u.nickname}`; // pseudo TikTok : jamais en innerHTML
+        rangEtNom.textContent = `#${index + 1} ${u.nickname}`; // textContent protège contre XSS
         const montant = document.createElement('span');
         montant.textContent = `${u.coins.toLocaleString()} 💎`;
         li.append(rangEtNom, montant);
@@ -244,8 +247,7 @@
             : "Enchère terminée, aucun don valide.";
 
           const diamantsEnchere = data.totalDiamantsEnchere || 0;
-          const tauxEur = (460.44 / 95927) * 0.88;
-          const eurosEnchere = diamantsEnchere * tauxEur;
+          const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR; // Utilisation de la constante centralisée
 
           document.getElementById('enchere-gain').innerHTML = `
             <span>Total : ${diamantsEnchere.toLocaleString()} 💎</span>
