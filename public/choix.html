@@ -226,7 +226,7 @@
       </div>
       <form id="form-profil" onsubmit="sauvegarderProfil(event)">
         <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-        <div class="form-group" style="margin-top: 12px;"><label>Clé API Live Connector</label><input type="text" id="input-apikey" required style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
+        <div class="form-group" style="margin-top: 12px;"><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
@@ -289,7 +289,6 @@
       typeActuel = type;
       styleActuel = 1;
       
-      // Utilisation stricte de textContent pour le titre de la modale
       document.getElementById('modal-title').textContent = `${icone} ${titre}`;
       
       mettreAJourSelectionStyleUI();

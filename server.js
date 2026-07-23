@@ -109,6 +109,11 @@ function strictInteger(value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
   return number;
 }
 
+function positiveInteger(value, fallback = 1) {
+  const num = Number(value);
+  return Number.isInteger(num) && num > 0 ? num : fallback;
+}
+
 function avatarFor(user = {}, nickname = 'Anonyme') {
   const avatarList = user?.avatarThumb?.urlList;
   if (Array.isArray(avatarList) && avatarList.length > 0 && typeof avatarList[0] === 'string') {
@@ -289,10 +294,13 @@ app.post('/api/update-profile', async (req, res) => {
     } catch {
       return res.status(400).json({ error: "Pseudo invalide." });
     }
-    const nvApiKey = safeText(apiKey);
 
-    if (!nvApiKey) {
-      return res.status(400).json({ error: "Champs invalides." });
+    const nvApiKey = safeText(apiKey);
+    const updateData = { pseudo: nvPseudo };
+
+    // Si une nouvelle clé API est fournie, on la met à jour. Si elle est vide, on conserve l'ancienne.
+    if (nvApiKey !== "") {
+      updateData.apiKey = nvApiKey;
     }
 
     const conflict = await db.collection('users').findOne({
@@ -306,7 +314,7 @@ app.post('/api/update-profile', async (req, res) => {
 
     await db.collection('users').updateOne(
       { email: req.session.user.email }, 
-      { $set: { pseudo: nvPseudo, apiKey: nvApiKey } }
+      { $set: updateData }
     );
     
     req.session.user.pseudo = nvPseudo;
