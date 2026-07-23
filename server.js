@@ -16,22 +16,38 @@ const PORT = process.env.PORT || 3000;
 
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 
+// Sécurité : Configuration obligatoire des secrets en production
+if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
+  throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
+}
+
+app.set('trust proxy', 1);
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
-if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
-  throw new Error("FATAL ERROR: SESSION_SECRET est manquant dans l'environnement de production !");
-}
-
 const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
+// Configuration sécurisée des sessions (HttpOnly, SameSite, Secure, MongoStore)
 const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'tokoverlay_secret_key_change_it',
+  name: '__Host-tokoverlay',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: process.env.MONGO_URI ? MongoStore.create({ mongoUrl: process.env.MONGO_URI }) : new session.MemoryStore()
+  rolling: true,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 60 * 60 * 24 * 7
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
 });
 app.use(sessionMiddleware);
 
@@ -44,10 +60,6 @@ let db = null;
 let vouchesGlobalCount = 0;
 
 async function connectMongo() {
-  if (!mongoUri) {
-    console.error("❌ ERREUR : MONGO_URI absente des variables Render !");
-    return;
-  }
   try {
     const client = new MongoClient(mongoUri);
     await client.connect();
@@ -65,7 +77,6 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Fonctions utilitaires de normalisation et de sécurité robuste
 function normalizePseudo(value) {
   if (typeof value !== 'string') return '';
   return value.replace('@', '').trim().toLowerCase();
@@ -146,7 +157,7 @@ async function incrementerVouchGlobal() {
 }
 
 // ----------------------------------------------------
-// ROUTES D'AUTHENTIFICATION & PROFIL
+// ROUTES D'AUTHENTIFICATION & PROFIL (Sécurisées contre fixation de session)
 // ----------------------------------------------------
 
 app.post('/register', async (req, res) => {
@@ -177,7 +188,14 @@ app.post('/register', async (req, res) => {
     };
     await usersCollection.insertOne(newUser);
     
+    // Régénération de session pour éviter la fixation
+    await new Promise((resolve, reject) =>
+      req.session.regenerate((error) => error ? reject(error) : resolve())
+    );
+
     req.session.user = { id: newUser._id, pseudo: newUser.pseudo, email: newUser.email, role: newUser.role };
+    await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
+
     res.redirect('/choix.html');
   } catch (err) {
     res.status(500).send("Erreur serveur lors de l'inscription.");
@@ -191,7 +209,15 @@ app.post('/login', async (req, res) => {
     const usersCollection = db.collection('users');
     const user = await usersCollection.findOne({ pseudo: normalizePseudo(pseudo) });
     if (user && await bcrypt.compare(password, user.password)) {
+      
+      // Régénération de session après authentification réussie
+      await new Promise((resolve, reject) =>
+        req.session.regenerate((error) => error ? reject(error) : resolve())
+      );
+
       req.session.user = { id: user._id, pseudo: user.pseudo, email: user.email, role: user.role || 'streamer' };
+      await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
+
       return res.redirect('/choix.html');
     }
     res.redirect('/?error=wrong_credentials');
@@ -252,7 +278,20 @@ app.post('/api/update-profile', async (req, res) => {
   }
 });
 
-app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/')));
+// Sécurisation de la déconnexion via POST (protection anti-CSRF)
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('__Host-tokoverlay');
+    res.json({ success: true });
+  });
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('__Host-tokoverlay');
+    res.redirect('/');
+  });
+});
 
 // ----------------------------------------------------
 // ROUTES FRONT-END ET API
@@ -452,7 +491,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     arreterEcouteLive(pseudo, data, 'error');
   });
 
-  // Handler Like sécurisé avec parsing robuste
   connection.on('like', (d = {}) => {
     if (data.closed) return;
     const user = d.user && typeof d.user === 'object' ? d.user : {};
@@ -469,7 +507,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
   });
 
-  // Handler Gift sécurisé avec parsing robuste
   connection.on('gift', (d = {}) => {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
@@ -513,7 +550,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
   });
 
-  // Handler Chat sécurisé avec parsing robuste
   connection.on('chat', (d = {}) => {
     if (data.closed) return;
     const user = d.user && typeof d.user === 'object' ? d.user : {};
