@@ -5,7 +5,7 @@ const TikTokModule = require('tiktok-live-connector');
 const path = require('path');
 const session = require('express-session');
 const MongoStore = require('connect-mongo'); // Ajout pour la persistance des sessions
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 
 const app = express();
