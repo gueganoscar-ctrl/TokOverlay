@@ -673,7 +673,6 @@ function terminerEnchere(pseudo) {
 // ----------------------------------------------------
 
 io.on('connection', socket => {
-  // Sécurité Socket : Connexion validée soit par le propriétaire connecté, soit par un Token OBS valide
   socket.on('rejoindre', async ({ pseudo, apiKey, token }) => {
     const pseudoNettoye = normalizePseudo(pseudo);
     if (!pseudoNettoye) return;
@@ -690,13 +689,16 @@ io.on('connection', socket => {
         return;
       }
 
-      // Autorisation acceptée si : Admin / Propriétaire avec clé API / Token OBS valide
-      if (!estAdmin && !tokenValide && (!estProprietaireConnecte || utilisateur.apiKey !== apiKey)) {
+      // Autorisation acceptée si : 
+      // 1. C'est l'admin
+      // 2. C'est le propriétaire connecté via sa session (dashboards, panels, etc.)
+      // 3. C'est un overlay OBS muni d'un jeton valide
+      // 4. (Fallback compatibilité) La clé API correspond
+      if (!estAdmin && !estProprietaireConnecte && !tokenValide && utilisateur.apiKey !== apiKey) {
         socket.emit('erreurConnexion', 'Accès refusé : Authentification invalide.');
         return;
       }
       
-      // Récupération sécurisée de la vraie clé TikTok depuis la base de données
       const cleApiUtilisee = utilisateur.apiKey;
       socket.join(pseudoNettoye);
       demarrerEcouteLive(pseudoNettoye, cleApiUtilisee);
