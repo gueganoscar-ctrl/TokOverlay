@@ -160,7 +160,7 @@ app.get('/encheres/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'controle-encheres.html'));
 });
 
-// CORRECTIF : Route admin-live restaurée
+// Route admin-live restaurée et protégée
 app.get('/admin-live/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   if (req.session.user.pseudo !== req.params.username) return res.redirect('/admin-live/' + encodeURIComponent(req.session.user.pseudo));
@@ -305,26 +305,29 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 
   connection.on('chat', d => {
-    const id = d.user?.displayId || 'inconnu';
-    const nickname = d.user?.nickname || 'Anonyme';
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    const message = d.comment || '';
+    // 1. Extraction hyper-robuste de l'ID et du Pseudo 
+    const id = d.uniqueId || d.userId || d.user?.displayId || d.user?.userId || 'inconnu';
+    const nickname = d.nickname || d.user?.nickname || 'Anonyme';
+    const avatar = d.profilePictureUrl || d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+    
+    // 2. Extraction du message (cherche dans toutes les versions)
+    const message = d.comment || d.text || d.message || d.msg || '';
 
-    // 🚨 ESPION 1 : Affiche chaque message reçu dans la console Render
-    console.log(`[CHAT TIKTOK] ${nickname} dit : "${message}"`);
+    // Espion pour le débogage (visible dans Render)
+    console.log(`[CHAT DEBUG] ${nickname} a écrit : "${message}"`);
 
+    // Mise à jour de l'historique de l'enchère
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
     }
 
+    // Gestion du Coffre-Fort
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
       const msgNettoye = message.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const secretNettoye = data.coffre.secret.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
-      // 🚨 ESPION 2 : Compare ce que tu as tapé avec le secret du coffre
-      console.log(`[COFFRE DEBUG] On compare "${msgNettoye}" avec le secret "${secretNettoye}"`);
-      
-      if (msgNettoye === secretNettoye) {
+      // On s'assure que le message n'est pas vide avant de comparer
+      if (msgNettoye !== "" && msgNettoye === secretNettoye) {
         console.log(`🎉 [COFFRE] VICTOIRE ! ${nickname} a ouvert le coffre !`);
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
@@ -337,6 +340,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(pseudo).emit('updateMessageGagnantCoffre', { message }); 
     }
 
+    // Gestion des enchères (Le Vouch)
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
       io.to(pseudo).emit('updateMessageGagnant', { message });
 
