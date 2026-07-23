@@ -203,15 +203,6 @@ app.get('/api/live-stats/:pseudo', (req, res) => {
 
 const connexionsActives = {};
 
-// Optimisation : Diffusion centralisée via WebSockets
-function diffuserStatsLive(pseudo) {
-  const data = connexionsActives[pseudo];
-  if (!data) return;
-  const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
-  const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
-  io.to(pseudo).emit('updateStatsLive', { totalDiamonds, totalLikes });
-}
-
 function demarrerEcouteLive(pseudo, apiKey) {
   if (connexionsActives[pseudo]) return;
 
@@ -360,86 +351,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
   });
 }
 
-  connection.on('like', d => {
-    const id = d.user?.displayId || 'inconnu';
-    const nickname = d.user?.nickname || 'Anonyme';
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    if (!data.likers[id]) data.likers[id] = { nickname, profilePictureUrl: avatar, likes: 0 };
-    data.likers[id].likes += d.count || 1;
-    
-    io.to(pseudo).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
-    if (data.objectif && data.objectif.metrique === 'likes') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
-    diffuserStatsLive(pseudo); // Remplacement du polling
-  });
-
-  connection.on('gift', d => {
-    if (d.gift?.type === 1 && !d.repeatEnd) return;
-    const id = d.user?.displayId || d.uniqueId || 'inconnu';
-    const nickname = d.user?.nickname || d.nickname || 'Anonyme';
-    const totalPieces = (d.gift?.diamondCount || 0) * (d.repeatCount || 1);
-    if (totalPieces === 0) return;
-    
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    const giftIcon = d.gift?.icon?.urlList?.[0] || 'https://via.placeholder.com/60';
-
-    if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
-    data.gifters[id].coins += totalPieces;
-    
-    io.to(pseudo).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
-    traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
-
-    if (!data.bestGift || totalPieces > data.bestGift.montant) {
-      data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
-      io.to(pseudo).emit('updateBestGift', data.bestGift);
-    }
-    if (data.objectif && data.objectif.metrique === 'diamants') io.to(pseudo).emit('updateObjectif', etatObjectif(pseudo));
-    diffuserStatsLive(pseudo); // Remplacement du polling
-  });
-
-  connection.on('chat', d => {
-    const id = d.user?.displayId || 'inconnu';
-    const nickname = d.user?.nickname || 'Anonyme';
-    const avatar = d.user?.avatarThumb?.urlList?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
-    const message = d.comment || '';
-
-    if (data.enchere && data.enchere.dons[id]) {
-      data.enchere.dons[id].dernierMessageChat = message;
-    }
-
-    if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
-      if (message.trim().toLowerCase() === data.coffre.secret.toLowerCase()) {
-        data.coffre.gagnant = { id, nickname, avatar };
-        data.coffre.actif = false;
-        io.to(pseudo).emit('coffreOuvert', etatCoffrePublic(pseudo));
-      }
-    } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
-      data.coffre.dernierMessageGagnant = message;
-      io.to(pseudo).emit('updateMessageGagnantCoffre', { message });
-    }
-
-    if (data.derniereGagnantId && id === data.derniereGagnantId) {
-      io.to(pseudo).emit('updateMessageGagnant', { message });
-
-      if (!data.vouchFait && message.trim().toLowerCase() === 'vouch') {
-        data.vouchFait = true;
-        incrementerVouchGlobal();
-        io.to(pseudo).emit('vouchConfirme', {});
-      }
-    }
-  });
-
-  connection.on('disconnect', () => {
-    sauvegarderHistoriqueLive(pseudo);
-    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    delete connexionsActives[pseudo];
-  });
-  
-  connection.on('streamEnd', () => {
-    sauvegarderHistoriqueLive(pseudo);
-    if (data.enchere?.minuteur) clearTimeout(data.enchere.minuteur);
-    delete connexionsActives[pseudo];
-  });
-  
 function etatCoffrePublic(pseudo) {
   const coffre = connexionsActives[pseudo]?.coffre;
   if (!coffre) return null;
