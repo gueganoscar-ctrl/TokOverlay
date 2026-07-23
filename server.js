@@ -269,6 +269,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
   const data = {
     connection, likers: {}, gifters: {}, enchere: null, bestGift: null,
     debutLive: new Date(), derniereGagnantId: null, vouchFait: false, objectif: null,
+    roue: { active: false, options: ["Gage 1", "Gage 2", "100 Diamants", "Rien", "Boost x2"] },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
@@ -350,6 +351,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
+
+    // Déclenchement automatique de la Roue de la Fortune sur don >= 10 pièces
+    if (totalPieces >= 10 && data.roue && data.roue.options.length > 0) {
+      const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
+      io.to(pseudo).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
+    }
     
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
@@ -599,6 +606,25 @@ io.on('connection', socket => {
     if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudo));
     if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudo));
     socket.emit('initVouch', { vouches: vouchesGlobalCount });
+  });
+
+  socket.on('configurerRoue', ({ pseudo, options }) => {
+    const user = socket.request.session?.user;
+    if (!user || (user.pseudo !== pseudo && user.pseudo !== 'slacezzz')) return;
+    const data = connexionsActives[pseudo];
+    if (data && Array.isArray(options)) {
+      data.roue.options = options;
+    }
+  });
+
+  socket.on('forcerTournerRoue', ({ pseudo }) => {
+    const user = socket.request.session?.user;
+    if (!user || (user.pseudo !== pseudo && user.pseudo !== 'slacezzz')) return;
+    const data = connexionsActives[pseudo];
+    if (data && data.roue && data.roue.options.length > 0) {
+      const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
+      io.to(pseudo).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+    }
   });
 
   socket.on('demarrerEnchere', ({ pseudo, dureeSecondes, snipeSecondes, miseMinimale }) => {

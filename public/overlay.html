@@ -27,8 +27,8 @@
     }
 
     /* ==========================================
-       1. LEADERBOARD (Top Donateurs / Top Likers)
-       ========================================== */
+        1. LEADERBOARD (Top Donateurs / Top Likers)
+        ========================================== */
     #leaderboard {
       display: flex;
       flex-direction: column;
@@ -113,8 +113,8 @@
 
 
     /* ==========================================
-       2. WIDGET BEST GIFT
-       ========================================== */
+        2. WIDGET BEST GIFT
+        ========================================== */
     #best-gift-container {
       background: #08080c;
       border: 1px solid var(--gold);
@@ -138,8 +138,8 @@
 
 
     /* ==========================================
-       3. PANNEAU ENCHÈRES
-       ========================================== */
+        3. PANNEAU ENCHÈRES
+        ========================================== */
     #enchere-panel {
       width: 300px;
       padding: 20px;
@@ -244,8 +244,8 @@
 
 
     /* ==========================================
-       4. WIDGET OBJECTIF DE LIVE
-       ========================================== */
+        4. WIDGET OBJECTIF DE LIVE
+        ========================================== */
     #objectif-panel {
       width: 320px; padding: 18px 20px; border-radius: 16px;
       background: var(--bg-dark); border: 1px solid #29283a;
@@ -278,8 +278,8 @@
 
 
     /* ==========================================
-       5. WIDGET COFFRE-FORT & CASES MOTUS
-       ========================================== */
+        5. WIDGET COFFRE-FORT & CASES MOTUS
+        ========================================== */
     #coffre-panel {
       width: 320px; background: var(--bg-dark); border: 2px solid var(--gold); border-radius: 20px;
       padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); display: none; flex-direction: column; gap: 14px;
@@ -311,6 +311,17 @@
     body.style-3 #coffre-panel { border-color: var(--fuchsia); box-shadow: 0 10px 30px rgba(254, 44, 85, 0.25); }
     body.style-3 .coffre-header { color: var(--fuchsia); }
     body.style-3 .case-char { border-color: var(--fuchsia); color: var(--fuchsia); }
+
+    /* ==========================================
+        6. WIDGET ROUE DE LA FORTUNE
+        ========================================== */
+    #roue-container {
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(11, 14, 20, 0.95); border: 2px solid #22d3ee; border-radius: 24px; padding: 30px;
+      text-align: center; box-shadow: 0 0 40px rgba(34, 211, 238, 0.4); animation: popIn 0.4s ease-out;
+      z-index: 1000;
+    }
+    @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
   </style>
 </head>
 <body>
@@ -358,6 +369,15 @@
         <div class="gagnant-chat-title">💬 Message du gagnant :</div>
         <div class="gagnant-chat-texte" id="coffre-gagnant-msg">En attente d'un message dans le chat...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Widget Roue de la Fortune -->
+  <div id="roue-container">
+    <div class="text-cyan-400 font-bold text-lg uppercase tracking-wider mb-2" style="color: var(--cyan);">🎡 Roue de la Fortune</div>
+    <div id="roue-gagnant" class="text-sm text-gray-300 mb-4">Un don a déclenché la roue !</div>
+    <div id="roue-resultat" class="text-3xl font-extrabold text-pink-400 bg-gray-900 border border-gray-800 py-4 px-8 rounded-xl shadow-inner" style="color: var(--fuchsia); background: #18181f; border: 1px solid #29283a;">
+      Tourne... 🎲
     </div>
   </div>
 
@@ -439,7 +459,6 @@
       return carte;
     }
 
-    // Fonction corrigée : résolution du bug d'imbrication DOM (DOMException)
     function creerCartePodium(user, rank) {
       const carte = document.createElement('div');
       carte.className = `carte-podium podium-${rank}`;
@@ -486,6 +505,43 @@
         document.getElementById('bg-pseudo').textContent = data.pseudo;
       }
     });
+
+    if (type === 'roue') {
+      document.getElementById('roue-container').style.display = 'block';
+
+      if (isDemo) {
+        setTimeout(() => {
+          animerRoue("Utilisateur Test", "Gage exceptionnel !");
+        }, 1000);
+      }
+
+      socket.on('tournerRoue', (data) => {
+        animerRoue(data.gagnant, data.resultat);
+      });
+    }
+
+    function animerRoue(gagnant, resultatFinal) {
+      const container = document.getElementById('roue-container');
+      const boxGagnant = document.getElementById('roue-gagnant');
+      const boxResultat = document.getElementById('roue-resultat');
+      
+      container.style.display = 'block';
+      boxGagnant.textContent = `Cadeau reçu de ${gagnant} !`;
+      
+      let counter = 0;
+      const optionsSimulees = ["Gage 1", "100 Diamants", "Rien", "Boost x2", "Chanson", "VIP"];
+      const interval = setInterval(() => {
+        boxResultat.textContent = optionsSimulees[Math.floor(Math.random() * optionsSimulees.length)];
+        counter++;
+        if (counter > 15) {
+          clearInterval(interval);
+          boxResultat.textContent = `🎉 ${resultatFinal}`;
+          setTimeout(() => {
+            container.style.display = 'none';
+          }, 5000);
+        }
+      }, 100);
+    }
 
     if (type === 'donateurs' || type === 'likers') {
       const leaderboard = document.getElementById('leaderboard');
