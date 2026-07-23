@@ -257,9 +257,8 @@
 
         document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
         document.getElementById('input-pseudo').value = user.pseudo;
-        document.getElementById('input-apikey').value = ''; // Masqué pour la sécurité
+        document.getElementById('input-apikey').value = '';
 
-        // Connexion Socket automatique avec le pseudo et le token sécurisé
         socket = io();
         socket.on('connect', () => {
           socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal });
@@ -289,47 +288,180 @@
     function ouvrirPersonnalisation(type, titre, icone) {
       typeActuel = type;
       styleActuel = 1;
-      document.getElementById('modal-title').innerHTML = `${icone} ${titre}`;
+      
+      // Utilisation stricte de textContent pour le titre de la modale
+      document.getElementById('modal-title').textContent = `${icone} ${titre}`;
+      
       mettreAJourSelectionStyleUI();
 
       const extraDiv = document.getElementById('modal-extra-action');
+      extraDiv.replaceChildren();
+
       if (type === 'encheres') {
-        extraDiv.innerHTML = `<a href="/encheres/${pseudoGlobal}" class="btn btn-primary" style="width: 100%; padding: 12px; text-align: center; display: block;">Ouvrir le panneau d'enchères →</a>`;
+        const link = document.createElement('a');
+        link.href = `/encheres/${encodeURIComponent(pseudoGlobal)}`;
+        link.className = 'btn btn-primary';
+        link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block;';
+        link.textContent = "Ouvrir le panneau d'enchères →";
+        extraDiv.appendChild(link);
       } else if (type === 'roue') {
-        extraDiv.innerHTML = `
-          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;">
-            <h3>Configuration de la Roue</h3>
-            <div class="form-group"><label>Options (séparées par des virgules)</label><input type="text" id="roue-options-input" value="Gage 1, Gage 2, 100 Diamants, Rien, Boost x2" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="sauvegarderRoue()">Enregistrer les options</button>
-            <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;" onclick="testerRoue()">🎲 Tester un tour de roue</button>
-          </div>
-        `;
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
+        
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Configuration de la Roue';
+        wrapper.appendChild(h3);
+
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+        const label = document.createElement('label');
+        label.textContent = 'Options (séparées par des virgules)';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'roue-options-input';
+        input.value = 'Gage 1, Gage 2, 100 Diamants, Rien, Boost x2';
+        input.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;';
+        formGroup.append(label, input);
+        wrapper.appendChild(formGroup);
+
+        const btnSave = document.createElement('button');
+        btnSave.className = 'btn btn-primary';
+        btnSave.style.cssText = 'width: 100%; margin-top: 10px;';
+        btnSave.textContent = 'Enregistrer les options';
+        btnSave.onclick = sauvegarderRoue;
+        wrapper.appendChild(btnSave);
+
+        const btnTest = document.createElement('button');
+        btnTest.className = 'btn btn-secondary';
+        btnTest.style.cssText = 'width: 100%; margin-top: 8px;';
+        btnTest.textContent = '🎲 Tester un tour de roue';
+        btnTest.onclick = testerRoue;
+        wrapper.appendChild(btnTest);
+
+        extraDiv.appendChild(wrapper);
       } else if (type === 'objectif') {
-        extraDiv.innerHTML = `
-          <div class="form-group"><label>Métrique</label><select id="objectif-metrique-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"><option value="diamants">Pièces (💎)</option><option value="likes">Likes (❤️)</option></select></div>
-          <div class="form-group" style="margin-top: 10px;"><label>Cible</label><input type="number" id="objectif-cible-input" value="1000" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"></div>
-          <div class="form-group" style="margin-top: 10px;"><label>Texte</label><input type="text" id="objectif-label-input" value="🎯 Objectif" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"></div>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="demarrerObjectif()">Lancer l'objectif</button>
-        `;
+        const fg1 = document.createElement('div');
+        fg1.className = 'form-group';
+        const lbl1 = document.createElement('label');
+        lbl1.textContent = 'Métrique';
+        const select = document.createElement('select');
+        select.id = 'objectif-metrique-input';
+        select.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;';
+        const opt1 = document.createElement('option');
+        opt1.value = 'diamants';
+        opt1.textContent = 'Pièces (💎)';
+        const opt2 = document.createElement('option');
+        opt2.value = 'likes';
+        opt2.textContent = 'Likes (❤️)';
+        select.append(opt1, opt2);
+        fg1.append(lbl1, select);
+        extraDiv.appendChild(fg1);
+
+        const fg2 = document.createElement('div');
+        fg2.className = 'form-group';
+        fg2.style.marginTop = '10px';
+        const lbl2 = document.createElement('label');
+        lbl2.textContent = 'Cible';
+        const inputCible = document.createElement('input');
+        inputCible.type = 'number';
+        inputCible.id = 'objectif-cible-input';
+        inputCible.value = '1000';
+        inputCible.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;';
+        fg2.append(lbl2, inputCible);
+        extraDiv.appendChild(fg2);
+
+        const fg3 = document.createElement('div');
+        fg3.className = 'form-group';
+        fg3.style.marginTop = '10px';
+        const lbl3 = document.createElement('label');
+        lbl3.textContent = 'Texte';
+        const inputLabel = document.createElement('input');
+        inputLabel.type = 'text';
+        inputLabel.id = 'objectif-label-input';
+        inputLabel.value = '🎯 Objectif';
+        inputLabel.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;';
+        fg3.append(lbl3, inputLabel);
+        extraDiv.appendChild(fg3);
+
+        const btnObj = document.createElement('button');
+        btnObj.className = 'btn btn-primary';
+        btnObj.style.cssText = 'width: 100%; margin-top: 12px;';
+        btnObj.textContent = "Lancer l'objectif";
+        btnObj.onclick = demarrerObjectif;
+        extraDiv.appendChild(btnObj);
       } else if (type === 'coffre') {
-        extraDiv.innerHTML = `
-          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;">
-            <h3>1. Configurer le coffre</h3>
-            <div class="form-group"><label>Mot / Chiffre secret</label><input type="text" id="coffre-secret-input" placeholder="ex: 777" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-            <div class="form-group" style="margin-top: 8px;"><label>Récompense</label><input type="text" id="coffre-recompense-input" placeholder="ex: 1 Abo" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="lancerCoffreFort()">Lancer le jeu</button>
-          </div>
-          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
-            <h3>2. Indices</h3>
-            <button class="btn btn-secondary" style="width:100%;" onclick="devoilerHasard()">🎲 Dévoiler au hasard</button>
-            <div class="indices-controls" style="margin-top: 8px;">
-              <input type="number" id="char-index-input" min="1" placeholder="N° Case" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-              <button class="btn btn-secondary" style="flex:1;" onclick="devoilerIndex()">🔍 Dévoiler cette case</button>
-            </div>
-          </div>
-        `;
-      } else {
-        extraDiv.innerHTML = '';
+        const wrap1 = document.createElement('div');
+        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
+        const h3_1 = document.createElement('h3');
+        h3_1.textContent = '1. Configurer le coffre';
+        wrap1.appendChild(h3_1);
+
+        const fgSecret = document.createElement('div');
+        fgSecret.className = 'form-group';
+        const lblSecret = document.createElement('label');
+        lblSecret.textContent = 'Mot / Chiffre secret';
+        const inputSecret = document.createElement('input');
+        inputSecret.type = 'text';
+        inputSecret.id = 'coffre-secret-input';
+        inputSecret.placeholder = 'ex: 777';
+        inputSecret.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;';
+        fgSecret.append(lblSecret, inputSecret);
+        wrap1.appendChild(fgSecret);
+
+        const fgReco = document.createElement('div');
+        fgReco.className = 'form-group';
+        fgReco.style.marginTop = '8px';
+        const lblReco = document.createElement('label');
+        lblReco.textContent = 'Récompense';
+        const inputReco = document.createElement('input');
+        inputReco.type = 'text';
+        inputReco.id = 'coffre-recompense-input';
+        inputReco.placeholder = 'ex: 1 Abo';
+        inputReco.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;';
+        fgReco.append(lblReco, inputReco);
+        wrap1.appendChild(fgReco);
+
+        const btnCoffre = document.createElement('button');
+        btnCoffre.className = 'btn btn-primary';
+        btnCoffre.style.cssText = 'width: 100%; margin-top: 10px;';
+        btnCoffre.textContent = 'Lancer le jeu';
+        btnCoffre.onclick = lancerCoffreFort;
+        wrap1.appendChild(btnCoffre);
+        extraDiv.appendChild(wrap1);
+
+        const wrap2 = document.createElement('div');
+        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;';
+        const h3_2 = document.createElement('h3');
+        h3_2.textContent = '2. Indices';
+        wrap2.appendChild(h3_2);
+
+        const btnHasard = document.createElement('button');
+        btnHasard.className = 'btn btn-secondary';
+        btnHasard.style.width = '100%';
+        btnHasard.textContent = '🎲 Dévoiler au hasard';
+        btnHasard.onclick = devoilerHasard;
+        wrap2.appendChild(btnHasard);
+
+        const ctrl = document.createElement('div');
+        ctrl.className = 'indices-controls';
+        ctrl.style.marginTop = '8px';
+
+        const inputIdx = document.createElement('input');
+        inputIdx.type = 'number';
+        inputIdx.id = 'char-index-input';
+        inputIdx.min = '1';
+        inputIdx.placeholder = 'N° Case';
+        inputIdx.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;';
+        
+        const btnIdx = document.createElement('button');
+        btnIdx.className = 'btn btn-secondary';
+        btnIdx.style.flex = '1';
+        btnIdx.textContent = '🔍 Dévoiler cette case';
+        btnIdx.onclick = devoilerIndex;
+
+        ctrl.append(inputIdx, btnIdx);
+        wrap2.appendChild(ctrl);
+        extraDiv.appendChild(wrap2);
       }
 
       if (!socket) {
@@ -351,8 +483,7 @@
 
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      // Utilisation du token sécurisé au lieu de la clé API en clair
-      const lien = `${baseUrl}/overlay/${pseudoGlobal}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+      const lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
