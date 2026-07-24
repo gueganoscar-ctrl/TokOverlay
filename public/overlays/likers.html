@@ -62,8 +62,8 @@
 
     const socket = io();
     socket.on('connect', () => {
-      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'likers' });
-    });
+  if (pseudo) socket.emit('rejoindre', { pseudo, type: 'likers' });
+});
 
     const leaderboard = document.getElementById('leaderboard');
     const messageAttente = document.getElementById('message-attente-simple');
