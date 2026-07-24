@@ -147,6 +147,12 @@
         <span class="click-hint">Configurer les options & Lien →</span>
       </div>
 
+      <!-- NOUVEAU WIDGET VIP / CHAT / Corgi, Galaxy, etc. -->
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
+        <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
+      </div>
+
       <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
         <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
@@ -337,7 +343,12 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'encheres') {
+      if (type === 'vip') {
+        const infoP = document.createElement('p');
+        infoP.style.cssText = 'font-size: 13px; color: var(--text-lo); line-height: 1.4; margin-top: 5px;';
+        infoP.textContent = "Cet overlay se connecte au flux pour afficher en direct les messages des joueurs lorsqu'ils envoient un cadeau éligible (Corgi, Galaxy, Baleine, Donut, etc.).";
+        extraDiv.appendChild(infoP);
+      } else if (type === 'encheres') {
         const link = document.createElement('a');
         link.href = `/encheres/${encodeURIComponent(pseudoGlobal)}`;
         link.className = 'btn btn-primary';
@@ -537,7 +548,9 @@
 
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      const lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+      // Si c'est l'overlay vip, on pointe vers la route spécifique '/overlay-vip/'
+      const pathSegment = (typeActuel === 'vip') ? `overlay-vip/${encodeURIComponent(pseudoGlobal)}` : `overlay/${encodeURIComponent(pseudoGlobal)}`;
+      const lien = `${baseUrl}/${pathSegment}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
