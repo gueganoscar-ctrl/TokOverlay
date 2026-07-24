@@ -162,7 +162,7 @@
         <span class="click-hint" style="color: #22d3ee;">Voir les graphiques →</span>
       </div>
 
-      <div class="widget-card card" onclick="window.open('/admin-live/auto', '_blank')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
+      <div class="widget-card card" onclick="allerAuPanneauAdmin()" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
         <div class="widget-top">
           <div class="widget-icon-title">
             <div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">⚙️</div>
@@ -284,6 +284,12 @@
     }
 
     function allerAuxStatistiques() { if (pseudoGlobal) window.location.href = `/statistiques/${pseudoGlobal}`; }
+    
+    function allerAuPanneauAdmin() {
+      if (pseudoGlobal) {
+        window.open('/admin-live/' + encodeURIComponent(pseudoGlobal), '_blank');
+      }
+    }
 
     function ouvrirPersonnalisation(type, titre, icone) {
       typeActuel = type;
@@ -323,9 +329,23 @@
         formGroup.append(label, input);
         wrapper.appendChild(formGroup);
 
+        const formGroupMin = document.createElement('div');
+        formGroupMin.className = 'form-group';
+        formGroupMin.style.marginTop = '10px';
+        const labelMin = document.createElement('label');
+        labelMin.textContent = 'Pièces minimum pour déclencher la roue';
+        const inputMin = document.createElement('input');
+        inputMin.type = 'number';
+        inputMin.id = 'roue-montant-min';
+        inputMin.value = '10';
+        inputMin.min = '1';
+        inputMin.style.cssText = 'padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;';
+        formGroupMin.append(labelMin, inputMin);
+        wrapper.appendChild(formGroupMin);
+
         const btnSave = document.createElement('button');
         btnSave.className = 'btn btn-primary';
-        btnSave.style.cssText = 'width: 100%; margin-top: 10px;';
+        btnSave.style.cssText = 'width: 100%; margin-top: 12px;';
         btnSave.textContent = 'Enregistrer les options';
         btnSave.onclick = sauvegarderRoue;
         wrapper.appendChild(btnSave);
@@ -489,8 +509,9 @@
 
     function sauvegarderRoue() {
       const opts = document.getElementById('roue-options-input').value.split(',').map(s => s.trim()).filter(Boolean);
+      const montantMin = parseInt(document.getElementById('roue-montant-min').value, 10) || 10;
       if (!socket) socket = io();
-      socket.emit('configurerRoue', { pseudo: pseudoGlobal, options: opts });
+      socket.emit('configurerRoue', { pseudo: pseudoGlobal, options: opts, montantMin: montantMin });
       alert("Options de la roue enregistrées !");
     }
 

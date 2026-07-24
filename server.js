@@ -305,7 +305,6 @@ app.post('/api/update-profile', async (req, res) => {
     const nvApiKey = safeText(apiKey);
     const updateData = { pseudo: nvPseudo };
 
-    // Si une nouvelle clé API est fournie, on la met à jour. Si elle est vide, on conserve l'ancienne.
     if (nvApiKey !== "") {
       updateData.apiKey = nvApiKey;
     }
@@ -537,7 +536,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     derniereGagnantId: null, 
     vouchFait: false, 
     objectif: null,
-    roue: { active: false, options: ["Gage 1", "Gage 2", "100 Diamants", "Rien", "Boost x2"] },
+    roue: { active: false, options: ["Gage 1", "Gage 2", "100 Diamants", "Rien", "Boost x2"], montantMin: 10 },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
@@ -623,7 +622,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
-    if (totalPieces >= 10 && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
+    const seuilRoue = data.roue?.montantMin ?? 10;
+    if (totalPieces >= seuilRoue && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
       io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
@@ -889,16 +889,21 @@ io.on('connection', socket => {
 
   socket.on('configurerRoue', (payload = {}) => {
     try {
-      const { pseudo, options } = payload;
+      const { pseudo, options, montantMin } = payload;
       const user = socket.request.session?.user;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(user, pseudoNettoye)) return;
       const data = connexionsActives[pseudoNettoye];
-      if (data && Array.isArray(options)) {
-        data.roue.options = options
-          .slice(0, 20)
-          .map(opt => safeText(opt).slice(0, 80))
-          .filter(Boolean);
+      if (data) {
+        if (Array.isArray(options)) {
+          data.roue.options = options
+            .slice(0, 20)
+            .map(opt => safeText(opt).slice(0, 80))
+            .filter(Boolean);
+        }
+        if (montantMin !== undefined) {
+          data.roue.montantMin = positiveInteger(montantMin, 1);
+        }
       }
     } catch {}
   });
