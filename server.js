@@ -485,6 +485,16 @@ app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 
+// Route de test pour simuler l'affichage VIP
+app.get('/api/test-vip/:username', (req, res) => {
+  const pseudo = req.params.username;
+  io.to(`streamer:${pseudo}`).emit('vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
+  setTimeout(() => {
+    io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username: "Testeur_VIP", message: "MonPseudoRoblox123" });
+  }, 1000);
+  res.send(`Test de simulation VIP lancé pour @${pseudo} ! Va voir ton overlay.`);
+});
+
 app.get('/encheres/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   try {
