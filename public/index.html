@@ -87,6 +87,9 @@
         <label>Mot de passe</label>
         <input type="password" name="password" placeholder="••••••••" required>
       </div>
+      <div style="margin-top: -4px;">
+        <a href="#" onclick="motDePasseOublie(event)" style="font-size: 11px; color: var(--cyan); text-decoration: none;">Mot de passe oublié ?</a>
+      </div>
       <button type="submit" class="btn-submit">Se connecter</button>
     </form>
 
@@ -179,6 +182,25 @@
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
       }
+    }
+
+    function motDePasseOublie(e) {
+      e.preventDefault();
+      const email = prompt("Veuillez entrer l'adresse e-mail associée à votre compte :");
+      if (!email) return;
+
+      fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      .then(r => r.json())
+      .then(data => {
+        alert(data.message || "Si cet e-mail existe, un lien de réinitialisation a été envoyé.");
+      })
+      .catch(() => {
+        alert("Erreur de connexion au serveur.");
+      });
     }
 
     function ouvrirTuto(e) {

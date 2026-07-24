@@ -8,11 +8,14 @@ const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
+const { Resend } = require('resend');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 
@@ -187,7 +190,7 @@ async function incrementerVouchGlobal() {
 }
 
 // ----------------------------------------------------
-// ROUTES D'AUTHENTIFICATION & PROFIL
+// ROUTES D'AUTHENTIFICATION & PROFIL & RÉINITIALISATION
 // ----------------------------------------------------
 
 app.post('/register', async (req, res) => {
@@ -268,6 +271,98 @@ app.post('/login', async (req, res) => {
     res.redirect('/?error=wrong_credentials');
   } catch (err) {
     res.status(500).send("Erreur serveur.");
+  }
+});
+
+// Route 1 : Demande de réinitialisation de mot de passe (Envoi d'e-mail via Resend)
+app.post('/api/forgot-password', async (req, res) => {
+  let { email } = req.body;
+  try {
+    if (!db) return res.status(500).json({ error: "Base de données indisponible." });
+    email = safeText(email).toLowerCase();
+    
+    const user = await db.collection('users').findOne({ email });
+    
+    // Par sécurité, on renvoie toujours un succès pour ne pas divulguer si l'e-mail existe
+    if (!user) {
+      return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé." });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = Date.now() + 15 * 60 * 1000; // Valide 15 minutes
+
+    await db.collection('users').updateOne(
+      { email },
+      { $set: { resetToken, resetExpires } }
+    );
+
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    const { error } = await resend.emails.send({
+      from: 'TokOverlay <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Réinitialisation de votre mot de passe - TokOverlay',
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+          <h2 style="color: #6366f1;">Réinitialisation de mot de passe</h2>
+          <p>Bonjour,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte TokOverlay.</p>
+          <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe (ce lien est valable 15 minutes) :</p>
+          <a href="${resetLink}" style="display: inline-block; padding: 12px 20px; background: #22d3ee; color: #000; font-weight: bold; text-decoration: none; border-radius: 5px; margin: 20px 0;">Réinitialiser mon mot de passe</a>
+          <p>Si vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="font-size: 12px; color: #666;">TokOverlay - Tous droits réservés.</p>
+        </div>
+      `
+    });
+
+    if (error) {
+      console.error("Erreur Resend :", error);
+      return res.status(500).json({ error: "Erreur lors de l'envoi de l'e-mail." });
+    }
+
+    res.json({ success: true, message: "E-mail de réinitialisation envoyé avec succès !" });
+  } catch (err) {
+    console.error("Erreur serveur forgot-password :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// Route 2 : Validation du nouveau mot de passe
+app.post('/api/reset-password', async (req, res) => {
+  let { email, token, newPassword } = req.body;
+  try {
+    if (!db) return res.status(500).json({ error: "Base de données indisponible." });
+    email = safeText(email).toLowerCase();
+    const cleanToken = safeText(token);
+
+    if (!email || !cleanToken || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: "Données invalides ou mot de passe trop court (min 6 caractères)." });
+    }
+
+    const user = await db.collection('users').findOne({
+      email,
+      resetToken: cleanToken,
+      resetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Lien de réinitialisation invalide ou expiré." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.collection('users').updateOne(
+      { email },
+      { 
+        $set: { password: hashedPassword },
+        $unset: { resetToken: "", resetExpires: "" }
+      }
+    );
+
+    res.json({ success: true, message: "Mot de passe mis à jour avec succès !" });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
