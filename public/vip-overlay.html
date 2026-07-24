@@ -167,6 +167,14 @@
         const listeJoueurs = document.getElementById('liste-joueurs');
         const joueursEnAttente = {};
 
+        // Récupération automatique du pseudo depuis l'URL (ex: /overlay-vip/slacezzz)
+        const pathParts = window.location.pathname.split('/');
+        const pseudoStreamer = pathParts[pathParts.length - 1];
+
+        if (pseudoStreamer) {
+            socket.emit('rejoindre', { pseudo: pseudoStreamer });
+        }
+
         const VALEUR_CADEAUX = {
             "whale diving": 2150,
             "galaxy": 1000,
@@ -187,54 +195,52 @@
                 return;
             }
 
-            const nomDuCadeau = joueursEnAttente[data.username];
+            const nomDuCadeau = joueursEnAttente[data.username] || "galaxy"; // Fallback pour le test si l'alerte gift est simulée en même temps
             
-            if (nomDuCadeau) {
-                const anciennesCartes = document.querySelectorAll('.dernier-joueur');
-                anciennesCartes.forEach(c => c.classList.remove('dernier-joueur'));
+            const anciennesCartes = document.querySelectorAll('.dernier-joueur');
+            anciennesCartes.forEach(c => c.classList.remove('dernier-joueur'));
 
-                const isDonut = nomDuCadeau.toLowerCase() === "donut";
-                const pieces = VALEUR_CADEAUX[nomDuCadeau.toLowerCase()] || "???";
-                
-                const carte = document.createElement('div');
-                carte.id = `carte-${data.username}`;
-                carte.className = isDonut ? 'carte-joueur carte-donut dernier-joueur' : 'carte-joueur dernier-joueur';
-                
-                let htmlContent = `
-                    <div class="en-tete">
-                        <div class="groupe-tiktok">
-                            <span class="pseudo-tiktok">@${data.username}</span>
-                            <span class="badge-nouveau">✨ Nouveau</span>
-                        </div>
-                        <span class="infos-cadeau">🎁 ${nomDuCadeau} (${pieces} 🪙)</span>
+            const isDonut = nomDuCadeau.toLowerCase() === "donut";
+            const pieces = VALEUR_CADEAUX[nomDuCadeau.toLowerCase()] || "???";
+            
+            const carte = document.createElement('div');
+            carte.id = `carte-${data.username}`;
+            carte.className = isDonut ? 'carte-joueur carte-donut dernier-joueur' : 'carte-joueur dernier-joueur';
+            
+            let htmlContent = `
+                <div class="en-tete">
+                    <div class="groupe-tiktok">
+                        <span class="pseudo-tiktok">@${data.username}</span>
+                        <span class="badge-nouveau">✨ Nouveau</span>
                     </div>
-                    <div class="message-roblox" id="msg-${data.username}">🎮 ${data.message}</div>
-                `;
+                    <span class="infos-cadeau">🎁 ${nomDuCadeau} (${pieces} 🪙)</span>
+                </div>
+                <div class="message-roblox" id="msg-${data.username}">🎮 ${data.message}</div>
+            `;
 
-                if (isDonut) {
-                    htmlContent += `
-                        <div class="zone-roulette">
-                            <div class="conteneur-roue">
-                                <div class="curseur">▼</div>
-                                <div class="roue-spin" id="roue-${data.username}"></div>
-                            </div>
-                            <div class="texte-resultat" id="res-${data.username}">La roue tourne...</div>
+            if (isDonut) {
+                htmlContent += `
+                    <div class="zone-roulette">
+                        <div class="conteneur-roue">
+                            <div class="curseur">▼</div>
+                            <div class="roue-spin" id="roue-${data.username}"></div>
                         </div>
-                    `;
-                }
+                        <div class="texte-resultat" id="res-${data.username}">La roue tourne...</div>
+                    </div>
+                `;
+            }
 
-                carte.innerHTML = htmlContent;
-                listeJoueurs.prepend(carte);
+            carte.innerHTML = htmlContent;
+            listeJoueurs.prepend(carte);
 
-                if (isDonut) {
-                    setTimeout(() => {
-                        lancerVraieRoue(`roue-${data.username}`, `res-${data.username}`);
-                    }, 100);
-                }
+            if (isDonut) {
+                setTimeout(() => {
+                    lancerVraieRoue(`roue-${data.username}`, `res-${data.username}`);
+                }, 100);
+            }
 
-                if (listeJoueurs.children.length > 6) {
-                    listeJoueurs.removeChild(listeJoueurs.lastChild);
-                }
+            if (listeJoueurs.children.length > 6) {
+                listeJoueurs.removeChild(listeJoueurs.lastChild);
             }
         });
 
