@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TokOverlay - VIP Pro</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: transparent; 
+            color: white;
+            overflow: hidden; 
+        }
+
+        .liste-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 450px;
+        }
+
+        .carte-joueur {
+            background: rgba(15, 15, 20, 0.75); 
+            border-left: 4px solid #00f2fe;
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            animation: glissement 0.5s ease-out forwards;
+            transition: all 0.4s ease;
+        }
+
+        .carte-donut {
+            border-left: 4px solid #ff007f;
+        }
+
+        .carte-joueur.dernier-joueur {
+            background: rgba(15, 15, 20, 0.95);
+            border-left: 8px solid #00f2fe;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.6), 0 4px 15px rgba(0,0,0,0.8);
+            transform: scale(1.02);
+        }
+
+        @keyframes glissement {
+            from { opacity: 0; transform: translateX(-50px) scale(1); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        .en-tete {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 4px;
+        }
+
+        .groupe-tiktok {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pseudo-tiktok { 
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #00f2fe; 
+        }
+        
+        .carte-donut .pseudo-tiktok { color: #ff007f; }
+
+        .badge-nouveau {
+            display: none;
+            background: #ffeb3b;
+            color: #000;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            box-shadow: 0 0 8px rgba(255, 235, 59, 0.8);
+        }
+
+        .dernier-joueur .badge-nouveau {
+            display: block;
+            animation: pulseBadge 1s infinite alternate;
+        }
+
+        @keyframes pulseBadge {
+            from { opacity: 0.8; transform: scale(1); }
+            to { opacity: 1; transform: scale(1.1); }
+        }
+
+        .infos-cadeau {
+            font-size: 13px;
+            color: #ffeb3b;
+            font-weight: bold;
+            background: rgba(255, 235, 59, 0.15);
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+
+        .message-roblox {
+            font-size: 22px; 
+            font-weight: 900; 
+            color: #ffffff;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
+
+        .zone-roulette {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 6px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 1px dashed #ff007f;
+        }
+
+        .conteneur-roue {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+
+        .curseur {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            color: white;
+            z-index: 10;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .roue-spin {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #00ffcc 0deg 36deg, 
+                #ff4444 36deg 360deg
+            );
+            border: 2px solid white;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1); 
+        }
+
+        .texte-resultat {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="liste-container" id="liste-joueurs"></div>
+
+    <script>
+        const socket = io();
+        const listeJoueurs = document.getElementById('liste-joueurs');
+        const joueursEnAttente = {};
+
+        const VALEUR_CADEAUX = {
+            "whale diving": 2150,
+            "galaxy": 1000,
+            "swan": 699,
+            "donut": 30,
+            "corgi": 299
+        };
+
+        socket.on('vip_alert', (data) => {
+            joueursEnAttente[data.username] = data.giftName;
+        });
+
+        socket.on('roblox_pseudo', (data) => {
+            const carteExistante = document.getElementById(`carte-${data.username}`);
+            if (carteExistante) {
+                const msgElement = document.getElementById(`msg-${data.username}`);
+                if (msgElement) msgElement.innerText = `🎮 ${data.message}`;
+                return;
+            }
+
+            const nomDuCadeau = joueursEnAttente[data.username];
+            
+            if (nomDuCadeau) {
+                const anciennesCartes = document.querySelectorAll('.dernier-joueur');
+                anciennesCartes.forEach(c => c.classList.remove('dernier-joueur'));
+
+                const isDonut = nomDuCadeau.toLowerCase() === "donut";
+                const pieces = VALEUR_CADEAUX[nomDuCadeau.toLowerCase()] || "???";
+                
+                const carte = document.createElement('div');
+                carte.id = `carte-${data.username}`;
+                carte.className = isDonut ? 'carte-joueur carte-donut dernier-joueur' : 'carte-joueur dernier-joueur';
+                
+                let htmlContent = `
+                    <div class="en-tete">
+                        <div class="groupe-tiktok">
+                            <span class="pseudo-tiktok">@${data.username}</span>
+                            <span class="badge-nouveau">✨ Nouveau</span>
+                        </div>
+                        <span class="infos-cadeau">🎁 ${nomDuCadeau} (${pieces} 🪙)</span>
+                    </div>
+                    <div class="message-roblox" id="msg-${data.username}">🎮 ${data.message}</div>
+                `;
+
+                if (isDonut) {
+                    htmlContent += `
+                        <div class="zone-roulette">
+                            <div class="conteneur-roue">
+                                <div class="curseur">▼</div>
+                                <div class="roue-spin" id="roue-${data.username}"></div>
+                            </div>
+                            <div class="texte-resultat" id="res-${data.username}">La roue tourne...</div>
+                        </div>
+                    `;
+                }
+
+                carte.innerHTML = htmlContent;
+                listeJoueurs.prepend(carte);
+
+                if (isDonut) {
+                    setTimeout(() => {
+                        lancerVraieRoue(`roue-${data.username}`, `res-${data.username}`);
+                    }, 100);
+                }
+
+                if (listeJoueurs.children.length > 6) {
+                    listeJoueurs.removeChild(listeJoueurs.lastChild);
+                }
+            }
+        });
+
+        function lancerVraieRoue(idRoue, idResultat) {
+            const roue = document.getElementById(idRoue);
+            const texte = document.getElementById(idResultat);
+
+            const isWinner = Math.random() < 0.10; 
+            const toursDeBase = 6 * 360; 
+            let angleArret;
+
+            if (isWinner) {
+                angleArret = Math.floor(Math.random() * 30) + 325;
+            } else {
+                angleArret = Math.floor(Math.random() * 300) + 10;
+            }
+
+            const rotationTotale = toursDeBase + angleArret;
+            roue.style.transform = `rotate(${rotationTotale}deg)`;
+
+            setTimeout(() => {
+                if (isWinner) {
+                    texte.innerHTML = "🎉 <b>GAGNÉ !</b> 🎉";
+                    texte.style.color = "#00ffcc";
+                    texte.style.transform = "scale(1.1)";
+                    texte.style.transition = "0.3s";
+                } else {
+                    texte.innerHTML = "💀 <b>PERDU...</b> 💀";
+                    texte.style.color = "#ff4444";
+                }
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

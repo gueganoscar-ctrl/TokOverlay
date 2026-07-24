@@ -482,6 +482,7 @@ app.get('/logout', (req, res) => {
 // ----------------------------------------------------
 
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
+app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 
 app.get('/encheres/:username', (req, res) => {
@@ -616,6 +617,8 @@ app.get('/api/live-stats/:pseudo', async (req, res) => {
 // ----------------------------------------------------
 
 const connexionsActives = {};
+const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
+const waitingUsers = new Map();
 
 function arreterEcouteLive(pseudo, data, reason) {
   if (!data || data.closed) return;
@@ -733,6 +736,15 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const user = d.user && typeof d.user === 'object' ? d.user : {};
     const id = resolveUserId(d, user);
     const nickname = safeText(user.nickname || d.nickname, 'Anonyme');
+    const username = safeText(user.uniqueId || d.uniqueId, nickname);
+    const giftName = safeText(d.giftName || d.gift?.name, '').toLowerCase();
+
+    if (ELIGIBLE_GIFTS.includes(giftName)) {
+      if (!waitingUsers.has(`${pseudo}_${username}`)) {
+        io.to(`streamer:${pseudo}`).emit('vip_alert', { username, giftName });
+      }
+      waitingUsers.set(`${pseudo}_${username}`, Date.now() + 90000);
+    }
     
     const diamondCount = positiveInteger(d.gift?.diamondCount, 0);
     const repeatCount = positiveInteger(d.repeatCount, 1);
@@ -776,8 +788,17 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const user = d.user && typeof d.user === 'object' ? d.user : {};
     const id = resolveUserId(d, user);
     const nickname = safeText(d.nickname || user.nickname, 'Anonyme');
+    const username = safeText(user.uniqueId || d.uniqueId, nickname);
     const avatar = avatarFor(user, nickname);
     const message = safeText(d.comment || d.text || d.message || d.msg || d.content, '');
+
+    const userKey = `${pseudo}_${username}`;
+    if (waitingUsers.has(userKey)) {
+      if (Date.now() <= waitingUsers.get(userKey)) {
+        io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username, message });
+      }
+      waitingUsers.delete(userKey);
+    }
 
     io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname, avatar, message });
 
