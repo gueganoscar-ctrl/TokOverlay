@@ -114,6 +114,13 @@ function positiveInteger(value, fallback = 1) {
   return Number.isInteger(num) && num > 0 ? num : fallback;
 }
 
+function resolveUserId(d = {}, user = {}) {
+  return safeText(
+    user.displayId || d.uniqueId || user.userId || d.userId,
+    `unknown:${crypto.randomUUID()}`
+  );
+}
+
 function avatarFor(user = {}, nickname = 'Anonyme') {
   const avatarList = user?.avatarThumb?.urlList;
   if (Array.isArray(avatarList) && avatarList.length > 0 && typeof avatarList[0] === 'string') {
@@ -575,7 +582,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
   connection.on('like', (d = {}) => {
     if (data.closed) return;
     const user = d.user && typeof d.user === 'object' ? d.user : {};
-    const id = safeText(user.displayId || user.uniqueId, `unknown:${Math.random()}`);
+    const id = resolveUserId(d, user);
     const nickname = safeText(user.nickname, 'Anonyme');
     const likes = positiveInteger(d.count, 1);
     const avatar = avatarFor(user, nickname);
@@ -592,7 +599,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
     const user = d.user && typeof d.user === 'object' ? d.user : {};
-    const id = safeText(user.displayId || d.uniqueId || user.userId, 'inconnu');
+    const id = resolveUserId(d, user);
     const nickname = safeText(user.nickname || d.nickname, 'Anonyme');
     
     const diamondCount = positiveInteger(d.gift?.diamondCount, 0);
@@ -634,7 +641,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
   connection.on('chat', (d = {}) => {
     if (data.closed) return;
     const user = d.user && typeof d.user === 'object' ? d.user : {};
-    const id = safeText(d.uniqueId || d.userId || user.displayId || user.userId, 'inconnu');
+    const id = resolveUserId(d, user);
     const nickname = safeText(d.nickname || user.nickname, 'Anonyme');
     const avatar = avatarFor(user, nickname);
     const message = safeText(d.comment || d.text || d.message || d.msg || d.content, '');
