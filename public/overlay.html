@@ -369,10 +369,14 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const pathParts = window.location.pathname.split('/');
-    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
     const params = new URLSearchParams(window.location.search);
-    const type = params.get('type');
+    const overlayTypes = new Set(['donateurs', 'likers', 'bestgift', 'objectif', 'coffre', 'roue', 'encheres']);
+    const typeFromPath = pathParts[pathParts.length - 1];
+    const type = overlayTypes.has(typeFromPath) ? typeFromPath : params.get('type');
+    const pseudo = overlayTypes.has(typeFromPath)
+      ? pathParts[pathParts.length - 2]
+      : pathParts[pathParts.length - 1];
     const token = params.get('token');
     const style = params.get('style') || '1';
     const isDemo = params.get('demo') === '1';

@@ -458,12 +458,19 @@ app.get('/logout', (req, res) => {
 // ROUTES FRONT-END ET API
 // ----------------------------------------------------
 
+app.get('/overlay/:username/:type', (req, res) => {
+    const type = req.params.type;
+    if (type === 'vip') {
+        return res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html'));
+    }
+    res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
+});
+
+// Compatibilité avec les anciens liens utilisant ?type=...
 app.get('/overlay/:username', (req, res) => {
     const type = req.query.type;
     if (type === 'vip') {
         return res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html'));
-    } else if (type === 'coffre') {
-        return res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
     }
     res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
 });

@@ -553,7 +553,7 @@
       if (typeActuel === 'vip') {
         lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
       } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       }
       
       document.getElementById('modal-obs-url').textContent = lien;

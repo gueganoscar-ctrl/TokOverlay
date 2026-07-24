@@ -216,7 +216,7 @@
 
         // Utilisation du jeton sécurisé (overlayToken) au lieu de l'ancienne clé en clair
         const overlayToken = user.overlayToken || '';
-        document.getElementById('url-champ').value = `${window.location.origin}/overlay/${pseudo}?type=encheres&token=${encodeURIComponent(overlayToken)}`;
+        document.getElementById('url-champ').value = `${window.location.origin}/overlay/${encodeURIComponent(pseudo)}/encheres?token=${encodeURIComponent(overlayToken)}`;
 
         const socket = io();
         socket.on('connect', () => {
