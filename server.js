@@ -3,7 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const TikTokModule = require('tiktok-live-connector');
 const path = require('path');
-const fs = require('fs');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
@@ -460,19 +459,16 @@ app.get('/logout', (req, res) => {
 // ----------------------------------------------------
 
 const OVERLAY_PAGE_TYPES = new Set(['donateurs', 'likers', 'bestgift', 'objectif', 'coffre', 'roue', 'encheres']);
-const overlayTemplate = fs.readFileSync(path.join(__dirname, 'public', 'overlay.html'), 'utf8');
 
 function envoyerOverlayIsole(res, username, type) {
   if (!OVERLAY_PAGE_TYPES.has(type)) return res.status(400).send('Type d’overlay invalide.');
 
-  const config = JSON.stringify({ pseudo: username, type }).replace(/</g, '\\u003c');
-  const page = overlayTemplate.replace('<!-- OVERLAY_SERVER_CONFIG -->', `<script>window.__TOKOVERLAY_CONFIG__=${config};</script>`);
   res.set({
     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
     Pragma: 'no-cache',
     Expires: '0'
   });
-  res.type('html').send(page);
+  res.sendFile(path.join(__dirname, 'public', 'overlays', `${type}.html`));
 }
 
 app.get('/overlay/:username/:type', (req, res) => {

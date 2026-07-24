@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Donateurs</title></head><body><script>
+  const type = 'donateurs';
+  const parts = location.pathname.split('/').filter(Boolean);
+  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
+  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
+    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
+    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
+    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
+  });
+</script></body></html>
