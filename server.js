@@ -365,6 +365,45 @@ app.post('/api/reset-password', async (req, res) => {
   }
 });
 
+// Route 3 : Envoi de suggestions / contact depuis la page choix.html
+app.post('/api/contact', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Vous devez être connecté." });
+  }
+
+  const { type, message } = req.body;
+  const user = req.session.user;
+
+  if (!message || message.trim() === '') {
+    return res.status(400).json({ error: "Le message ne peut pas être vide." });
+  }
+
+  try {
+    await resend.emails.send({
+      from: 'TokOverlay <onboarding@resend.dev>',
+      to: ['gueganoscar@gmail.com'],
+      subject: `[TokOverlay] ${type} de @${user.pseudo}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background: #f4f4f5; border-radius: 10px; color: #18181b;">
+          <h2 style="color: #6366f1;">Nouveau retour utilisateur (${type})</h2>
+          <p><strong>Streamer :</strong> @${user.pseudo}</p>
+          <p><strong>Email :</strong> ${user.email}</p>
+          <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 15px 0;">
+          <p><strong>Message :</strong></p>
+          <blockquote style="background: #ffffff; padding: 12px; border-left: 4px solid #6366f1; margin: 0; border-radius: 4px;">
+            ${message.replace(/\n/g, '<br>')}
+          </blockquote>
+        </div>
+      `
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erreur envoi suggestion :", err);
+    res.status(500).json({ error: "Erreur lors de l'envoi du message." });
+  }
+});
+
 app.get('/api/me', async (req, res) => {
   if (!req.session.user || !db) return res.status(401).json({ error: 'Non connecté' });
   try {
