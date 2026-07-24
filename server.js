@@ -481,7 +481,16 @@ app.get('/logout', (req, res) => {
 // ROUTES FRONT-END ET API
 // ----------------------------------------------------
 
-app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
+app.get('/overlay/:username', (req, res) => {
+    const type = req.query.type;
+    if (type === 'vip') {
+        return res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html'));
+    } else if (type === 'coffre') {
+        // Crée ou utilise ton fichier dédié au coffre, ou renvoie overlay.html si géré en interne
+        return res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
+    }
+    res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
+});
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 
