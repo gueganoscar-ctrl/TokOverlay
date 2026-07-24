@@ -283,7 +283,6 @@ app.post('/api/forgot-password', async (req, res) => {
     
     const user = await db.collection('users').findOne({ email });
     
-    // Par sécurité, on renvoie toujours un succès pour ne pas divulguer si l'e-mail existe
     if (!user) {
       return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé." });
     }
