@@ -548,11 +548,16 @@
 
     function mettreAJourLienModal() {
       if (!pseudoGlobal) return;
-      // Si c'est l'overlay vip, on pointe vers la route spécifique '/overlay-vip/'
-      const pathSegment = (typeActuel === 'vip') ? `overlay-vip/${encodeURIComponent(pseudoGlobal)}` : `overlay/${encodeURIComponent(pseudoGlobal)}`;
-      const lien = `${baseUrl}/${pathSegment}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+      
+      let lien = '';
+      if (typeActuel === 'vip') {
+        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}`;
+      } else {
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+      }
+      
       document.getElementById('modal-obs-url').textContent = lien;
-      document.getElementById('modal-demo-link').href = lien + '&demo=1';
+      document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '' : '&demo=1');
     }
 
     function sauvegarderRoue() {
