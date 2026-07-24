@@ -6,6 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <!-- OVERLAY_SERVER_CONFIG -->
   <style>
     :root {
       --cyan: #22e5e0;
@@ -369,14 +370,15 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const serverConfig = window.__TOKOVERLAY_CONFIG__ || {};
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     const params = new URLSearchParams(window.location.search);
     const overlayTypes = new Set(['donateurs', 'likers', 'bestgift', 'objectif', 'coffre', 'roue', 'encheres']);
     const typeFromPath = pathParts[pathParts.length - 1];
-    const type = overlayTypes.has(typeFromPath) ? typeFromPath : params.get('type');
-    const pseudo = overlayTypes.has(typeFromPath)
+    const type = serverConfig.type || (overlayTypes.has(typeFromPath) ? typeFromPath : params.get('type'));
+    const pseudo = serverConfig.pseudo || (overlayTypes.has(typeFromPath)
       ? pathParts[pathParts.length - 2]
-      : pathParts[pathParts.length - 1];
+      : pathParts[pathParts.length - 1]);
     const token = params.get('token');
     const style = params.get('style') || '1';
     const isDemo = params.get('demo') === '1';
