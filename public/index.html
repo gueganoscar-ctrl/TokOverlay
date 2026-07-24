@@ -196,7 +196,7 @@
       })
       .then(r => r.json())
       .then(data => {
-        alert(data.message || "Si cet e-mail existe, un lien de réinitialisation a été envoyé.");
+        alert((data.message || "Si cet e-mail existe, un lien de réinitialisation a été envoyé.") + "\n\n⚠️ Pensez à vérifier vos spams / courriers indésirables !");
       })
       .catch(() => {
         alert("Erreur de connexion au serveur.");
