@@ -220,7 +220,7 @@
 
         const socket = io();
         socket.on('connect', () => {
-          socket.emit('rejoindre', { pseudo, token: overlayToken });
+          socket.emit('rejoindre', { pseudo, token: overlayToken, type: 'control' });
         });
 
         document.getElementById('demarrer-btn').addEventListener('click', () => {

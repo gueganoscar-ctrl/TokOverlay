@@ -434,7 +434,7 @@
 
     socket.on('connect', () => {
       if (pseudo && !isDemo) {
-        socket.emit('rejoindre', { pseudo, token });
+        socket.emit('rejoindre', { pseudo, token, type });
       }
     });
 

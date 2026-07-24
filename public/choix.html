@@ -302,7 +302,7 @@
 
         socket = io();
         socket.on('connect', () => {
-          socket.emit('rejoindre', { pseudo: pseudoGlobal });
+          socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' });
         });
 
         verifierStatutLive(user.pseudo);
@@ -531,7 +531,7 @@
 
       if (!socket) {
         socket = io();
-        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal }));
+        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' }));
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -551,13 +551,13 @@
       
       let lien = '';
       if (typeActuel === 'vip') {
-        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}`;
+        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
       } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&style=${styleActuel}`;
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       }
       
       document.getElementById('modal-obs-url').textContent = lien;
-      document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '?demo=1' : '&demo=1');
+      document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
 
     function sauvegarderRoue() {

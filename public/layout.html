@@ -199,7 +199,7 @@
     const socket = io();
     socket.on('connect', () => {
       if (pseudo && !isDemo) {
-        socket.emit('rejoindre', { pseudo, token }, response => {
+        socket.emit('rejoindre', { pseudo, token, type: 'layout' }, response => {
           if (response && !response.ok) {
             console.error(response.error || 'Erreur de connexion WebSocket.');
           }

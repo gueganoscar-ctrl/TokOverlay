@@ -97,7 +97,7 @@
 
     socket.on('connect', () => {
       if (utilisateurGlobal && utilisateurGlobal.pseudo) {
-        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, token: utilisateurGlobal.overlayToken });
+        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, token: utilisateurGlobal.overlayToken, type: 'control' });
       }
     });
 
@@ -111,7 +111,7 @@
         utilisateurGlobal = user;
         document.getElementById('user-info').textContent = `Suivi en direct pour @${user.pseudo}`;
 
-        socket.emit('rejoindre', { pseudo: user.pseudo, token: user.overlayToken });
+        socket.emit('rejoindre', { pseudo: user.pseudo, token: user.overlayToken, type: 'control' });
 
         function afficherAlerte(texte) {
           document.getElementById('latest-alert').textContent = texte;

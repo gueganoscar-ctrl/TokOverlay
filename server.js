@@ -473,9 +473,9 @@ app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'pu
 // Route de test pour simuler l'affichage VIP
 app.get('/api/test-vip/:username', (req, res) => {
   const pseudo = req.params.username;
-  io.to(`streamer:${pseudo}`).emit('vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
+  emitToStreamer(pseudo, 'vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
   setTimeout(() => {
-    io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username: "Testeur_VIP", message: "MonPseudoRoblox123" });
+    emitToStreamer(pseudo, 'roblox_pseudo', { username: "Testeur_VIP", message: "MonPseudoRoblox123" });
   }, 1000);
   res.send(`Test de simulation VIP lancé pour @${pseudo} ! Va voir ton overlay.`);
 });
@@ -615,6 +615,46 @@ const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
 
+// Une room par widget : une source OBS/TikTok ne reçoit que les événements utiles
+// au type indiqué dans son URL. Les panneaux de contrôle utilisent la room
+// "control" et continuent à recevoir les événements nécessaires à leur suivi.
+const OVERLAY_TYPES = new Set([
+  'donateurs', 'likers', 'bestgift', 'objectif', 'coffre',
+  'roue', 'vip', 'encheres', 'layout', 'control'
+]);
+
+const EVENT_OVERLAY_TYPES = {
+  vip_alert: ['vip'],
+  roblox_pseudo: ['vip'],
+  updateTopLikers: ['likers', 'layout'],
+  updateTopGifters: ['donateurs', 'layout'],
+  updateStatsLive: [],
+  updateObjectif: ['objectif', 'layout'],
+  tournerRoue: ['roue'],
+  updateBestGift: ['bestgift', 'layout'],
+  chatEnDirect: [],
+  updateCoffre: ['coffre', 'layout'],
+  coffreOuvert: ['coffre', 'layout'],
+  updateMessageGagnantCoffre: ['coffre', 'layout'],
+  enchereDemarree: ['encheres', 'layout'],
+  updateEnchere: ['encheres', 'layout'],
+  egaliteEnchere: ['encheres', 'layout'],
+  enchereTerminee: ['encheres', 'layout'],
+  updateMessageGagnant: ['encheres', 'layout'],
+  vouchConfirme: ['encheres', 'layout'],
+  liveArrete: ['donateurs', 'likers', 'bestgift', 'objectif', 'coffre', 'roue', 'vip', 'encheres', 'layout'],
+  erreurConnexion: ['donateurs', 'likers', 'bestgift', 'objectif', 'coffre', 'roue', 'vip', 'encheres', 'layout']
+};
+
+function roomOverlay(pseudo, type) {
+  return `streamer:${pseudo}:overlay:${type}`;
+}
+
+function emitToStreamer(pseudo, event, payload) {
+  const types = new Set([...(EVENT_OVERLAY_TYPES[event] || []), 'control']);
+  for (const type of types) io.to(roomOverlay(pseudo, type)).emit(event, payload);
+}
+
 function arreterEcouteLive(pseudo, data, reason) {
   if (!data || data.closed) return;
   data.closed = true;
@@ -647,7 +687,7 @@ function arreterEcouteLive(pseudo, data, reason) {
     delete connexionsActives[pseudo];
   }
   
-  io.to(`streamer:${pseudo}`).emit('liveArrete', { reason });
+  emitToStreamer(pseudo, 'liveArrete', { reason });
 }
 
 function demarrerEcouteLive(pseudo, apiKey) {
@@ -681,27 +721,27 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const p = data.pendingUpdates;
 
     if (p.likers) {
-      io.to(`streamer:${pseudo}`).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
+      emitToStreamer(pseudo, 'updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
       p.likers = false;
     }
     if (p.gifters) {
-      io.to(`streamer:${pseudo}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
+      emitToStreamer(pseudo, 'updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
       p.gifters = false;
     }
     if (p.stats) {
       const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
       const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
-      io.to(`streamer:${pseudo}`).emit('updateStatsLive', { totalDiamonds, totalLikes });
+      emitToStreamer(pseudo, 'updateStatsLive', { totalDiamonds, totalLikes });
       p.stats = false;
     }
     if (p.objectif && data.objectif) {
-      io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
+      emitToStreamer(pseudo, 'updateObjectif', etatObjectif(pseudo));
       p.objectif = false;
     }
   }, 2000); 
 
   connection.connect().catch(() => {
-    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live.");
+    emitToStreamer(pseudo, 'erreurConnexion', "Impossible de se connecter au live.");
     arreterEcouteLive(pseudo, data, 'connect_error');
   });
 
@@ -736,7 +776,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
     if (ELIGIBLE_GIFTS.includes(giftName)) {
       if (!waitingUsers.has(`${pseudo}_${username}`)) {
-        io.to(`streamer:${pseudo}`).emit('vip_alert', { username, giftName });
+        emitToStreamer(pseudo, 'vip_alert', { username, giftName });
       }
       waitingUsers.set(`${pseudo}_${username}`, Date.now() + 90000);
     }
@@ -765,12 +805,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const seuilRoue = data.roue?.montantMin ?? 10;
     if (totalPieces >= seuilRoue && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
       const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
+      emitToStreamer(pseudo, 'tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
     
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
       data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
-      io.to(`streamer:${pseudo}`).emit('updateBestGift', data.bestGift); 
+      emitToStreamer(pseudo, 'updateBestGift', data.bestGift);
     }
 
     data.pendingUpdates.gifters = true;
@@ -790,12 +830,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     const userKey = `${pseudo}_${username}`;
     if (waitingUsers.has(userKey)) {
       if (Date.now() <= waitingUsers.get(userKey)) {
-        io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username, message });
+        emitToStreamer(pseudo, 'roblox_pseudo', { username, message });
       }
       waitingUsers.delete(userKey);
     }
 
-    io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname, avatar, message });
+    emitToStreamer(pseudo, 'chatEnDirect', { nickname, avatar, message });
 
     if (data.enchere && data.enchere.dons[id]) {
       data.enchere.dons[id].dernierMessageChat = message;
@@ -809,21 +849,21 @@ function demarrerEcouteLive(pseudo, apiKey) {
         data.coffre.gagnant = { id, nickname, avatar };
         data.coffre.actif = false;
         
-        io.to(`streamer:${pseudo}`).emit('updateCoffre', etatCoffrePublic(pseudo)); 
-        io.to(`streamer:${pseudo}`).emit('coffreOuvert', etatCoffrePublic(pseudo)); 
+        emitToStreamer(pseudo, 'updateCoffre', etatCoffrePublic(pseudo));
+        emitToStreamer(pseudo, 'coffreOuvert', etatCoffrePublic(pseudo));
       }
     } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
       data.coffre.dernierMessageGagnant = message;
-      io.to(`streamer:${pseudo}`).emit('updateMessageGagnantCoffre', { message }); 
+      emitToStreamer(pseudo, 'updateMessageGagnantCoffre', { message });
     }
 
     if (data.derniereGagnantId && id === data.derniereGagnantId) {
-      io.to(`streamer:${pseudo}`).emit('updateMessageGagnant', { message });
+      emitToStreamer(pseudo, 'updateMessageGagnant', { message });
 
       if (!data.vouchFait && message.toLowerCase() === 'vouch') {
         data.vouchFait = true;
         incrementerVouchGlobal();
-        io.to(`streamer:${pseudo}`).emit('vouchConfirme', {});
+        emitToStreamer(pseudo, 'vouchConfirme', {});
       }
     }
   });
@@ -885,7 +925,7 @@ function demarrerEnchere(pseudo, dureeSecondes, snipeSecondes, miseMinimale) {
   };
   data.enchere = enchere;
   programmerTransitionOuFin(pseudo, enchere);
-  io.to(`streamer:${pseudo}`).emit('enchereDemarree', etatEnchere(pseudo));
+  emitToStreamer(pseudo, 'enchereDemarree', etatEnchere(pseudo));
 }
 
 function etatObjectif(pseudo) {
@@ -932,7 +972,7 @@ function programmerTransitionOuFin(pseudo, enchere) {
     if (enchere.phase === 'timer') {
       enchere.phase = 'snipe';
       enchere.finTimestamp = Date.now() + enchere.snipeMs;
-      io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
+      emitToStreamer(pseudo, 'updateEnchere', etatEnchere(pseudo));
       programmerTransitionOuFin(pseudo, enchere);
     } else {
       terminerEnchere(pseudo);
@@ -946,7 +986,7 @@ function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
   if (!enchere.dons[id]) enchere.dons[id] = { id, nickname, profilePictureUrl: avatar, coins: 0, dernierMessageChat: '' };
   enchere.dons[id].coins += totalPieces;
   enchere.totalDiamantsEnchere += totalPieces;
-  io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
+  emitToStreamer(pseudo, 'updateEnchere', etatEnchere(pseudo));
 }
 
 function terminerEnchere(pseudo) {
@@ -958,9 +998,9 @@ function terminerEnchere(pseudo) {
   if (donsValides.length >= 2 && donsValides[0].coins === donsValides[1].coins) {
     enchere.phase = 'timer';
     enchere.finTimestamp = Date.now() + 30000;
-    io.to(`streamer:${pseudo}`).emit('egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
+    emitToStreamer(pseudo, 'egaliteEnchere', { message: "Égalité ! +30s ajoutées !" });
     programmerTransitionOuFin(pseudo, enchere);
-    io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
+    emitToStreamer(pseudo, 'updateEnchere', etatEnchere(pseudo));
     return;
   }
 
@@ -983,7 +1023,7 @@ function terminerEnchere(pseudo) {
     }).catch(() => {});
   }
 
-  io.to(`streamer:${pseudo}`).emit('enchereTerminee', { 
+  emitToStreamer(pseudo, 'enchereTerminee', {
     gagnant, 
     classement: donsValides.slice(0, 3),
     totalDiamantsEnchere: enchere.totalDiamantsEnchere 
@@ -1000,6 +1040,7 @@ io.on('connection', socket => {
   socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
     try {
       const { pseudo } = payload;
+      const type = OVERLAY_TYPES.has(payload.type) ? payload.type : 'control';
       let pseudoNettoye;
       try {
         pseudoNettoye = normalizePseudo(pseudo);
@@ -1013,15 +1054,23 @@ io.on('connection', socket => {
         return ack({ ok: false, error: 'Streamer inconnu.' });
       }
 
-      socket.join(`streamer:${pseudoNettoye}`);
+      socket.join(roomOverlay(pseudoNettoye, type));
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
       ack({ ok: true });
       
       const data = connexionsActives[pseudoNettoye];
-      if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
-      if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
-      if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
-      if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      if (type === 'encheres' || type === 'layout' || type === 'control') {
+        if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
+      }
+      if (type === 'bestgift' || type === 'layout' || type === 'control') {
+        if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
+      }
+      if (type === 'objectif' || type === 'layout' || type === 'control') {
+        if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
+      }
+      if (type === 'coffre' || type === 'layout' || type === 'control') {
+        if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      }
       socket.emit('initVouch', { vouches: vouchesGlobalCount });
     } catch {
       ack({ ok: false, error: 'Requête invalide.' });
@@ -1058,7 +1107,7 @@ io.on('connection', socket => {
       const data = connexionsActives[pseudoNettoye];
       if (data && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
         const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-        io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+        emitToStreamer(pseudoNettoye, 'tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
       }
     } catch {}
   });
@@ -1094,7 +1143,7 @@ io.on('connection', socket => {
         metrique: metrique === 'likes' ? 'likes' : 'diamants',
         label: safeText(label, 'Objectif du live').slice(0, 60)
       };
-      io.to(`streamer:${pseudoNettoye}`).emit('updateObjectif', etatObjectif(pseudoNettoye));
+      emitToStreamer(pseudoNettoye, 'updateObjectif', etatObjectif(pseudoNettoye));
     } catch {}
   });
 
@@ -1118,7 +1167,7 @@ io.on('connection', socket => {
         gagnant: null,
         dernierMessageGagnant: ''
       };
-      io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+      emitToStreamer(pseudoNettoye, 'updateCoffre', etatCoffrePublic(pseudoNettoye));
     } catch {}
   });
 
@@ -1135,7 +1184,7 @@ io.on('connection', socket => {
       if (indicesNonDevoiles.length > 0) {
         const idxChoisi = indicesNonDevoiles[Math.floor(Math.random() * indicesNonDevoiles.length)];
         coffre.devoiles[idxChoisi] = true;
-        io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+        emitToStreamer(pseudoNettoye, 'updateCoffre', etatCoffrePublic(pseudoNettoye));
       }
     } catch {}
   });
@@ -1152,7 +1201,7 @@ io.on('connection', socket => {
       const idxArr = strictInteger(index, { min: 1, max: 100 }) - 1;
       if (idxArr >= 0 && idxArr < coffre.devoiles.length) {
         coffre.devoiles[idxArr] = true;
-        io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+        emitToStreamer(pseudoNettoye, 'updateCoffre', etatCoffrePublic(pseudoNettoye));
       }
     } catch {}
   });
