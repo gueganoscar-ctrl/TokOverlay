@@ -165,15 +165,17 @@
     <script>
         const socket = io();
         const listeJoueurs = document.getElementById('liste-joueurs');
-        const joueursEnAttente = {};
+        const joueursEnAttente = new Map();
+        const cartesParJoueur = new Map();
 
         // Récupération automatique du pseudo depuis l'URL (ex: /overlay-vip/slacezzz)
         const pathParts = window.location.pathname.split('/');
         const pseudoStreamer = pathParts[pathParts.length - 1];
 
-        if (pseudoStreamer) {
-            socket.emit('rejoindre', { pseudo: pseudoStreamer });
-        }
+        const token = new URLSearchParams(window.location.search).get('token');
+        socket.on('connect', () => {
+            if (pseudoStreamer && token) socket.emit('rejoindre', { pseudo: pseudoStreamer, token });
+        });
 
         const VALEUR_CADEAUX = {
             "whale diving": 2150,
@@ -184,7 +186,9 @@
         };
 
         socket.on('vip_alert', (data) => {
-            joueursEnAttente[data.username] = data.giftName;
+            if (typeof data?.username === 'string' && typeof data?.giftName === 'string') {
+                joueursEnAttente.set(data.username, data.giftName);
+            }
         });
 
         socket.on('roblox_pseudo', (data) => {

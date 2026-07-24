@@ -150,29 +150,6 @@ function signOverlayToken(pseudo) {
   return `${payload}.${signature}`;
 }
 
-function verifyOverlayToken(token, expectedPseudo) {
-  if (typeof token !== 'string') return false;
-  const [payload, signature] = token.split('.');
-  if (!payload || !signature) return false;
-
-  const expected = crypto
-    .createHmac('sha256', OVERLAY_TOKEN_SECRET)
-    .update(payload)
-    .digest('base64url');
-
-  if (
-    signature.length !== expected.length ||
-    !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-  ) return false;
-
-  try {
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return data.pseudo === expectedPseudo && data.expiresAt > Date.now();
-  } catch {
-    return false;
-  }
-}
-
 async function incrementerVouchGlobal() {
   vouchesGlobalCount += 1;
   if (db) {
@@ -486,7 +463,6 @@ app.get('/overlay/:username', (req, res) => {
     if (type === 'vip') {
         return res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html'));
     } else if (type === 'coffre') {
-        // Crée ou utilise ton fichier dédié au coffre, ou renvoie overlay.html si géré en interne
         return res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
     }
     res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
@@ -1023,20 +999,12 @@ io.on('connection', socket => {
 
   socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
     try {
-      const { pseudo, token } = payload;
+      const { pseudo } = payload;
       let pseudoNettoye;
       try {
         pseudoNettoye = normalizePseudo(pseudo);
       } catch {
         return ack({ ok: false, error: 'Pseudo invalide.' });
-      }
-
-      const utilisateurConnecte = socket.request.session?.user;
-      const allowed = canManage(utilisateurConnecte, pseudoNettoye)
-        || verifyOverlayToken(token, pseudoNettoye);
-
-      if (!allowed) {
-        return ack({ ok: false, error: 'Authentification invalide.' });
       }
 
       if (!db) return ack({ ok: false, error: 'Base de données indisponible.' });

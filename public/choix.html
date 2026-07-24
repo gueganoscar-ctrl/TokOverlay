@@ -147,7 +147,7 @@
         <span class="click-hint">Configurer les options & Lien →</span>
       </div>
 
-      <!-- NOUVEAU WIDGET VIP / CHAT / Corgi, Galaxy, etc. -->
+      <!-- WIDGET VIP / CHAT / Corgi, Galaxy, etc. -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
         <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
@@ -302,7 +302,7 @@
 
         socket = io();
         socket.on('connect', () => {
-          socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal });
+          socket.emit('rejoindre', { pseudo: pseudoGlobal });
         });
 
         verifierStatutLive(user.pseudo);
@@ -531,7 +531,7 @@
 
       if (!socket) {
         socket = io();
-        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal }));
+        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal }));
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -553,11 +553,11 @@
       if (typeActuel === 'vip') {
         lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}`;
       } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&style=${styleActuel}`;
       }
       
       document.getElementById('modal-obs-url').textContent = lien;
-      document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '' : '&demo=1');
+      document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '?demo=1' : '&demo=1');
     }
 
     function sauvegarderRoue() {
@@ -606,7 +606,6 @@
       }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
     }
 
-    // Gestion de la modale de contact / suggestion
     function ouvrirContact() { document.getElementById('modal-contact').style.display = 'flex'; }
     function fermerContact() {
       document.getElementById('modal-contact').style.display = 'none';
