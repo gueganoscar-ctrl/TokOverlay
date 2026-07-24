@@ -29,7 +29,7 @@
     }
 
     #leaderboard {
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 10px;
       width: 260px;
@@ -137,6 +137,7 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       position: relative;
       overflow: hidden;
+      display: none;
     }
 
     body.style-1 #enchere-panel {
@@ -215,6 +216,7 @@
       width: 320px; padding: 18px 20px; border-radius: 16px;
       background: var(--bg-dark); border: 1px solid #29283a;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: none;
     }
     #objectif-label {
       font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 800;
@@ -281,12 +283,12 @@
     <div id="bg-pseudo">En attente...</div>
   </div>
 
-  <div id="leaderboard" style="display:none;">
+  <div id="leaderboard">
     <h3 id="titre-classement"></h3>
     <p class="message-attente" id="message-attente-simple">Connexion au live...</p>
   </div>
 
-  <div id="objectif-panel" style="display:none;">
+  <div id="objectif-panel">
     <div id="objectif-label">Objectif du live</div>
     <div id="objectif-barre-fond">
       <div id="objectif-barre-remplissage"></div>
@@ -327,7 +329,7 @@
     </div>
   </div>
 
-  <div id="enchere-panel" style="display:none;">
+  <div id="enchere-panel">
     <div class="badges-top-container">
       <div class="pill-badge"><span>TokOverlay</span></div>
       <div class="pill-badge" id="global-vouch-box"><span>Vouchs :</span> <span class="highlight" id="global-vouch-count">0</span></div>
