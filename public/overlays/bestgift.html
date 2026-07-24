@@ -1,11 +1,47 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Best Gift</title></head><body><script>
-  const type = 'bestgift';
-  const parts = location.pathname.split('/').filter(Boolean);
-  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
-  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
-    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
-    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
-    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
-  });
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Best Gift</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --gold: #ffbe3d; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; color: #ffffff; background: transparent; display: flex; flex-direction: column; align-items: flex-start; padding: 10px; width: fit-content; height: fit-content; }
+    #best-gift-container { background: #08080c; border: 1px solid var(--gold); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); width: 140px; }
+    .bg-title { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+    #bg-icon { width: 70px; height: 70px; object-fit: contain; }
+    #bg-pseudo { font-size: 13px; font-weight: 700; color: #ffffff; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+  </style>
+</head>
+<body>
+  <div id="best-gift-container">
+    <div class="bg-title">👑 Best Gift</div>
+    <img id="bg-icon" src="" alt="Cadeau">
+    <div id="bg-pseudo">En attente...</div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === '1';
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'bestgift' });
+    });
+
+    if (isDemo) {
+      document.getElementById('bg-icon').src = 'https://via.placeholder.com/60';
+      document.getElementById('bg-pseudo').textContent = 'Mia.Star';
+    }
+
+    socket.on('updateBestGift', data => {
+      document.getElementById('bg-icon').src = data.icon || 'https://via.placeholder.com/60';
+      document.getElementById('bg-pseudo').textContent = data.pseudo;
+    });
+  </script>
+</body>
+</html>

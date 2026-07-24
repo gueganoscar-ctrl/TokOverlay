@@ -1,11 +1,65 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Roue</title></head><body><script>
-  const type = 'roue';
-  const parts = location.pathname.split('/').filter(Boolean);
-  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
-  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
-    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
-    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
-    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
-  });
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Roue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --cyan: #22e5e0; --fuchsia: #fe2c55; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; color: #ffffff; background: transparent; }
+    #roue-container { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(11, 14, 20, 0.95); border: 2px solid #22d3ee; border-radius: 24px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(34, 211, 238, 0.4); z-index: 1000; }
+    .roue-title { color: var(--cyan); font-weight: bold; font-size: 18px; text-transform: uppercase; margin-bottom: 8px; font-family: 'Space Grotesk', sans-serif; }
+    #roue-gagnant { font-size: 14px; color: #d1d5db; margin-bottom: 16px; }
+    #roue-resultat { font-size: 32px; font-weight: 800; color: var(--fuchsia); background: #18181f; border: 1px solid #29283a; padding: 16px 24px; border-radius: 14px; font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div id="roue-container">
+    <div class="roue-title">🎡 Roue de la Fortune</div>
+    <div id="roue-gagnant">Un don a déclenché la roue !</div>
+    <div id="roue-resultat">Tourne... 🎲</div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === '1';
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'roue' });
+    });
+
+    function animerRoue(gagnant, resultatFinal) {
+      const container = document.getElementById('roue-container');
+      const boxGagnant = document.getElementById('roue-gagnant');
+      const boxResultat = document.getElementById('roue-resultat');
+      
+      container.style.display = 'block';
+      boxGagnant.textContent = `Cadeau reçu de ${gagnant} !`;
+      
+      let counter = 0;
+      const optionsSimulees = ["Gage 1", "100 Diamants", "Rien", "Boost x2", "Chanson", "VIP"];
+      const interval = setInterval(() => {
+        boxResultat.textContent = optionsSimulees[Math.floor(Math.random() * optionsSimulees.length)];
+        counter++;
+        if (counter > 15) {
+          clearInterval(interval);
+          boxResultat.textContent = `🎉 ${resultatFinal}`;
+          setTimeout(() => { container.style.display = 'none'; }, 5000);
+        }
+      }, 100);
+    }
+
+    socket.on('tournerRoue', data => animerRoue(data.gagnant, data.resultat));
+
+    if (isDemo) {
+      setTimeout(() => animerRoue("Utilisateur Test", "Gage exceptionnel !"), 1000);
+    }
+  </script>
+</body>
+</html>

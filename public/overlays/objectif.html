@@ -1,11 +1,69 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Objectif</title></head><body><script>
-  const type = 'objectif';
-  const parts = location.pathname.split('/').filter(Boolean);
-  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
-  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
-    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
-    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
-    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
-  });
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Objectif</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --cyan: #22e5e0; --fuchsia: #fe2c55; --bg-dark: #100f14; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; color: #ffffff; background: transparent; display: flex; flex-direction: column; align-items: flex-start; padding: 10px; width: fit-content; height: fit-content; }
+    #objectif-panel { width: 320px; padding: 18px 20px; border-radius: 16px; background: var(--bg-dark); border: 1px solid #29283a; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+    #objectif-label { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    #objectif-barre-fond { width: 100%; height: 22px; background: #18181f; border: 1px solid #29283a; border-radius: 999px; overflow: hidden; position: relative; }
+    #objectif-barre-remplissage { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), var(--fuchsia)); transition: width 0.4s ease; }
+    #objectif-texte { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f4f4f5; display: flex; justify-content: space-between; }
+    #objectif-texte .valeur-actuelle { color: var(--cyan); }
+    #objectif-texte .valeur-cible { color: #a1a1aa; }
+  </style>
+</head>
+<body>
+  <div id="objectif-panel">
+    <div id="objectif-label">Objectif du live</div>
+    <div id="objectif-barre-fond">
+      <div id="objectif-barre-remplissage"></div>
+    </div>
+    <div id="objectif-texte">
+      <span class="valeur-actuelle" id="objectif-valeur-actuelle">0</span>
+      <span class="valeur-cible" id="objectif-valeur-cible">/ 0</span>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === '1';
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'objectif' });
+    });
+
+    function afficherObjectif(etat) {
+      if (!etat) return;
+      document.getElementById('objectif-label').textContent = etat.label;
+      const pourcentage = Math.min(100, Math.round((etat.valeurActuelle / etat.cible) * 100));
+      document.getElementById('objectif-barre-remplissage').style.width = pourcentage + '%';
+      const emoji = etat.metrique === 'likes' ? '❤️' : '💎';
+      document.getElementById('objectif-valeur-actuelle').textContent = `${emoji} ${etat.valeurActuelle.toLocaleString()}`;
+      document.getElementById('objectif-valeur-cible').textContent = `/ ${etat.cible.toLocaleString()}`;
+    }
+
+    socket.on('updateObjectif', afficherObjectif);
+
+    if (isDemo) {
+      const cibleDemo = 5000;
+      let valeurDemo = 0;
+      afficherObjectif({ label: '🎯 Objectif : 5000 pièces', metrique: 'diamants', cible: cibleDemo, valeurActuelle: valeurDemo });
+      setInterval(() => {
+        valeurDemo += 200;
+        if (valeurDemo > cibleDemo) valeurDemo = 0;
+        afficherObjectif({ label: '🎯 Objectif : 5000 pièces', metrique: 'diamants', cible: cibleDemo, valeurActuelle: valeurDemo });
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

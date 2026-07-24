@@ -279,7 +279,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let pseudoGlobal = '';
-    let overlayTokenGlobal = '';
     let baseUrl = '';
     let typeActuel = '';
     let styleActuel = 1;
@@ -293,7 +292,6 @@
           return;
         }
         pseudoGlobal = user.pseudo;
-        overlayTokenGlobal = user.overlayToken || '';
         baseUrl = window.location.origin;
 
         document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
@@ -551,9 +549,9 @@
       
       let lien = '';
       if (typeActuel === 'vip') {
-        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}`;
       } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?style=${styleActuel}`;
       }
       
       document.getElementById('modal-obs-url').textContent = lien;

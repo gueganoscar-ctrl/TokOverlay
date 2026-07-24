@@ -1,11 +1,114 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Coffre</title></head><body><script>
-  const type = 'coffre';
-  const parts = location.pathname.split('/').filter(Boolean);
-  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
-  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
-    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
-    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
-    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
-  });
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Coffre-Fort</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --gold: #ffbe3d; --cyan: #22e5e0; --bg-dark: #100f14; --success: #34d399; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; color: #ffffff; background: transparent; display: flex; flex-direction: column; align-items: flex-start; padding: 10px; width: fit-content; height: fit-content; }
+    #coffre-panel { width: 320px; background: var(--bg-dark); border: 2px solid var(--gold); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); display: flex; flex-direction: column; gap: 14px; }
+    .coffre-header { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+    .coffre-icon { font-size: 28px; }
+    .coffre-recompense { font-size: 12px; color: #a1a1aa; font-weight: 600; background: #18181f; padding: 6px 12px; border-radius: 8px; border: 1px solid #29283a; }
+    .coffre-cases-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+    .case-char { width: 32px; height: 38px; background: #18181f; border: 2px solid #29283a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: var(--gold); text-transform: uppercase; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+    .case-char.devoile { border-color: var(--gold); background: rgba(255, 190, 61, 0.1); color: #ffffff; }
+    .coffre-gagnant-box { background: rgba(52, 211, 153, 0.1); border: 1px solid var(--success); border-radius: 12px; padding: 12px; display: none; text-align: center; }
+    .coffre-gagnant-titre { font-size: 11px; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 4px; }
+    .coffre-gagnant-profil { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .coffre-gagnant-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--success); }
+    .coffre-gagnant-nom { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: white; }
+    .gagnant-chat-container { background: #18181f; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: left; }
+    .gagnant-chat-title { font-size: 9px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 2px; }
+    .gagnant-chat-texte { font-size: 11px; color: #f4f4f5; font-style: italic; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <div id="coffre-panel">
+    <div class="coffre-header">
+      <span class="coffre-icon" id="coffre-icon-etat">🔒</span>
+      <span id="coffre-titre-texte">Coffre-Fort Verrouillé</span>
+    </div>
+    <div class="coffre-recompense" id="coffre-recompense-texte">Récompense : --</div>
+    <div class="coffre-cases-grid" id="coffre-cases-grid"></div>
+    <div class="coffre-gagnant-box" id="coffre-gagnant-box">
+      <div class="coffre-gagnant-titre">🎉 Coffre Ouvert !</div>
+      <div class="coffre-gagnant-profil">
+        <img class="coffre-gagnant-avatar" id="coffre-gagnant-avatar" src="" alt="">
+        <span class="coffre-gagnant-nom" id="coffre-gagnant-nom">--</span>
+      </div>
+      <div class="gagnant-chat-container">
+        <div class="gagnant-chat-title">💬 Message du gagnant :</div>
+        <div class="gagnant-chat-texte" id="coffre-gagnant-msg">En attente d'un message dans le chat...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === '1';
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'coffre' });
+    });
+
+    function afficherEtatCoffre(coffre) {
+      if (!coffre) return;
+      const grid = document.getElementById('coffre-cases-grid');
+      grid.innerHTML = '';
+
+      if (!coffre.gagnant) {
+        document.getElementById('coffre-icon-etat').textContent = '🔒';
+        document.getElementById('coffre-titre-texte').textContent = 'Coffre-Fort Verrouillé';
+        document.getElementById('coffre-gagnant-box').style.display = 'none';
+
+        coffre.caracteres.forEach(char => {
+          const div = document.createElement('div');
+          div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
+          div.textContent = char !== '_' ? char : '?';
+          grid.appendChild(div);
+        });
+      } else {
+        document.getElementById('coffre-icon-etat').textContent = '🔓';
+        document.getElementById('coffre-titre-texte').textContent = 'Coffre Ouvert !';
+        document.getElementById('coffre-gagnant-box').style.display = 'block';
+        
+        document.getElementById('coffre-gagnant-avatar').src = coffre.gagnant.avatar;
+        document.getElementById('coffre-gagnant-nom').textContent = coffre.gagnant.nickname;
+        if (coffre.dernierMessageGagnant) {
+          document.getElementById('coffre-gagnant-msg').textContent = `"${coffre.dernierMessageGagnant}"`;
+        }
+
+        const secret = coffre.secretComplet || '';
+        secret.split('').forEach(char => {
+          const div = document.createElement('div');
+          div.className = 'case-char devoile';
+          div.textContent = char;
+          grid.appendChild(div);
+        });
+      }
+      document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
+    }
+
+    socket.on('updateCoffre', afficherEtatCoffre);
+    socket.on('coffreOuvert', afficherEtatCoffre);
+    socket.on('updateMessageGagnantCoffre', data => {
+      document.getElementById('coffre-gagnant-msg').textContent = `"${data.message}"`;
+    });
+
+    if (isDemo) {
+      afficherEtatCoffre({ actif: true, recompense: '1 Abo Offert', caracteres: ['7', '_', '_'], gagnant: null });
+      setTimeout(() => {
+        afficherEtatCoffre({ actif: false, recompense: '1 Abo Offert', secretComplet: '777', gagnant: { nickname: 'Mia.Star', avatar: 'https://ui-avatars.com/api/?name=Mia' }, dernierMessageGagnant: 'Merci !!' });
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

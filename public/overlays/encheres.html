@@ -1,11 +1,173 @@
-<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>TokOverlay — Enchères</title></head><body><script>
-  const type = 'encheres';
-  const parts = location.pathname.split('/').filter(Boolean);
-  const pseudo = parts[0] === 'overlay' ? parts[parts.length - 2] : '';
-  fetch('/overlay.html', { cache: 'no-store' }).then(r => r.text()).then(template => {
-    const config = JSON.stringify({ pseudo, type }).replace(/</g, '\\u003c');
-    const configTag = '<scr' + 'ipt>window.__TOKOVERLAY_CONFIG__=' + config + ';</scr' + 'ipt>';
-    document.open(); document.write(template.replace('<!-- OVERLAY_SERVER_CONFIG -->', configTag)); document.close();
-  });
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>TokOverlay - Enchères</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --cyan: #22e5e0; --fuchsia: #fe2c55; --gold: #ffbe3d; --bg-dark: #100f14; --success: #34d399; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; color: #ffffff; background: transparent; display: flex; flex-direction: column; align-items: flex-start; padding: 10px; width: fit-content; height: fit-content; }
+    #enchere-panel { width: 300px; padding: 20px; border-radius: 18px; background: var(--bg-dark); border: 1px solid #29283a; text-align: center; color: white; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+    .badges-top-container { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 16px; }
+    .pill-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #18181f; border: 1px solid #29283a; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; width: 100%; }
+    .pill-badge .highlight { font-family: 'JetBrains Mono', monospace; color: var(--cyan); font-weight: 800; }
+    .ench-infos { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; background: #18181f; padding: 12px; border-radius: 12px; border: 1px solid #29283a; }
+    .ench-info-ligne { display: flex; justify-content: space-between; align-items: center; }
+    .ench-info-cle { color: #a1a1aa; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .ench-info-valeur { font-family: 'JetBrains Mono', monospace; color: var(--gold); font-weight: 800; font-size: 13px; }
+    #info-snipe-delay { color: var(--fuchsia); }
+    .chrono-group { display: flex; flex-direction: column; align-items: center; margin-bottom: 18px; }
+    #enchere-label { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #a1a1aa; margin-bottom: 4px; }
+    #enchere-chrono { font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 800; line-height: 1; color: #ffffff; }
+    #enchere-classement { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
+    .carte-podium { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #18181f; border: 1px solid #29283a; width: 100%; }
+    .carte-podium .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #27272a; border: 1px solid rgba(255,255,255,0.1); }
+    .carte-podium .info { display: flex; flex-direction: column; flex: 1; }
+    .carte-podium .nickname { font-size: 12px; font-weight: 700; color: #f4f4f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+    .carte-podium .valeur { font-size: 11px; font-weight: 700; color: #a1a1aa; }
+    .carte-podium.podium-1 { border-color: rgba(255, 190, 61, 0.4); background: rgba(255, 190, 61, 0.06); }
+    .carte-podium.podium-1 .valeur { color: var(--gold); }
+    #ecran-details-gagnant { text-align: center; }
+    #ecran-details-gagnant img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); margin-bottom: 8px; }
+    .titre-gagnant { font-size: 10px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .nom-gagnant { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 2px; }
+    .total-gagnant { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
+    .vouch-status { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 5px 12px; border-radius: 20px; margin-bottom: 12px; background: rgba(255, 190, 61, 0.12); border: 1px solid rgba(255, 190, 61, 0.35); color: var(--gold); }
+    .vouch-status.confirme { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.35); color: var(--success); }
+    .winner-chat-box { background: #18181f; border: 1px solid #29283a; border-radius: 10px; padding: 10px; margin-top: 8px; text-align: left; }
+    .winner-chat-title { font-size: 10px; font-weight: 800; color: var(--cyan); text-transform: uppercase; margin-bottom: 4px; }
+    .winner-chat-msg { font-size: 12px; color: #f4f4f5; font-style: italic; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <div id="enchere-panel">
+    <div class="badges-top-container">
+      <div class="pill-badge"><span>TokOverlay</span></div>
+      <div class="pill-badge" id="global-vouch-box"><span>Vouchs :</span> <span class="highlight" id="global-vouch-count">0</span></div>
+    </div>
+    <div class="ench-infos">
+      <div class="ench-info-ligne"><span class="ench-info-cle">Mise minimale</span><span class="ench-info-valeur" id="info-mise-min">--</span></div>
+      <div class="ench-info-ligne"><span class="ench-info-cle">Snipe delay</span><span class="ench-info-valeur" id="info-snipe-delay">--</span></div>
+    </div>
+    <div class="chrono-group" id="groupe-chrono">
+      <div id="enchere-label">Temps restant</div>
+      <div id="enchere-chrono">--</div>
+    </div>
+    <p class="message-attente" id="message-attente-enchere">En attente de l'enchère...</p>
+    <div id="enchere-classement"></div>
+    <div id="enchere-gagnant-ecran" style="display:none;">
+      <div id="ecran-details-gagnant">
+        <div class="titre-gagnant">🏆 Gagnant</div>
+        <img id="gagnant-avatar" src="" alt="">
+        <div class="nom-gagnant" id="gagnant-nom"></div>
+        <div class="total-gagnant" id="gagnant-total"></div>
+        <div class="vouch-status" id="vouch-status">⏳ En attente du "vouch" dans le chat</div>
+        <div class="winner-chat-box">
+          <div class="winner-chat-title">💬 Dernier message dans le chat :</div>
+          <div class="winner-chat-msg" id="gagnant-chat-message">En attente du message...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === '1';
+
+    function creerCartePodium(user, rank) {
+      const carte = document.createElement('div');
+      carte.className = `carte-podium podium-${rank}`;
+      const img = document.createElement('img');
+      img.className = 'avatar';
+      img.src = user.profilePictureUrl;
+      const info = document.createElement('div');
+      info.className = 'info';
+      const nickname = document.createElement('span');
+      nickname.className = 'nickname';
+      nickname.textContent = user.nickname;
+      const valeur = document.createElement('span');
+      valeur.className = 'valeur';
+      valeur.textContent = `${user.coins.toLocaleString()} 💎`;
+      info.append(nickname, valeur);
+      carte.append(img, info);
+      return carte;
+    }
+
+    const socket = io();
+    socket.on('connect', () => {
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, type: 'encheres' });
+    });
+
+    const groupeChrono = document.getElementById('groupe-chrono');
+    const labelEl = document.getElementById('enchere-label');
+    const chronoEl = document.getElementById('enchere-chrono');
+    const infoMiseMinEl = document.getElementById('info-mise-min');
+    const infoSnipeDelayEl = document.getElementById('info-snipe-delay');
+    const messageAttente = document.getElementById('message-attente-enchere');
+    const classementEl = document.getElementById('enchere-classement');
+    const gagnantEcran = document.getElementById('enchere-gagnant-ecran');
+    const ecranDetails = document.getElementById('ecran-details-gagnant');
+    const vouchStatusEl = document.getElementById('vouch-status');
+
+    let phaseActuelle = 'timer';
+    let intervalleChrono = null;
+
+    function mettreAJourPhase(finTimestamp) {
+      const restant = Math.max(finTimestamp - Date.now(), 0);
+      chronoEl.textContent = Math.ceil(restant / 1000) + 's';
+      const enSnipe = (phaseActuelle === 'snipe');
+      labelEl.textContent = enSnipe ? 'Snipe delay' : 'Temps restant';
+      if (restant <= 0 && intervalleChrono) clearInterval(intervalleChrono);
+    }
+
+    function afficherEtat(etat) {
+      if (!etat) return;
+      if (messageAttente) messageAttente.remove();
+      gagnantEcran.style.display = 'none';
+      groupeChrono.style.display = 'flex';
+      classementEl.style.display = 'flex';
+
+      phaseActuelle = etat.phase;
+      if (intervalleChrono) clearInterval(intervalleChrono);
+      const finTimestampLocal = Date.now() + etat.tempsRestant;
+      mettreAJourPhase(finTimestampLocal);
+      intervalleChrono = setInterval(() => mettreAJourPhase(finTimestampLocal), 250);
+
+      infoMiseMinEl.textContent = etat.miseMinimale > 0 ? etat.miseMinimale.toLocaleString() + ' 💎' : 'Aucune';
+      infoSnipeDelayEl.textContent = Math.round(etat.snipeMs / 1000) + 's';
+
+      classementEl.innerHTML = '';
+      etat.classement.forEach((user, i) => { classementEl.appendChild(creerCartePodium(user, i + 1)); });
+    }
+
+    socket.on('enchereDemarree', afficherEtat);
+    socket.on('updateEnchere', afficherEtat);
+    socket.on('enchereTerminee', ({ gagnant }) => {
+      if (intervalleChrono) clearInterval(intervalleChrono);
+      groupeChrono.style.display = 'none';
+      classementEl.style.display = 'none';
+      gagnantEcran.style.display = 'block';
+      ecranDetails.style.display = 'block';
+
+      if (gagnant) {
+        document.getElementById('gagnant-avatar').src = gagnant.profilePictureUrl;
+        document.getElementById('gagnant-nom').textContent = gagnant.nickname;
+        document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
+        document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente du message...';
+      }
+    });
+
+    socket.on('initVouch', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
+    socket.on('updateVouchGlobal', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
+    socket.on('vouchConfirme', () => {
+      vouchStatusEl.textContent = '✅ Vouch confirmé';
+      vouchStatusEl.classList.add('confirme');
+    });
+  </script>
+</body>
+</html>
