@@ -167,12 +167,16 @@
         const listeJoueurs = document.getElementById('liste-joueurs');
         const joueursEnAttente = {};
 
-        // Récupération automatique du pseudo depuis l'URL (ex: /overlay-vip/slacezzz)
+        // Récupération automatique du pseudo, du token et du mode démo depuis l'URL
         const pathParts = window.location.pathname.split('/');
         const pseudoStreamer = pathParts[pathParts.length - 1];
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const isDemo = params.get('demo') === '1';
 
-        if (pseudoStreamer) {
-            socket.emit('rejoindre', { pseudo: pseudoStreamer });
+        // Connexion sécurisée au serveur si on n'est pas en mode démo
+        if (pseudoStreamer && !isDemo) {
+            socket.emit('rejoindre', { pseudo: pseudoStreamer, token: token });
         }
 
         const VALEUR_CADEAUX = {
@@ -187,7 +191,8 @@
             joueursEnAttente[data.username] = data.giftName;
         });
 
-        socket.on('roblox_pseudo', (data) => {
+        // Fonction principale pour afficher un joueur
+        function afficherCarteVIP(data) {
             const carteExistante = document.getElementById(`carte-${data.username}`);
             if (carteExistante) {
                 const msgElement = document.getElementById(`msg-${data.username}`);
@@ -195,7 +200,7 @@
                 return;
             }
 
-            const nomDuCadeau = joueursEnAttente[data.username] || "galaxy"; // Fallback pour le test si l'alerte gift est simulée en même temps
+            const nomDuCadeau = joueursEnAttente[data.username] || "galaxy"; 
             
             const anciennesCartes = document.querySelectorAll('.dernier-joueur');
             anciennesCartes.forEach(c => c.classList.remove('dernier-joueur'));
@@ -242,7 +247,10 @@
             if (listeJoueurs.children.length > 6) {
                 listeJoueurs.removeChild(listeJoueurs.lastChild);
             }
-        });
+        }
+
+        // Écoute des événements réels
+        socket.on('roblox_pseudo', afficherCarteVIP);
 
         function lancerVraieRoue(idRoue, idResultat) {
             const roue = document.getElementById(idRoue);
@@ -271,6 +279,19 @@
                     texte.innerHTML = "💀 <b>PERDU...</b> 💀";
                     texte.style.color = "#ff4444";
                 }
+            }, 4000);
+        }
+
+        // MODE DÉMO
+        if (isDemo) {
+            setTimeout(() => {
+                joueursEnAttente["DemoUser1"] = "galaxy";
+                afficherCarteVIP({ username: "DemoUser1", message: "MonPseudoRoblox123" });
+            }, 1000);
+            
+            setTimeout(() => {
+                joueursEnAttente["DemoUser2"] = "donut";
+                afficherCarteVIP({ username: "DemoUser2", message: "SniperPro99" });
             }, 4000);
         }
     </script>
