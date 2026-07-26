@@ -43,7 +43,7 @@
     
     <div class="elim-stats">
       <div class="stat-block gift-block">
-        <img id="target-gift-img" src="" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+        <img id="target-gift-img" src="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
         <span id="target-gift-price">0</span>
       </div>
       <div class="stat-block"><div class="stat-title">PLAYERS</div><div class="stat-val" id="stat-players">0</div></div>
@@ -52,7 +52,7 @@
 
     <div class="grid-container" id="grid">
       <div id="elim-popup">
-        <img id="popup-img" src="" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #ff2a55; object-fit: cover;">
+        <img id="popup-img" src="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #ff2a55; object-fit: cover;">
         <h2 id="popup-name" style="margin:0; color:white; font-family:'Space Grotesk'; font-size:22px;">Pseudo</h2>
         <p style="color:#ff2a55; font-weight:900; font-size:28px; margin:5px 0;">ÉLIMINÉ 💀</p>
         <p style="color:#a1a1aa; margin:0; font-size: 14px;">Chance d'élimination : <span id="popup-prob" style="color:white; font-weight:bold; font-size: 18px;">0%</span></p>
@@ -61,7 +61,7 @@
     
     <div id="winner-screen">
       <h1 class="winner-title">👑 GRAND GAGNANT 👑</h1>
-      <img id="winner-img" class="winner-img" src="" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+      <img id="winner-img" class="winner-img" src="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
       <h2 id="winner-name" class="winner-name">Pseudo</h2>
       <div id="winner-coins" class="winner-coins">Total envoyé: 0 💎</div>
       <div id="winner-chat" class="winner-chat"><strong>Message:</strong> <span>En attente...</span></div>
@@ -180,7 +180,7 @@
         cell.className = 'grid-cell';
         cell.style.width = cellSize + 'px';
         cell.style.height = cellSize + 'px';
-        cell.innerHTML = `<img src="${place.avatar}" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname)}&background=random'" alt="${place.nickname}">`;
+        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname)}&background=random'" alt="${place.nickname}">`;
         grid.appendChild(cell);
       });
     }

@@ -335,6 +335,36 @@ io.on('connection', socket => {
     } catch {}
   });
 
+  socket.on('updateEliminationSettings', (payload = {}) => {
+    try {
+      const { pseudo, cout, intervalle, giftImage } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      const elim = data?.elimination;
+      if (!elim) return;
+
+      if (cout !== undefined && cout !== '') elim.cout = positiveInteger(cout, elim.cout);
+      if (giftImage !== undefined && giftImage !== '') elim.giftImage = safeText(giftImage, elim.giftImage);
+
+      if (intervalle !== undefined && intervalle !== '') {
+        const nouvelIntervalle = positiveInteger(intervalle, elim.intervalle);
+        elim.intervalle = nouvelIntervalle;
+
+        // Si le massacre tourne déjà, on relance le timer avec le nouvel intervalle
+        // sans toucher à la grille ni aux joueurs déjà inscrits.
+        if (elim.eliminationEnCours && elim.timer) {
+          clearInterval(elim.timer);
+          elim.nextElimination = Date.now() + (nouvelIntervalle * 1000);
+          elim.timer = setInterval(() => { processEliminationKill(pseudoNettoye, data); }, nouvelIntervalle * 1000);
+        }
+      }
+
+      io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+    } catch {}
+  });
+
   socket.on('actionElimination', (payload = {}) => {
     try {
       const { pseudo, action } = payload;
