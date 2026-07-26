@@ -16,38 +16,24 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
-
 const isProduction = process.env.NODE_ENV === 'production';
 
-if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
-  throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
-}
-
+if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
 const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 app.set('trust proxy', 1);
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
 const sessionMiddleware = session({
-  name: '__Host-tokoverlay',
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  rolling: true,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI,
-    ttl: 60 * 60 * 24 * 7
-  }),
+  name: '__Host-tokoverlay', secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false, rolling: true,
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI, ttl: 60 * 60 * 24 * 7 }),
   cookie: { httpOnly: true, secure: isProduction, sameSite: 'lax', path: '/', maxAge: 1000 * 60 * 60 * 24 * 7 }
 });
 app.use(sessionMiddleware);
-
 io.use((socket, next) => { sessionMiddleware(socket.request, {}, next); });
 
 const mongoUri = process.env.MONGO_URI;
@@ -64,9 +50,7 @@ async function connectMongo() {
     await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
     const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
     vouchesGlobalCount = compteur?.total || 0;
-  } catch (err) {
-    console.error("❌ Erreur de connexion MongoDB :", err);
-  }
+  } catch (err) { console.error("❌ Erreur de connexion MongoDB :", err); }
 }
 connectMongo();
 
@@ -83,13 +67,8 @@ function strictInteger(value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
   if (!Number.isSafeInteger(number) || number < min || number > max) throw new Error('Nombre invalide.');
   return number;
 }
-function positiveInteger(value, fallback = 1) {
-  const num = Number(value);
-  return Number.isInteger(num) && num > 0 ? num : fallback;
-}
-function resolveUserId(d = {}, user = {}) {
-  return safeText(user.displayId || d.uniqueId || user.userId || d.userId, `unknown:${crypto.randomUUID()}`);
-}
+function positiveInteger(value, fallback = 1) { const num = Number(value); return Number.isInteger(num) && num > 0 ? num : fallback; }
+function resolveUserId(d = {}, user = {}) { return safeText(user.displayId || d.uniqueId || user.userId || d.userId, `unknown:${crypto.randomUUID()}`); }
 function avatarFor(user = {}, nickname = 'Anonyme') {
   const avatarList = user?.avatarThumb?.urlList;
   if (Array.isArray(avatarList) && avatarList.length > 0 && typeof avatarList[0] === 'string') return avatarList[0];
@@ -123,95 +102,44 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
-// ----------------------------------------------------
-// ROUTES D'AUTHENTIFICATION & PROFIL
-// ----------------------------------------------------
-
+// ROUTES AUTHENTIFICATION
 app.post('/register', async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
   try {
-    if (!db) return res.status(500).send("Base de données en cours de connexion.");
     email = safeText(email).toLowerCase();
     let pseudoNettoye;
     try { pseudoNettoye = normalizePseudo(pseudo); } catch { return res.redirect('/?error=invalid_pseudo'); }
-    const cleanApiKey = safeText(apiKey);
-    if (!cleanApiKey || !email || !password) return res.redirect('/?error=missing_fields');
+    if (!safeText(apiKey) || !email || !password) return res.redirect('/?error=missing_fields');
 
     const usersCollection = db.collection('users');
     const existingUser = await usersCollection.findOne({ $or: [{ email }, { pseudo: pseudoNettoye }] });
-    if (existingUser) {
-      if (existingUser.email === email) return res.redirect('/?error=email_exists');
-      if (existingUser.pseudo === pseudoNettoye) return res.redirect('/?error=pseudo_exists');
-    }
+    if (existingUser) return res.redirect('/?error=pseudo_exists');
 
     const passwordHache = await bcrypt.hash(password, 10);
-    const newUser = { pseudo: pseudoNettoye, apiKey: cleanApiKey, email, password: passwordHache, role: 'streamer', totalDiamantsGlobal: 0 };
+    const newUser = { pseudo: pseudoNettoye, apiKey: safeText(apiKey), email, password: passwordHache, role: 'streamer', totalDiamantsGlobal: 0 };
     await usersCollection.insertOne(newUser);
     
-    await new Promise((resolve, reject) => req.session.regenerate((error) => error ? reject(error) : resolve()));
+    await new Promise((resolve, reject) => req.session.regenerate((err) => err ? reject(err) : resolve()));
     req.session.user = { id: newUser._id, pseudo: newUser.pseudo, email: newUser.email, role: newUser.role };
     await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
     res.redirect('/choix.html');
-  } catch (err) { res.status(500).send("Erreur serveur lors de l'inscription."); }
+  } catch (err) { res.status(500).send("Erreur serveur."); }
 });
 
 app.post('/login', async (req, res) => {
   let { pseudo, password } = req.body;
   try {
-    if (!db) return res.status(500).send("Base de données en cours de connexion.");
     let pseudoNettoye;
     try { pseudoNettoye = normalizePseudo(pseudo); } catch { return res.redirect('/?error=wrong_credentials'); }
-
-    const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ pseudo: pseudoNettoye });
+    const user = await db.collection('users').findOne({ pseudo: pseudoNettoye });
     if (user && typeof password === 'string' && await bcrypt.compare(password, user.password)) {
-      await new Promise((resolve, reject) => req.session.regenerate((error) => error ? reject(error) : resolve()));
+      await new Promise((resolve, reject) => req.session.regenerate((err) => err ? reject(err) : resolve()));
       req.session.user = { id: user._id, pseudo: user.pseudo, email: user.email, role: user.role || 'streamer' };
       await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
       return res.redirect('/choix.html');
     }
     res.redirect('/?error=wrong_credentials');
   } catch (err) { res.status(500).send("Erreur serveur."); }
-});
-
-app.post('/api/forgot-password', async (req, res) => {
-  let { email } = req.body;
-  try {
-    if (!db) return res.status(500).json({ error: "Base de données indisponible." });
-    email = safeText(email).toLowerCase();
-    const user = await db.collection('users').findOne({ email });
-    if (!user) return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé." });
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = Date.now() + 15 * 60 * 1000;
-    await db.collection('users').updateOne({ email }, { $set: { resetToken, resetExpires } });
-
-    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    const { error } = await resend.emails.send({
-      from: 'TokOverlay <onboarding@resend.dev>', to: [email], subject: 'Réinitialisation de votre mot de passe - TokOverlay',
-      html: `<div style="font-family: Arial; padding: 20px;"><h2>Réinitialisation</h2><a href="${resetLink}">Réinitialiser mon mot de passe</a></div>`
-    });
-
-    if (error) return res.status(500).json({ error: "Erreur lors de l'envoi de l'e-mail." });
-    res.json({ success: true, message: "E-mail de réinitialisation envoyé avec succès !" });
-  } catch (err) { res.status(500).json({ error: "Erreur serveur" }); }
-});
-
-app.post('/api/reset-password', async (req, res) => {
-  let { email, token, newPassword } = req.body;
-  try {
-    if (!db) return res.status(500).json({ error: "Base de données indisponible." });
-    email = safeText(email).toLowerCase();
-    const cleanToken = safeText(token);
-    if (!email || !cleanToken || !newPassword || newPassword.length < 6) return res.status(400).json({ error: "Données invalides." });
-
-    const user = await db.collection('users').findOne({ email, resetToken: cleanToken, resetExpires: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ error: "Lien de réinitialisation invalide ou expiré." });
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.collection('users').updateOne({ email }, { $set: { password: hashedPassword }, $unset: { resetToken: "", resetExpires: "" } });
-    res.json({ success: true, message: "Mot de passe mis à jour avec succès !" });
-  } catch (err) { res.status(500).json({ error: "Erreur serveur" }); }
 });
 
 app.post('/api/contact', async (req, res) => {
@@ -230,43 +158,30 @@ app.post('/api/contact', async (req, res) => {
 
 app.get('/api/me', async (req, res) => {
   if (!req.session.user || !db) return res.status(401).json({ error: 'Non connecté' });
-  try {
-    const userDb = await db.collection('users').findOne({ email: req.session.user.email });
-    if (!userDb) return res.status(401).json({ error: 'Utilisateur introuvable' });
-    res.json({ id: userDb._id, pseudo: userDb.pseudo, email: userDb.email, role: userDb.role || 'streamer', overlayToken: signOverlayToken(userDb.pseudo) });
-  } catch { res.status(500).json({ error: 'Erreur serveur' }); }
+  const userDb = await db.collection('users').findOne({ email: req.session.user.email });
+  if (!userDb) return res.status(401).json({ error: 'Utilisateur introuvable' });
+  res.json({ id: userDb._id, pseudo: userDb.pseudo, email: userDb.email, role: userDb.role || 'streamer', overlayToken: signOverlayToken(userDb.pseudo) });
 });
 
-// NOUVEAU: Récupérer les vrais cadeaux de TikTok
 app.get('/api/gifts/:username', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.username);
     if (!req.session.user || !canManage(req.session.user, pseudo)) return res.status(401).json({ error: "Non autorisé" });
-    
     const data = connexionsActives[pseudo];
     if (!data || !data.connection) return res.json([]);
 
     const gifts = await data.connection.getAvailableGifts();
     const cleanGifts = gifts.map(g => ({
-        id: g.id,
-        name: g.name,
-        diamond_count: g.diamond_count,
-        image: g.image?.url_list[0] || ''
+        id: g.id, name: g.name, diamond_count: g.diamond_count, image: g.image?.url_list[0] || ''
     })).filter(g => g.image && g.diamond_count > 0);
-
     res.json(cleanGifts);
-  } catch (err) {
-    res.json([]);
-  }
+  } catch (err) { res.json([]); }
 });
 
 app.post('/logout', (req, res) => { req.session.destroy(() => { res.clearCookie('__Host-tokoverlay'); res.json({ success: true }); }); });
 app.get('/logout', (req, res) => { req.session.destroy(() => { res.clearCookie('__Host-tokoverlay'); res.redirect('/'); }); });
 
-// ----------------------------------------------------
-// ROUTES FRONT-END ET API
-// ----------------------------------------------------
-
+// ROUTES FRONT-END
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
@@ -337,10 +252,7 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
   } catch { res.status(400).json({ error: "Requête invalide." }); }
 });
 
-// ----------------------------------------------------
 // GESTION DU LIVE TIKTOK & NETTOYAGE DES RESSOURCES
-// ----------------------------------------------------
-
 const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
@@ -348,25 +260,18 @@ const waitingUsers = new Map();
 function arreterEcouteLive(pseudo, data, reason) {
   if (!data || data.closed) return;
   data.closed = true;
-
   if (data.refreshTimer) { clearInterval(data.refreshTimer); data.refreshTimer = null; }
   if (data.enchere?.minuteur) { clearTimeout(data.enchere.minuteur); data.enchere.minuteur = null; }
   if (data.elimination?.timer) { clearInterval(data.elimination.timer); data.elimination.timer = null; }
-
   try {
-    if (data.connection) {
-      data.connection.removeAllListeners();
-      if (typeof data.connection.disconnect === 'function') data.connection.disconnect();
-    }
+    if (data.connection) { data.connection.removeAllListeners(); if (typeof data.connection.disconnect === 'function') data.connection.disconnect(); }
   } catch {}
-
   if (connexionsActives[pseudo] === data) delete connexionsActives[pseudo];
   io.to(`streamer:${pseudo}`).emit('liveArrete', { reason });
 }
 
 function demarrerEcouteLive(pseudo, apiKey) {
   if (connexionsActives[pseudo]) return;
-
   const connection = new TikTokLiveConnection(pseudo, { signApiKey: apiKey });
   const data = {
     connection, closed: false, refreshTimer: null,
@@ -375,7 +280,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     derniereGagnantId: null, vouchFait: false, objectif: null,
     roue: { active: false, options: ["Gage 1"], montantMin: 10 },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
-    elimination: { actif: false, cout: 1, intervalle: 5, giftImage: 'https://cdn-icons-png.flaticon.com/512/3004/3004076.png', locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null },
+    elimination: { actif: false, cout: 1, intervalle: 5, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
@@ -394,15 +299,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
   connection.once('error', () => arreterEcouteLive(pseudo, data, 'error'));
 
-  connection.on('like', (d = {}) => {
-    if (data.closed) return;
-    const user = d.user || {};
-    const id = resolveUserId(d, user);
-    if (!data.likers[id]) data.likers[id] = { nickname: safeText(user.nickname, 'Anonyme'), profilePictureUrl: avatarFor(user, safeText(user.nickname)), likes: 0 };
-    data.likers[id].likes += positiveInteger(d.count, 1);
-    data.pendingUpdates.likers = true;
-  });
-
   connection.on('gift', (d = {}) => {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
@@ -418,14 +314,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     if (db) db.collection('users').updateOne({ pseudo: pseudo }, { $inc: { totalDiamantsGlobal: totalPieces } }, { upsert: true }).catch(() => {});
 
-    // MODE ÉLIMINATION LOGIC
+    // MODE ÉLIMINATION
     const elim = data.elimination;
     if (elim && elim.actif && !elim.locked) {
       const nbPlaces = Math.floor(totalPieces / elim.cout);
       if (nbPlaces > 0) {
-        for (let i = 0; i < nbPlaces; i++) {
-          elim.places.push({ id, nickname, avatar, eliminated: false });
-        }
+        for (let i = 0; i < nbPlaces; i++) elim.places.push({ id, nickname, avatar, eliminated: false });
         elim.totalCoins += totalPieces;
         io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
       }
@@ -448,7 +342,7 @@ function etatElimination(pseudo) {
   return {
     actif: elim.actif, cout: elim.cout, locked: elim.locked,
     eliminationEnCours: elim.eliminationEnCours, totalCoins: elim.totalCoins,
-    places: elim.places, giftImage: elim.giftImage
+    places: elim.places, giftImage: elim.giftImage, nextElimination: elim.nextElimination
   };
 }
 
@@ -475,10 +369,10 @@ io.on('connection', socket => {
       
       const data = connexionsActives[pseudoNettoye];
       if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye));
-      socket.emit('initVouch', { vouches: vouchesGlobalCount });
     } catch { ack({ ok: false, error: 'Requête invalide.' }); }
   });
 
+  // SOCKETS ELIMINATION AVEC TIMER
   socket.on('configurerElimination', (payload = {}) => {
     try {
       const { pseudo, cout, intervalle, giftImage } = payload;
@@ -491,8 +385,8 @@ io.on('connection', socket => {
         
         data.elimination = {
           actif: true, cout: positiveInteger(cout, 1), intervalle: positiveInteger(intervalle, 5),
-          giftImage: safeText(giftImage, 'https://cdn-icons-png.flaticon.com/512/3004/3004076.png'),
-          locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null
+          giftImage: safeText(giftImage, 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'),
+          locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null
         };
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
       }
@@ -513,14 +407,16 @@ io.on('connection', socket => {
 
         if (elim.eliminationEnCours && elim.timer) {
           clearInterval(elim.timer);
+          elim.nextElimination = Date.now() + (elim.intervalle * 1000);
           elim.timer = setInterval(() => {
             const vivants = elim.places.filter(p => !p.eliminated);
             if (vivants.length > 1) {
               const indexMort = Math.floor(Math.random() * vivants.length);
               vivants[indexMort].eliminated = true;
+              elim.nextElimination = Date.now() + (elim.intervalle * 1000);
               io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
             } else {
-              clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false;
+              clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
               io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
             }
           }, elim.intervalle * 1000);
@@ -545,25 +441,27 @@ io.on('connection', socket => {
         elim.locked = true; elim.eliminationEnCours = true;
         if (elim.timer) clearInterval(elim.timer);
         
+        elim.nextElimination = Date.now() + (elim.intervalle * 1000);
         elim.timer = setInterval(() => {
           const vivants = elim.places.filter(p => !p.eliminated);
           if (vivants.length > 1) {
             const indexMort = Math.floor(Math.random() * vivants.length);
             vivants[indexMort].eliminated = true;
+            elim.nextElimination = Date.now() + (elim.intervalle * 1000);
             io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
           } else {
-            clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false;
+            clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
             io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
           }
         }, elim.intervalle * 1000);
       } else if (action === 'stop_kill') {
         elim.eliminationEnCours = false;
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
+        elim.nextElimination = null;
       } else if (action === 'reset') {
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
-        elim.actif = false; elim.places = []; elim.totalCoins = 0;
+        elim.actif = false; elim.places = []; elim.totalCoins = 0; elim.nextElimination = null;
       }
-      
       io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
     } catch {}
   });

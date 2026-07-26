@@ -14,8 +14,12 @@
       display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
 
-    .elim-layout {
-      display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 600px;
+    .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 600px; }
+
+    .elim-timer {
+      font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; 
+      color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); 
+      margin-bottom: -10px; font-variant-numeric: tabular-nums;
     }
 
     .elim-title {
@@ -33,13 +37,10 @@
     }
     .elim-status.open { background: #10b981; }
 
-    .elim-stats {
-      display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center;
-    }
+    .elim-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center; }
 
     .stat-block {
-      background: rgba(10, 5, 15, 0.95);
-      border: 2px solid #3f3f46; border-radius: 12px;
+      background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px;
       padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
     .stat-block.gift-block { flex-direction: row; gap: 8px; font-size: 18px; font-weight: 900; color: #ffbe3d; }
@@ -49,17 +50,14 @@
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
 
     .grid-container {
-      background: rgba(10, 5, 15, 0.95);
-      border: 4px solid #a855f7; border-radius: 16px;
-      padding: 10px; width: 100%;
-      box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
+      background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px;
+      padding: 10px; width: 100%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
       display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start;
       min-height: 400px; position: relative;
     }
 
     .grid-cell {
-      width: 45px; height: 45px;
-      background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
+      width: 45px; height: 45px; background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
       overflow: hidden; position: relative; transition: all 0.3s ease;
     }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
@@ -69,10 +67,8 @@
     .grid-cell.eliminated::after { content: '💀'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
     @keyframes explode { 0% { transform: scale(1); } 50% { transform: scale(1.3); z-index: 10; box-shadow: 0 0 20px red; } 100% { transform: scale(0.9); opacity: 0.5; } }
-
     .grid-container.massive .grid-cell { width: 30px; height: 30px; }
 
-    /* POPUP D'ELIMINATION */
     #elim-popup {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center;
@@ -80,12 +76,12 @@
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
   </style>
 </head>
 <body>
 
   <div class="elim-layout" id="game-container" style="display: none;">
+    <div class="elim-timer" id="elim-timer-display" style="display:none;">0:00</div>
     <div class="elim-title">💀 ELIMINATION MODE 💀</div>
     <div class="elim-status" id="elim-status">🔒 LOCKED ENTRIES - DO NOT SEND 🔒</div>
     
@@ -105,7 +101,6 @@
     </div>
 
     <div class="grid-container" id="grid">
-      <!-- Popup Central -->
       <div id="elim-popup">
         <img id="popup-img" src="" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #ff2a55; object-fit: cover;">
         <h2 id="popup-name" style="margin:0; color:white; font-family:'Space Grotesk'; font-size:22px;">Pseudo</h2>
@@ -130,21 +125,43 @@
     const grid = document.getElementById('grid');
     const statusBadge = document.getElementById('elim-status');
     const popup = document.getElementById('elim-popup');
+    const timerDisplay = document.getElementById('elim-timer-display');
     
     let prevPlaces = [];
+    let countdownInterval;
+
+    function startTimer(nextEliminationTimestamp) {
+      clearInterval(countdownInterval);
+      if (!nextEliminationTimestamp) { timerDisplay.style.display = 'none'; return; }
+      
+      timerDisplay.style.display = 'block';
+      countdownInterval = setInterval(() => {
+        const diff = Math.max(0, nextEliminationTimestamp - Date.now());
+        const seconds = Math.ceil(diff / 1000);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        if (diff <= 0) clearInterval(countdownInterval);
+      }, 100);
+    }
 
     function renderGrid(data) {
-      if (!data || !data.actif) { container.style.display = 'none'; return; }
+      if (!data || !data.actif) { container.style.display = 'none'; clearInterval(countdownInterval); return; }
       container.style.display = 'flex';
 
-      // Calcul des stats
       const uniquePlayers = new Set(data.places.filter(p => !p.eliminated).map(p => p.id)).size;
       document.getElementById('stat-players').textContent = uniquePlayers;
       document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
-      document.getElementById('target-gift-img').src = data.giftImage;
+      document.getElementById('target-gift-img').src = data.giftImage || 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
       document.getElementById('target-gift-price').textContent = data.cout;
 
-      // Status
+      if (data.eliminationEnCours && data.nextElimination) {
+        startTimer(data.nextElimination);
+      } else {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
+      }
+
       if (data.locked) {
         statusBadge.className = 'elim-status';
         statusBadge.innerHTML = '🔒 LOCKED ENTRIES - DO NOT SEND 🔒';
@@ -153,7 +170,6 @@
         statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
       }
 
-      // Detection Elimination pour le popup
       if (prevPlaces.length > 0 && data.eliminationEnCours) {
         const newlyEliminated = data.places.find((p, i) => p.eliminated && !prevPlaces[i].eliminated);
         if (newlyEliminated) {
@@ -173,7 +189,6 @@
 
       if (data.places.length > 100) grid.classList.add('massive'); else grid.classList.remove('massive');
 
-      // Nettoyage et rendu de la grille (sans écraser le popup)
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
       
       data.places.forEach((place) => {
@@ -189,13 +204,14 @@
     // DÉMO
     if (isDemo) {
       let mockData = {
-        actif: true, cout: 1000, giftImage: 'https://cdn-icons-png.flaticon.com/512/3133/3133170.png', locked: false, eliminationEnCours: false, totalCoins: 25000,
-        places: Array(25).fill(0).map((_, i) => ({ id: i%5, nickname: `Joueur_${i%5}`, avatar: `https://ui-avatars.com/api/?name=J${i%5}&background=random`, eliminated: false }))
+        actif: true, cout: 1000, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 25000,
+        places: Array(25).fill(0).map((_, i) => ({ id: i%5, nickname: `Joueur_${i%5}`, avatar: `https://ui-avatars.com/api/?name=J${i%5}&background=random`, eliminated: false })),
+        nextElimination: null
       };
       renderGrid(mockData);
 
       setInterval(() => {
-        mockData.locked = true; mockData.eliminationEnCours = true;
+        mockData.locked = true; mockData.eliminationEnCours = true; mockData.nextElimination = Date.now() + 3000;
         const survivants = mockData.places.filter(p => !p.eliminated);
         if(survivants.length > 1) {
           survivants[Math.floor(Math.random() * survivants.length)].eliminated = true;
