@@ -556,10 +556,16 @@
       
       let lien = '';
       if (typeActuel === 'vip') {
-        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}`;
+        // On remet le token obligatoire pour OBS, ce qui permet au &demo=1 de fonctionner correctement
+        lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
       } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${typeActuel}&token=${encodeURIComponent(overlayTokenGlobal)}&style=${styleActuel}`;
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       }
+      
+      document.getElementById('modal-obs-url').textContent = lien;
+      // Comme chaque lien a maintenant au moins un paramètre (?), on peut ajouter la démo avec "&"
+      document.getElementById('modal-demo-link').href = lien + '&demo=1';
+    }
       
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '' : '&demo=1');
