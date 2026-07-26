@@ -8,82 +8,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;900&family=Inter:wght@700;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 15px;
-      font-family: 'Inter', sans-serif;
-      color: white; background: transparent;
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-    }
-
+    body { margin: 0; padding: 15px; font-family: 'Inter', sans-serif; color: white; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 700px; }
-
-    .elim-timer {
-      font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; 
-      color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); 
-      margin-bottom: -10px; font-variant-numeric: tabular-nums;
-    }
-
-    .elim-title {
-      background: #ff2a55; color: white;
-      font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px;
-      text-transform: uppercase; letter-spacing: 2px;
-      padding: 6px 24px; border-radius: 99px;
-      box-shadow: 0 4px 15px rgba(255, 42, 85, 0.5);
-    }
-
-    .elim-status {
-      background: #f59e0b; color: white;
-      font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
-      padding: 4px 16px; border-radius: 8px;
-    }
+    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -10px; font-variant-numeric: tabular-nums; }
+    .elim-title { background: #ff2a55; color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; padding: 6px 24px; border-radius: 99px; box-shadow: 0 4px 15px rgba(255, 42, 85, 0.5); }
+    .elim-status { background: #f59e0b; color: white; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 16px; border-radius: 8px; }
     .elim-status.open { background: #10b981; }
-
     .elim-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center; }
-
-    .stat-block {
-      background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px;
-      padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
+    .stat-block { background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px; padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .stat-block.gift-block { flex-direction: row; gap: 8px; font-size: 18px; font-weight: 900; color: #ffbe3d; }
     .stat-block.gift-block img { width: 30px; height: 30px; object-fit: contain; }
-
     .stat-title { font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
-
-    .grid-container {
-      background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px;
-      padding: 10px; width: 100%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
-      display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start;
-      min-height: 400px; position: relative;
-    }
-
-    .grid-cell {
-      background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
-      overflow: hidden; position: relative; transition: all 0.3s ease;
-    }
+    .grid-container { background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px; padding: 10px; width: 100%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start; min-height: 400px; position: relative; }
+    .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 6px; overflow: hidden; position: relative; transition: all 0.3s ease; }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
-
-    #elim-popup {
-      display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center;
-      z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6);
-      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
+    #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
-    /* ECRAN DU GAGNANT */
-    #winner-screen {
-      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
-      background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px;
-      padding: 40px; width: 100%; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center;
-    }
+    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
     .winner-title { color: #ffbe3d; font-family: 'Space Grotesk', sans-serif; font-size: 32px; text-transform: uppercase; font-weight: 900; margin: 0; }
     .winner-img { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #ffbe3d; object-fit: cover; box-shadow: 0 0 20px rgba(255, 190, 61, 0.6); }
     .winner-name { font-size: 28px; font-weight: 900; margin: 0; }
     .winner-coins { font-family: 'Space Grotesk', sans-serif; font-size: 20px; color: #ffbe3d; background: rgba(255,190,61,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,190,61,0.4); }
     .winner-chat { font-style: italic; font-size: 18px; color: #a1a1aa; margin-top: 10px; max-width: 80%; }
     .winner-chat strong { color: white; font-style: normal; }
-
   </style>
 </head>
 <body>
@@ -98,14 +46,8 @@
         <img id="target-gift-img" src="">
         <span id="target-gift-price">0</span>
       </div>
-      <div class="stat-block">
-        <div class="stat-title">PLAYERS</div>
-        <div class="stat-val" id="stat-players">0</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-title">COINS</div>
-        <div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div>
-      </div>
+      <div class="stat-block"><div class="stat-title">PLAYERS</div><div class="stat-val" id="stat-players">0</div></div>
+      <div class="stat-block"><div class="stat-title">COINS</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
     </div>
 
     <div class="grid-container" id="grid">
@@ -147,13 +89,13 @@
     let prevPlaces = [];
     let countdownInterval;
 
-    function startTimer(nextEliminationTimestamp) {
+    function startTimer(targetTimestamp) {
       clearInterval(countdownInterval);
-      if (!nextEliminationTimestamp) { timerDisplay.style.display = 'none'; return; }
+      if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
       
       timerDisplay.style.display = 'block';
       countdownInterval = setInterval(() => {
-        const diff = Math.max(0, nextEliminationTimestamp - Date.now());
+        const diff = Math.max(0, targetTimestamp - Date.now());
         const seconds = Math.ceil(diff / 1000);
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -166,7 +108,6 @@
       if (!data || !data.actif) { container.style.display = 'none'; clearInterval(countdownInterval); return; }
       container.style.display = 'flex';
 
-      // Affichage Winner
       if (data.gagnant) {
         clearInterval(countdownInterval);
         timerDisplay.style.display = 'none';
@@ -183,7 +124,6 @@
         winnerScreen.style.display = 'none';
       }
 
-      // Si le jeu n'est pas fini
       const vivants = data.places.filter(p => !p.eliminated);
       const uniquePlayers = new Set(vivants.map(p => p.id)).size;
       document.getElementById('stat-players').textContent = uniquePlayers;
@@ -191,8 +131,15 @@
       document.getElementById('target-gift-img').src = data.giftImage || 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
       document.getElementById('target-gift-price').textContent = data.cout;
 
-      if (data.eliminationEnCours && data.nextElimination) startTimer(data.nextElimination);
-      else { clearInterval(countdownInterval); timerDisplay.style.display = 'none'; }
+      // Gestion des timers d'ouverture ou d'élimination
+      if (!data.locked && data.openEndsAt) {
+        startTimer(data.openEndsAt);
+      } else if (data.eliminationEnCours && data.nextElimination) {
+        startTimer(data.nextElimination);
+      } else {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
+      }
 
       if (data.locked) {
         statusBadge.className = 'elim-status';
@@ -202,7 +149,6 @@
         statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
       }
 
-      // Détection Élimination => Popup
       if (prevPlaces.length > 0 && data.eliminationEnCours) {
         const newlyEliminated = data.places.find((p, i) => p.eliminated && !prevPlaces[i].eliminated);
         if (newlyEliminated) {
@@ -220,7 +166,6 @@
       }
       prevPlaces = JSON.parse(JSON.stringify(data.places));
 
-      // Calcul dynamique de la taille des cases selon le nombre de places restantes
       let count = vivants.length;
       let cellSize = 100;
       if (count > 9) cellSize = 80;
@@ -229,7 +174,6 @@
       if (count > 100) cellSize = 30;
       if (count > 200) cellSize = 20;
 
-      // Mise à jour de la grille (On ne garde que les vivants et on efface ceux éliminés)
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
       
       vivants.forEach((place) => {
@@ -244,35 +188,13 @@
 
     socket.on('updateElimination', renderGrid);
 
-    // DÉMO
     if (isDemo) {
       let mockData = {
-        actif: true, cout: 1000, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 25000,
+        actif: true, cout: 10, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 2500,
         places: Array(15).fill(0).map((_, i) => ({ id: i%3, nickname: `Joueur_${i%3}`, avatar: `https://ui-avatars.com/api/?name=J${i%3}&background=random`, eliminated: false })),
-        nextElimination: null, gagnant: null, messageGagnant: ''
+        openEndsAt: Date.now() + 15000, nextElimination: null, gagnant: null, messageGagnant: ''
       };
       renderGrid(mockData);
-
-      setInterval(() => {
-        if(mockData.gagnant) return;
-        mockData.locked = true; mockData.eliminationEnCours = true; mockData.nextElimination = Date.now() + 3000;
-        const survivants = mockData.places.filter(p => !p.eliminated);
-        const uniqueIds = [...new Set(survivants.map(p => p.id))];
-
-        if(uniqueIds.length > 1) {
-          survivants[Math.floor(Math.random() * survivants.length)].eliminated = true;
-          
-          // Revérifie s'il y a un gagnant après la mort
-          const vivantsApres = mockData.places.filter(p => !p.eliminated);
-          const uniqueApresIds = [...new Set(vivantsApres.map(p => p.id))];
-          if(uniqueApresIds.length === 1) {
-             mockData.gagnant = vivantsApres[0];
-             mockData.gagnant.coins = 15000;
-             setTimeout(() => { mockData.messageGagnant = "GG tout le monde !!"; renderGrid(mockData); }, 4000);
-          }
-          renderGrid(mockData);
-        }
-      }, 3000);
     }
   </script>
 </body>
