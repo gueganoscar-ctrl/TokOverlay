@@ -147,7 +147,7 @@
         <span class="click-hint">Configurer les options & Lien →</span>
       </div>
 
-      <!-- WIDGET VIP / CHAT / Corgi, Galaxy, etc. -->
+      <!-- WIDGET VIP (Caché par défaut, visible seulement pour admin) -->
       <div id="widget-vip" class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="display: none; border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
         <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
@@ -302,7 +302,8 @@
 
         // NOUVEAU : On affiche le widget VIP seulement si l'utilisateur est admin
         if (user.role === 'admin') {
-          document.getElementById('widget-vip').style.display = 'flex';
+          const widgetVip = document.getElementById('widget-vip');
+          if (widgetVip) widgetVip.style.display = 'flex';
         }
 
         socket = io();
@@ -536,7 +537,7 @@
 
       if (!socket) {
         socket = io();
-        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, token: overlayTokenGlobal }));
+        socket.on('connect', () => socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' }));
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
@@ -556,19 +557,13 @@
       
       let lien = '';
       if (typeActuel === 'vip') {
-        // On remet le token obligatoire pour OBS, ce qui permet au &demo=1 de fonctionner correctement
         lien = `${baseUrl}/overlay-vip/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
       } else {
         lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?style=${styleActuel}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       }
       
       document.getElementById('modal-obs-url').textContent = lien;
-      // Comme chaque lien a maintenant au moins un paramètre (?), on peut ajouter la démo avec "&"
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
-    }
-      
-      document.getElementById('modal-obs-url').textContent = lien;
-      document.getElementById('modal-demo-link').href = lien + (typeActuel === 'vip' ? '' : '&demo=1');
     }
 
     function sauvegarderRoue() {
@@ -617,7 +612,6 @@
       }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
     }
 
-    // Gestion de la modale de contact / suggestion
     function ouvrirContact() { document.getElementById('modal-contact').style.display = 'flex'; }
     function fermerContact() {
       document.getElementById('modal-contact').style.display = 'none';
