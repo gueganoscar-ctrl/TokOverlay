@@ -8,90 +8,112 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0; padding: 20px;
+      margin: 0; padding: 15px;
       font-family: 'Inter', sans-serif;
       color: white; background: transparent;
-      display: flex; flex-direction: column; align-items: center; gap: 15px;
-    }
-
-    .header-bar {
       display: flex; flex-direction: column; align-items: center; gap: 10px;
-      background: rgba(20, 15, 25, 0.95);
-      border: 2px solid #a855f7; border-radius: 16px; padding: 15px 30px;
-      box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
     }
 
-    .status-badge {
-      background: #ef4444; color: white;
-      font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 18px;
+    .elim-layout {
+      display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 600px;
+    }
+
+    .elim-title {
+      background: #ff2a55; color: white;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px;
       text-transform: uppercase; letter-spacing: 2px;
-      padding: 8px 24px; border-radius: 99px;
-      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
-      display: flex; align-items: center; gap: 10px;
+      padding: 6px 24px; border-radius: 99px;
+      box-shadow: 0 4px 15px rgba(255, 42, 85, 0.5);
     }
-    
-    .status-badge.locked { background: #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.5); }
-    .status-badge.waiting { background: #3b82f6; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5); }
 
-    .stats-row { display: flex; gap: 20px; margin-top: 5px; }
-    .stat-box { display: flex; flex-direction: column; align-items: center; }
-    .stat-label { font-size: 11px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
-    .stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 900; color: #c084fc; }
+    .elim-status {
+      background: #f59e0b; color: white;
+      font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
+      padding: 4px 16px; border-radius: 8px;
+    }
+    .elim-status.open { background: #10b981; }
+
+    .elim-stats {
+      display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center;
+    }
+
+    .stat-block {
+      background: rgba(10, 5, 15, 0.95);
+      border: 2px solid #3f3f46; border-radius: 12px;
+      padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .stat-block.gift-block { flex-direction: row; gap: 8px; font-size: 18px; font-weight: 900; color: #ffbe3d; }
+    .stat-block.gift-block img { width: 30px; height: 30px; object-fit: contain; }
+
+    .stat-title { font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
+    .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
 
     .grid-container {
       background: rgba(10, 5, 15, 0.95);
       border: 4px solid #a855f7; border-radius: 16px;
-      padding: 10px; width: 600px; max-width: 90vw;
+      padding: 10px; width: 100%;
       box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
       display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start;
-      min-height: 400px;
+      min-height: 400px; position: relative;
     }
 
     .grid-cell {
       width: 45px; height: 45px;
       background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
-      overflow: hidden; position: relative;
-      transition: all 0.3s ease;
+      overflow: hidden; position: relative; transition: all 0.3s ease;
     }
-    
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
     
-    .grid-cell.eliminated {
-      background: #ef4444; border-color: #ef4444;
-      animation: explode 0.5s ease-out forwards;
-    }
+    .grid-cell.eliminated { background: #ef4444; border-color: #ef4444; animation: explode 0.5s ease-out forwards; }
     .grid-cell.eliminated img { opacity: 0.2; filter: grayscale(100%); }
-    .grid-cell.eliminated::after {
-      content: '💀'; position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 20px;
-    }
+    .grid-cell.eliminated::after { content: '💀'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
-    @keyframes explode {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.3); z-index: 10; box-shadow: 0 0 20px red; }
-      100% { transform: scale(0.9); opacity: 0.5; }
-    }
+    @keyframes explode { 0% { transform: scale(1); } 50% { transform: scale(1.3); z-index: 10; box-shadow: 0 0 20px red; } 100% { transform: scale(0.9); opacity: 0.5; } }
 
     .grid-container.massive .grid-cell { width: 30px; height: 30px; }
+
+    /* POPUP D'ELIMINATION */
+    #elim-popup {
+      display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center;
+      z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
   </style>
 </head>
 <body>
 
-  <div class="header-bar" id="game-header" style="display: none;">
-    <div class="status-badge waiting" id="game-status">⏳ En attente...</div>
-    <div class="stats-row">
-      <div class="stat-box">
-        <span class="stat-label">Places occupées</span>
-        <span class="stat-value" id="stat-players">0</span>
+  <div class="elim-layout" id="game-container" style="display: none;">
+    <div class="elim-title">💀 ELIMINATION MODE 💀</div>
+    <div class="elim-status" id="elim-status">🔒 LOCKED ENTRIES - DO NOT SEND 🔒</div>
+    
+    <div class="elim-stats">
+      <div class="stat-block gift-block">
+        <img id="target-gift-img" src="">
+        <span id="target-gift-price">0</span>
       </div>
-      <div class="stat-box">
-        <span class="stat-label">Total Coins</span>
-        <span class="stat-value" id="stat-coins" style="color: #ffbe3d;">0</span>
+      <div class="stat-block">
+        <div class="stat-title">PLAYERS</div>
+        <div class="stat-val" id="stat-players">0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-title">COINS</div>
+        <div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div>
+      </div>
+    </div>
+
+    <div class="grid-container" id="grid">
+      <!-- Popup Central -->
+      <div id="elim-popup">
+        <img id="popup-img" src="" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #ff2a55; object-fit: cover;">
+        <h2 id="popup-name" style="margin:0; color:white; font-family:'Space Grotesk'; font-size:22px;">Pseudo</h2>
+        <p style="color:#ff2a55; font-weight:900; font-size:28px; margin:5px 0;">ÉLIMINÉ 💀</p>
+        <p style="color:#a1a1aa; margin:0; font-size: 14px;">Chance d'élimination : <span id="popup-prob" style="color:white; font-weight:bold; font-size: 18px;">0%</span></p>
       </div>
     </div>
   </div>
-
-  <div class="grid-container" id="grid" style="display: none;"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -102,43 +124,58 @@
     const isDemo = params.get('demo') === '1';
 
     const socket = io();
-    socket.on('connect', () => {
-      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' });
-    });
+    socket.on('connect', () => { if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' }); });
 
+    const container = document.getElementById('game-container');
     const grid = document.getElementById('grid');
-    const header = document.getElementById('game-header');
-    const statusBadge = document.getElementById('game-status');
+    const statusBadge = document.getElementById('elim-status');
+    const popup = document.getElementById('elim-popup');
+    
+    let prevPlaces = [];
 
     function renderGrid(data) {
-      if (!data || !data.actif) {
-        header.style.display = 'none';
-        grid.style.display = 'none';
-        return;
-      }
+      if (!data || !data.actif) { container.style.display = 'none'; return; }
+      container.style.display = 'flex';
 
-      header.style.display = 'flex';
-      grid.style.display = 'flex';
-
-      document.getElementById('stat-players').textContent = data.places.length;
+      // Calcul des stats
+      const uniquePlayers = new Set(data.places.filter(p => !p.eliminated).map(p => p.id)).size;
+      document.getElementById('stat-players').textContent = uniquePlayers;
       document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
+      document.getElementById('target-gift-img').src = data.giftImage;
+      document.getElementById('target-gift-price').textContent = data.cout;
 
+      // Status
       if (data.locked) {
-        statusBadge.className = 'status-badge locked';
-        statusBadge.innerHTML = '🔒 ENTRÉES VERROUILLÉES';
-      } else if (data.eliminationEnCours) {
-        statusBadge.className = 'status-badge';
-        statusBadge.innerHTML = '💀 ÉLIMINATION EN COURS 💀';
+        statusBadge.className = 'elim-status';
+        statusBadge.innerHTML = '🔒 LOCKED ENTRIES - DO NOT SEND 🔒';
       } else {
-        statusBadge.className = 'status-badge waiting';
-        const imgTag = `<span style="font-size:24px; margin:0 5px;">${data.giftImage || '🎁'}</span>`;
-        statusBadge.innerHTML = `🟢 OUVERT (1 place = ${imgTag} ${data.cout} pièces)`;
+        statusBadge.className = 'elim-status open';
+        statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
       }
 
-      if (data.places.length > 100) grid.classList.add('massive');
-      else grid.classList.remove('massive');
+      // Detection Elimination pour le popup
+      if (prevPlaces.length > 0 && data.eliminationEnCours) {
+        const newlyEliminated = data.places.find((p, i) => p.eliminated && !prevPlaces[i].eliminated);
+        if (newlyEliminated) {
+          const totalAliveBefore = prevPlaces.filter(p => !p.eliminated).length;
+          const userAliveBefore = prevPlaces.filter(p => !p.eliminated && p.id === newlyEliminated.id).length;
+          const prob = ((userAliveBefore / totalAliveBefore) * 100).toFixed(1);
 
-      grid.innerHTML = '';
+          document.getElementById('popup-img').src = newlyEliminated.avatar;
+          document.getElementById('popup-name').textContent = newlyEliminated.nickname;
+          document.getElementById('popup-prob').textContent = prob + '%';
+          
+          popup.style.display = 'block';
+          setTimeout(() => { popup.style.display = 'none'; }, 2000);
+        }
+      }
+      prevPlaces = JSON.parse(JSON.stringify(data.places));
+
+      if (data.places.length > 100) grid.classList.add('massive'); else grid.classList.remove('massive');
+
+      // Nettoyage et rendu de la grille (sans écraser le popup)
+      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
+      
       data.places.forEach((place) => {
         const cell = document.createElement('div');
         cell.className = `grid-cell ${place.eliminated ? 'eliminated' : ''}`;
@@ -149,27 +186,19 @@
 
     socket.on('updateElimination', renderGrid);
 
-    // MODE DÉMO
+    // DÉMO
     if (isDemo) {
       let mockData = {
-        actif: true, cout: 10, giftImage: '🍩', locked: false, eliminationEnCours: false, totalCoins: 1250,
-        places: Array(25).fill(0).map((_, i) => ({
-          id: i,
-          nickname: 'Demo',
-          avatar: `https://ui-avatars.com/api/?name=${i}&background=random`,
-          eliminated: false
-        }))
+        actif: true, cout: 1000, giftImage: 'https://cdn-icons-png.flaticon.com/512/3133/3133170.png', locked: false, eliminationEnCours: false, totalCoins: 25000,
+        places: Array(25).fill(0).map((_, i) => ({ id: i%5, nickname: `Joueur_${i%5}`, avatar: `https://ui-avatars.com/api/?name=J${i%5}&background=random`, eliminated: false }))
       };
-      
       renderGrid(mockData);
 
       setInterval(() => {
-        mockData.locked = true;
-        mockData.eliminationEnCours = true;
+        mockData.locked = true; mockData.eliminationEnCours = true;
         const survivants = mockData.places.filter(p => !p.eliminated);
         if(survivants.length > 1) {
-          const aEliminer = survivants[Math.floor(Math.random() * survivants.length)];
-          aEliminer.eliminated = true;
+          survivants[Math.floor(Math.random() * survivants.length)].eliminated = true;
           renderGrid(mockData);
         }
       }, 3000);
