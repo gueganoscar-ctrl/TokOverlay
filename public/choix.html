@@ -241,24 +241,13 @@
         wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement de l\'intégralité des cadeaux TikTok officiels...</p>';
         extraDiv.appendChild(wrap1);
 
-        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(gifts => {
-          const fallbackGifts = [
-            { name: 'Rose', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', diamond_count: 1 },
-            { name: 'GG', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7065969116668791557~tplv-obj.png', diamond_count: 5 },
-            { name: 'Donut', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6911928092264909574~tplv-obj.png', diamond_count: 30 },
-            { name: 'Confetti', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/c3ec78e4726cdb8ff23467f5dfcd3613~tplv-obj.png', diamond_count: 100 },
-            { name: 'Corgi', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/1a5e12ecaf4f3dce39c4d93ee8a49c25~tplv-obj.png', diamond_count: 299 },
-            { name: 'Swan', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/b0870932822a10cb55ed703c734898fc~tplv-obj.png', diamond_count: 699 },
-            { name: 'Galaxy', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png', diamond_count: 1000 },
-            { name: 'Lion', image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/ada635cc98d023f06dd95c02bbf9dd9d~tplv-obj.png', diamond_count: 29999 }
-          ];
-          
-          let finalGifts = gifts.length > 0 ? gifts : fallbackGifts;
+        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
           let giftHtml = '<div class="gift-grid" id="elim-gift-grid">';
           finalGifts.forEach((g, i) => {
              giftHtml += `<div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
-               <img class="gift-icon" src="${g.image}">
+               <img class="gift-icon" src="${g.image}" onerror="this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
                <div class="gift-price">${g.diamond_count} 💎</div>
+               <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
              </div>`;
           });
           giftHtml += '</div>';
