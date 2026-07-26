@@ -147,12 +147,6 @@
         <span class="click-hint">Configurer les options & Lien →</span>
       </div>
 
-      <!-- WIDGET VIP (Caché par défaut, visible seulement pour admin) -->
-      <div id="widget-vip" class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="display: none; border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
-        <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
-      </div>
-
       <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
         <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
@@ -178,6 +172,24 @@
           <p>Gère tes alertes, événements et vois ton chat en direct.</p>
         </div>
         <span class="click-hint" style="color: #c084fc;">Ouvrir le panneau →</span>
+      </div>
+
+      <!-- WIDGET VIP (Caché par défaut, visible seulement pour admin) -->
+      <div id="widget-vip" class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="display: none; border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
+        <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
+      </div>
+
+      <!-- WIDGET VIP ROOM SUPER ADMIN (Caché par défaut, visible seulement pour admin) -->
+      <div id="widget-vip-room" class="widget-card card" onclick="window.open('/vip-room', '_blank')" style="display: none; border-color: rgba(255, 190, 61, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #2a1f0c 100%);">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">👑</div>
+            <h3>VIP Room (Super Admin)</h3>
+          </div>
+          <p>Suivi en direct de l'utilisation de TokOverlay et des diamants générés.</p>
+        </div>
+        <span class="click-hint" style="color: #ffbe3d;">Ouvrir la Room VIP →</span>
       </div>
 
     </div>
@@ -300,10 +312,13 @@
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = '';
 
-        // NOUVEAU : On affiche le widget VIP seulement si l'utilisateur est admin
+        // NOUVEAU : On affiche le widget VIP et la VIP ROOM seulement si l'utilisateur est admin
         if (user.role === 'admin') {
           const widgetVip = document.getElementById('widget-vip');
           if (widgetVip) widgetVip.style.display = 'flex';
+          
+          const widgetVipRoom = document.getElementById('widget-vip-room');
+          if (widgetVipRoom) widgetVipRoom.style.display = 'flex';
         }
 
         socket = io();
