@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
   <title>TokOverlay - Mode Élimination</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;900&family=Inter:wght@700;900&display=swap" rel="stylesheet">
@@ -14,7 +15,7 @@
       display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
 
-    .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 600px; }
+    .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 700px; }
 
     .elim-timer {
       font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; 
@@ -57,17 +58,10 @@
     }
 
     .grid-cell {
-      width: 45px; height: 45px; background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
+      background: #18181b; border: 1px solid #3f3f46; border-radius: 6px;
       overflow: hidden; position: relative; transition: all 0.3s ease;
     }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
-    
-    .grid-cell.eliminated { background: #ef4444; border-color: #ef4444; animation: explode 0.5s ease-out forwards; }
-    .grid-cell.eliminated img { opacity: 0.2; filter: grayscale(100%); }
-    .grid-cell.eliminated::after { content: '💀'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-
-    @keyframes explode { 0% { transform: scale(1); } 50% { transform: scale(1.3); z-index: 10; box-shadow: 0 0 20px red; } 100% { transform: scale(0.9); opacity: 0.5; } }
-    .grid-container.massive .grid-cell { width: 30px; height: 30px; }
 
     #elim-popup {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -76,6 +70,20 @@
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+    /* ECRAN DU GAGNANT */
+    #winner-screen {
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+      background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px;
+      padding: 40px; width: 100%; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center;
+    }
+    .winner-title { color: #ffbe3d; font-family: 'Space Grotesk', sans-serif; font-size: 32px; text-transform: uppercase; font-weight: 900; margin: 0; }
+    .winner-img { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #ffbe3d; object-fit: cover; box-shadow: 0 0 20px rgba(255, 190, 61, 0.6); }
+    .winner-name { font-size: 28px; font-weight: 900; margin: 0; }
+    .winner-coins { font-family: 'Space Grotesk', sans-serif; font-size: 20px; color: #ffbe3d; background: rgba(255,190,61,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,190,61,0.4); }
+    .winner-chat { font-style: italic; font-size: 18px; color: #a1a1aa; margin-top: 10px; max-width: 80%; }
+    .winner-chat strong { color: white; font-style: normal; }
+
   </style>
 </head>
 <body>
@@ -108,6 +116,14 @@
         <p style="color:#a1a1aa; margin:0; font-size: 14px;">Chance d'élimination : <span id="popup-prob" style="color:white; font-weight:bold; font-size: 18px;">0%</span></p>
       </div>
     </div>
+    
+    <div id="winner-screen">
+      <h1 class="winner-title">👑 GRAND GAGNANT 👑</h1>
+      <img id="winner-img" class="winner-img" src="">
+      <h2 id="winner-name" class="winner-name">Pseudo</h2>
+      <div id="winner-coins" class="winner-coins">Total envoyé: 0 💎</div>
+      <div id="winner-chat" class="winner-chat"><strong>Message:</strong> <span>En attente...</span></div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -126,6 +142,7 @@
     const statusBadge = document.getElementById('elim-status');
     const popup = document.getElementById('elim-popup');
     const timerDisplay = document.getElementById('elim-timer-display');
+    const winnerScreen = document.getElementById('winner-screen');
     
     let prevPlaces = [];
     let countdownInterval;
@@ -149,18 +166,33 @@
       if (!data || !data.actif) { container.style.display = 'none'; clearInterval(countdownInterval); return; }
       container.style.display = 'flex';
 
-      const uniquePlayers = new Set(data.places.filter(p => !p.eliminated).map(p => p.id)).size;
+      // Affichage Winner
+      if (data.gagnant) {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
+        grid.style.display = 'none';
+        winnerScreen.style.display = 'flex';
+        
+        document.getElementById('winner-img').src = data.gagnant.avatar;
+        document.getElementById('winner-name').textContent = data.gagnant.nickname;
+        document.getElementById('winner-coins').textContent = `Total envoyé : ${data.gagnant.coins.toLocaleString()} 💎`;
+        document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'En attente dans le chat...'}</span>`;
+        return;
+      } else {
+        grid.style.display = 'flex';
+        winnerScreen.style.display = 'none';
+      }
+
+      // Si le jeu n'est pas fini
+      const vivants = data.places.filter(p => !p.eliminated);
+      const uniquePlayers = new Set(vivants.map(p => p.id)).size;
       document.getElementById('stat-players').textContent = uniquePlayers;
       document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
       document.getElementById('target-gift-img').src = data.giftImage || 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
       document.getElementById('target-gift-price').textContent = data.cout;
 
-      if (data.eliminationEnCours && data.nextElimination) {
-        startTimer(data.nextElimination);
-      } else {
-        clearInterval(countdownInterval);
-        timerDisplay.style.display = 'none';
-      }
+      if (data.eliminationEnCours && data.nextElimination) startTimer(data.nextElimination);
+      else { clearInterval(countdownInterval); timerDisplay.style.display = 'none'; }
 
       if (data.locked) {
         statusBadge.className = 'elim-status';
@@ -170,6 +202,7 @@
         statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
       }
 
+      // Détection Élimination => Popup
       if (prevPlaces.length > 0 && data.eliminationEnCours) {
         const newlyEliminated = data.places.find((p, i) => p.eliminated && !prevPlaces[i].eliminated);
         if (newlyEliminated) {
@@ -187,13 +220,23 @@
       }
       prevPlaces = JSON.parse(JSON.stringify(data.places));
 
-      if (data.places.length > 100) grid.classList.add('massive'); else grid.classList.remove('massive');
+      // Calcul dynamique de la taille des cases selon le nombre de places restantes
+      let count = vivants.length;
+      let cellSize = 100;
+      if (count > 9) cellSize = 80;
+      if (count > 25) cellSize = 60;
+      if (count > 49) cellSize = 45;
+      if (count > 100) cellSize = 30;
+      if (count > 200) cellSize = 20;
 
+      // Mise à jour de la grille (On ne garde que les vivants et on efface ceux éliminés)
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
       
-      data.places.forEach((place) => {
+      vivants.forEach((place) => {
         const cell = document.createElement('div');
-        cell.className = `grid-cell ${place.eliminated ? 'eliminated' : ''}`;
+        cell.className = 'grid-cell';
+        cell.style.width = cellSize + 'px';
+        cell.style.height = cellSize + 'px';
         cell.innerHTML = `<img src="${place.avatar}" alt="${place.nickname}">`;
         grid.appendChild(cell);
       });
@@ -205,16 +248,28 @@
     if (isDemo) {
       let mockData = {
         actif: true, cout: 1000, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 25000,
-        places: Array(25).fill(0).map((_, i) => ({ id: i%5, nickname: `Joueur_${i%5}`, avatar: `https://ui-avatars.com/api/?name=J${i%5}&background=random`, eliminated: false })),
-        nextElimination: null
+        places: Array(15).fill(0).map((_, i) => ({ id: i%3, nickname: `Joueur_${i%3}`, avatar: `https://ui-avatars.com/api/?name=J${i%3}&background=random`, eliminated: false })),
+        nextElimination: null, gagnant: null, messageGagnant: ''
       };
       renderGrid(mockData);
 
       setInterval(() => {
+        if(mockData.gagnant) return;
         mockData.locked = true; mockData.eliminationEnCours = true; mockData.nextElimination = Date.now() + 3000;
         const survivants = mockData.places.filter(p => !p.eliminated);
-        if(survivants.length > 1) {
+        const uniqueIds = [...new Set(survivants.map(p => p.id))];
+
+        if(uniqueIds.length > 1) {
           survivants[Math.floor(Math.random() * survivants.length)].eliminated = true;
+          
+          // Revérifie s'il y a un gagnant après la mort
+          const vivantsApres = mockData.places.filter(p => !p.eliminated);
+          const uniqueApresIds = [...new Set(vivantsApres.map(p => p.id))];
+          if(uniqueApresIds.length === 1) {
+             mockData.gagnant = vivantsApres[0];
+             mockData.gagnant.coins = 15000;
+             setTimeout(() => { mockData.messageGagnant = "GG tout le monde !!"; renderGrid(mockData); }, 4000);
+          }
           renderGrid(mockData);
         }
       }, 3000);

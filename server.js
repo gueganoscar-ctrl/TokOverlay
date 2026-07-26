@@ -102,7 +102,6 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
-// ROUTES AUTHENTIFICATION
 app.post('/register', async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
   try {
@@ -140,6 +139,40 @@ app.post('/login', async (req, res) => {
     }
     res.redirect('/?error=wrong_credentials');
   } catch (err) { res.status(500).send("Erreur serveur."); }
+});
+
+app.post('/api/forgot-password', async (req, res) => {
+  let { email } = req.body;
+  try {
+    if (!db) return res.status(500).json({ error: "Base de données indisponible." });
+    email = safeText(email).toLowerCase();
+    const user = await db.collection('users').findOne({ email });
+    if (!user) return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé." });
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = Date.now() + 15 * 60 * 1000;
+    await db.collection('users').updateOne({ email }, { $set: { resetToken, resetExpires } });
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const { error } = await resend.emails.send({
+      from: 'TokOverlay <onboarding@resend.dev>', to: [email], subject: 'Réinitialisation de votre mot de passe - TokOverlay',
+      html: `<div style="font-family: Arial; padding: 20px;"><h2>Réinitialisation</h2><a href="${resetLink}">Réinitialiser mon mot de passe</a></div>`
+    });
+    if (error) return res.status(500).json({ error: "Erreur lors de l'envoi de l'e-mail." });
+    res.json({ success: true, message: "E-mail de réinitialisation envoyé avec succès !" });
+  } catch (err) { res.status(500).json({ error: "Erreur serveur" }); }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+  let { email, token, newPassword } = req.body;
+  try {
+    email = safeText(email).toLowerCase();
+    const cleanToken = safeText(token);
+    if (!email || !cleanToken || !newPassword || newPassword.length < 6) return res.status(400).json({ error: "Données invalides." });
+    const user = await db.collection('users').findOne({ email, resetToken: cleanToken, resetExpires: { $gt: Date.now() } });
+    if (!user) return res.status(400).json({ error: "Lien de réinitialisation invalide ou expiré." });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.collection('users').updateOne({ email }, { $set: { password: hashedPassword }, $unset: { resetToken: "", resetExpires: "" } });
+    res.json({ success: true, message: "Mot de passe mis à jour avec succès !" });
+  } catch (err) { res.status(500).json({ error: "Erreur serveur" }); }
 });
 
 app.post('/api/contact', async (req, res) => {
@@ -181,7 +214,6 @@ app.get('/api/gifts/:username', async (req, res) => {
 app.post('/logout', (req, res) => { req.session.destroy(() => { res.clearCookie('__Host-tokoverlay'); res.json({ success: true }); }); });
 app.get('/logout', (req, res) => { req.session.destroy(() => { res.clearCookie('__Host-tokoverlay'); res.redirect('/'); }); });
 
-// ROUTES FRONT-END
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
@@ -252,7 +284,6 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
   } catch { res.status(400).json({ error: "Requête invalide." }); }
 });
 
-// GESTION DU LIVE TIKTOK & NETTOYAGE DES RESSOURCES
 const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
@@ -280,7 +311,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     derniereGagnantId: null, vouchFait: false, objectif: null,
     roue: { active: false, options: ["Gage 1"], montantMin: 10 },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
-    elimination: { actif: false, cout: 1, intervalle: 5, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null },
+    elimination: { actif: false, cout: 1, intervalle: 5, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null, gagnant: null, messageGagnant: '' },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
   connexionsActives[pseudo] = data;
@@ -299,6 +330,15 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
   connection.once('error', () => arreterEcouteLive(pseudo, data, 'error'));
 
+  connection.on('like', (d = {}) => {
+    if (data.closed) return;
+    const user = d.user || {};
+    const id = resolveUserId(d, user);
+    if (!data.likers[id]) data.likers[id] = { nickname: safeText(user.nickname, 'Anonyme'), profilePictureUrl: avatarFor(user, safeText(user.nickname)), likes: 0 };
+    data.likers[id].likes += positiveInteger(d.count, 1);
+    data.pendingUpdates.likers = true;
+  });
+
   connection.on('gift', (d = {}) => {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
@@ -314,9 +354,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     if (db) db.collection('users').updateOne({ pseudo: pseudo }, { $inc: { totalDiamantsGlobal: totalPieces } }, { upsert: true }).catch(() => {});
 
-    // MODE ÉLIMINATION
     const elim = data.elimination;
-    if (elim && elim.actif && !elim.locked) {
+    if (elim && elim.actif && !elim.locked && !elim.gagnant) {
       const nbPlaces = Math.floor(totalPieces / elim.cout);
       if (nbPlaces > 0) {
         for (let i = 0; i < nbPlaces; i++) elim.places.push({ id, nickname, avatar, eliminated: false });
@@ -329,7 +368,27 @@ function demarrerEcouteLive(pseudo, apiKey) {
 
   connection.on('chat', (d = {}) => {
     if (data.closed) return;
-    io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname: safeText(d.nickname), avatar: avatarFor(d.user, d.nickname), message: safeText(d.comment) });
+    const user = d.user || {};
+    const id = resolveUserId(d, user);
+    const message = safeText(d.comment || d.text || d.message || d.msg || d.content, '');
+    const nickname = safeText(d.nickname || user.nickname, 'Anonyme');
+    const avatar = avatarFor(user, nickname);
+
+    io.to(`streamer:${pseudo}`).emit('chatEnDirect', { nickname, avatar, message });
+
+    if (data.elimination && data.elimination.gagnant && id === data.elimination.gagnant.id) {
+      data.elimination.messageGagnant = message;
+      io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
+    }
+
+    if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
+      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (msgNettoye !== "" && msgNettoye === secretNettoye) {
+        data.coffre.gagnant = { id, nickname, avatar };
+        data.coffre.actif = false;
+      }
+    }
   });
 
   connection.once('disconnect', () => arreterEcouteLive(pseudo, data, 'disconnect'));
@@ -342,7 +401,8 @@ function etatElimination(pseudo) {
   return {
     actif: elim.actif, cout: elim.cout, locked: elim.locked,
     eliminationEnCours: elim.eliminationEnCours, totalCoins: elim.totalCoins,
-    places: elim.places, giftImage: elim.giftImage, nextElimination: elim.nextElimination
+    places: elim.places, giftImage: elim.giftImage, nextElimination: elim.nextElimination,
+    gagnant: elim.gagnant, messageGagnant: elim.messageGagnant
   };
 }
 
@@ -372,7 +432,6 @@ io.on('connection', socket => {
     } catch { ack({ ok: false, error: 'Requête invalide.' }); }
   });
 
-  // SOCKETS ELIMINATION AVEC TIMER
   socket.on('configurerElimination', (payload = {}) => {
     try {
       const { pseudo, cout, intervalle, giftImage } = payload;
@@ -386,7 +445,7 @@ io.on('connection', socket => {
         data.elimination = {
           actif: true, cout: positiveInteger(cout, 1), intervalle: positiveInteger(intervalle, 5),
           giftImage: safeText(giftImage, 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'),
-          locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null
+          locked: false, eliminationEnCours: false, totalCoins: 0, places: [], timer: null, nextElimination: null, gagnant: null, messageGagnant: ''
         };
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
       }
@@ -399,8 +458,9 @@ io.on('connection', socket => {
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
 
-      const elim = connexionsActives[pseudoNettoye]?.elimination;
-      if (elim && elim.actif) {
+      const data = connexionsActives[pseudoNettoye];
+      const elim = data?.elimination;
+      if (elim && elim.actif && !elim.gagnant) {
         if (cout) elim.cout = positiveInteger(cout, 1);
         if (intervalle) elim.intervalle = positiveInteger(intervalle, 5);
         if (giftImage) elim.giftImage = giftImage;
@@ -408,18 +468,7 @@ io.on('connection', socket => {
         if (elim.eliminationEnCours && elim.timer) {
           clearInterval(elim.timer);
           elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-          elim.timer = setInterval(() => {
-            const vivants = elim.places.filter(p => !p.eliminated);
-            if (vivants.length > 1) {
-              const indexMort = Math.floor(Math.random() * vivants.length);
-              vivants[indexMort].eliminated = true;
-              elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-              io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
-            } else {
-              clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
-              io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
-            }
-          }, elim.intervalle * 1000);
+          elim.timer = setInterval(() => { processEliminationKill(pseudoNettoye, data); }, elim.intervalle * 1000);
         }
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
       }
@@ -432,39 +481,60 @@ io.on('connection', socket => {
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
       
-      const elim = connexionsActives[pseudoNettoye]?.elimination;
+      const data = connexionsActives[pseudoNettoye];
+      const elim = data?.elimination;
       if (!elim) return;
 
       if (action === 'lock') {
         elim.locked = true;
       } else if (action === 'start_kill') {
+        if(elim.gagnant) return; // Ne pas relancer si déjà gagné
         elim.locked = true; elim.eliminationEnCours = true;
         if (elim.timer) clearInterval(elim.timer);
         
         elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-        elim.timer = setInterval(() => {
-          const vivants = elim.places.filter(p => !p.eliminated);
-          if (vivants.length > 1) {
-            const indexMort = Math.floor(Math.random() * vivants.length);
-            vivants[indexMort].eliminated = true;
-            elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-            io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
-          } else {
-            clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
-            io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
-          }
-        }, elim.intervalle * 1000);
+        elim.timer = setInterval(() => { processEliminationKill(pseudoNettoye, data); }, elim.intervalle * 1000);
       } else if (action === 'stop_kill') {
         elim.eliminationEnCours = false;
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
         elim.nextElimination = null;
       } else if (action === 'reset') {
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
-        elim.actif = false; elim.places = []; elim.totalCoins = 0; elim.nextElimination = null;
+        elim.actif = false; elim.places = []; elim.totalCoins = 0; elim.nextElimination = null; elim.gagnant = null; elim.messageGagnant = '';
       }
       io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
     } catch {}
   });
+
+  function processEliminationKill(pseudoNettoye, data) {
+    const elim = data.elimination;
+    const vivants = elim.places.filter(p => !p.eliminated);
+    const uniqueVivantsIds = [...new Set(vivants.map(p => p.id))];
+
+    if (uniqueVivantsIds.length > 1) {
+      const indexMort = Math.floor(Math.random() * vivants.length);
+      vivants[indexMort].eliminated = true;
+      elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+
+      const vivantsApres = elim.places.filter(p => !p.eliminated);
+      const uniqueApresIds = [...new Set(vivantsApres.map(p => p.id))];
+
+      if (uniqueApresIds.length === 1 && elim.places.length > 1) {
+        clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
+        elim.gagnant = vivantsApres[0];
+        const userGlobal = data.gifters[elim.gagnant.id];
+        elim.gagnant.coins = userGlobal ? userGlobal.coins : 0;
+      }
+    } else {
+      clearInterval(elim.timer); elim.timer = null; elim.eliminationEnCours = false; elim.nextElimination = null;
+      if(uniqueVivantsIds.length === 1 && elim.places.length > 1) {
+        elim.gagnant = vivants[0];
+        const userGlobal = data.gifters[elim.gagnant.id];
+        elim.gagnant.coins = userGlobal ? userGlobal.coins : 0;
+      }
+    }
+    io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+  }
 });
 
 server.listen(PORT, () => console.log(`🚀 TokOverlay démarré sur le port ${PORT}`));
