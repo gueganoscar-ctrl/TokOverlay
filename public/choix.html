@@ -127,6 +127,28 @@
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
+      <!-- NOUVEAU : MODE ÉLIMINATION -->
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div>
+            <h3>Mode Élimination (Grid)</h3>
+          </div>
+          <p>Grille interactive : 1 place = X pièces. Élimination aléatoire pour 1 seul gagnant !</p>
+        </div>
+        <span class="click-hint" style="color: #c084fc;">Ouvrir la télécommande →</span>
+      </div>
+
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div><p>Le chat devine un mot ou chiffre secret en cases.</p></div>
+        <span class="click-hint">Configurer le coffre & Indices →</span>
+      </div>
+
+      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
+        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
+        <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
+      </div>
+
       <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div><p>Affiche le meilleur cadeau.</p></div>
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
@@ -137,19 +159,9 @@
         <span class="click-hint">Personnaliser & Obtenir le lien →</span>
       </div>
 
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div><p>Le chat devine un mot ou chiffre secret en cases.</p></div>
-        <span class="click-hint">Configurer le coffre & Indices →</span>
-      </div>
-
       <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div><p>S'active automatiquement aux dons pour distribuer des gages ou des lots.</p></div>
         <span class="click-hint">Configurer les options & Lien →</span>
-      </div>
-
-      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
-        <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
       </div>
 
       <div class="widget-card card" onclick="allerAuxStatistiques()" style="border-color: rgba(34, 211, 238, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #082f49 100%);">
@@ -312,7 +324,6 @@
         document.getElementById('input-pseudo').value = user.pseudo;
         document.getElementById('input-apikey').value = '';
 
-        // NOUVEAU : On affiche le widget VIP et la VIP ROOM seulement si l'utilisateur est admin
         if (user.role === 'admin') {
           const widgetVip = document.getElementById('widget-vip');
           if (widgetVip) widgetVip.style.display = 'flex';
@@ -364,7 +375,77 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'vip') {
+      if (type === 'elimination') {
+        const wrap1 = document.createElement('div');
+        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
+        
+        const h3_1 = document.createElement('h3');
+        h3_1.textContent = '1. Configuration du jeu';
+        wrap1.appendChild(h3_1);
+
+        const fgCout = document.createElement('div');
+        fgCout.className = 'form-group';
+        fgCout.innerHTML = `<label>Coût pour 1 place (Pièces)</label><input type="number" id="elim-cout" value="1" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">`;
+        wrap1.appendChild(fgCout);
+
+        const fgTimer = document.createElement('div');
+        fgTimer.className = 'form-group';
+        fgTimer.style.marginTop = '8px';
+        fgTimer.innerHTML = `<label>Temps entre chaque élimination (Secondes)</label><input type="number" id="elim-interval" value="5" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">`;
+        wrap1.appendChild(fgTimer);
+
+        const btnStart = document.createElement('button');
+        btnStart.className = 'btn btn-primary';
+        btnStart.style.cssText = 'width: 100%; margin-top: 12px;';
+        btnStart.textContent = '🟢 Ouvrir la grille (Accepter les dons)';
+        btnStart.onclick = () => {
+          socket.emit('configurerElimination', { 
+            pseudo: pseudoGlobal, 
+            cout: document.getElementById('elim-cout').value, 
+            intervalle: document.getElementById('elim-interval').value 
+          });
+          alert("Grille ouverte ! Les spectateurs peuvent envoyer des cadeaux.");
+        };
+        wrap1.appendChild(btnStart);
+        extraDiv.appendChild(wrap1);
+
+        const wrap2 = document.createElement('div');
+        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
+        
+        const h3_2 = document.createElement('h3');
+        h3_2.textContent = '2. Contrôles en direct';
+        wrap2.appendChild(h3_2);
+
+        const btnLock = document.createElement('button');
+        btnLock.className = 'btn btn-secondary';
+        btnLock.textContent = '🔒 Verrouiller (Stop Dons)';
+        btnLock.onclick = () => socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'lock' });
+        
+        const btnKill = document.createElement('button');
+        btnKill.className = 'btn btn-danger';
+        btnKill.style.fontWeight = 'bold';
+        btnKill.textContent = '💀 Lancer le massacre (Auto)';
+        btnKill.onclick = () => socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' });
+
+        const btnStop = document.createElement('button');
+        btnStop.className = 'btn btn-secondary';
+        btnStop.textContent = '⏸️ Mettre l\'élimination en pause';
+        btnStop.onclick = () => socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'stop_kill' });
+
+        const btnReset = document.createElement('button');
+        btnReset.className = 'btn btn-secondary';
+        btnReset.textContent = '🔄 Réinitialiser et Vider la grille';
+        btnReset.style.marginTop = '10px';
+        btnReset.onclick = () => {
+          if(confirm('Es-tu sûr de vouloir vider toute la grille ?')) {
+            socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'reset' });
+          }
+        };
+
+        wrap2.append(btnLock, btnKill, btnStop, btnReset);
+        extraDiv.appendChild(wrap2);
+
+      } else if (type === 'vip') {
         const infoP = document.createElement('p');
         infoP.style.cssText = 'font-size: 13px; color: var(--text-lo); line-height: 1.4; margin-top: 5px;';
         infoP.textContent = "Cet overlay se connecte au flux pour afficher en direct les messages des joueurs lorsqu'ils envoient un cadeau éligible (Corgi, Galaxy, Baleine, Donut, etc.).";
