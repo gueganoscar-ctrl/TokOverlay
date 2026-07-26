@@ -145,25 +145,28 @@ app.get('/api/me', async (req, res) => {
 app.get('/api/gifts/:username', async (req, res) => {
   const catalogGifts = [
     { name: 'Rose', diamond_count: 1, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png' },
-    { name: 'Finger Heart', diamond_count: 5, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7065969116668791557~tplv-obj.png' },
     { name: 'TikTok', diamond_count: 1, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a7aa3ba2393279148d2d667c2d1b82e4~tplv-obj.png' },
+    { name: 'Finger Heart', diamond_count: 5, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7065969116668791557~tplv-obj.png' },
     { name: 'Mini Speaker', diamond_count: 1, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e42f9e4226d9c63d58d343411b5e58c~tplv-obj.png' },
     { name: 'Ice Cream', diamond_count: 1, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eb9b6348efd46a895b6c935b6727c943~tplv-obj.png' },
-    { name: 'Doughnut', diamond_count: 30, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6911928092264909574~tplv-obj.png' },
     { name: 'Perfume', diamond_count: 20, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6696efb2d29486cd5d9a941f12ff1dc5~tplv-obj.png' },
-    { name: 'Hat', diamond_count: 99, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/38c3e60124ca255554f6c449174092b3~tplv-obj.png' },
-    { name: 'Confetti', diamond_count: 100, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/c3ec78e4726cdb8ff23467f5dfcd3613~tplv-obj.png' },
+    { name: 'Doughnut', diamond_count: 30, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6911928092264909574~tplv-obj.png' },
     { name: 'Cap', diamond_count: 99, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/38c3e60124ca255554f6c449174092b3~tplv-obj.png' },
+    { name: 'Confetti', diamond_count: 100, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/c3ec78e4726cdb8ff23467f5dfcd3613~tplv-obj.png' },
     { name: 'Love Letter', diamond_count: 100, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a0c44a2c0709f18a5996fec203bf182d~tplv-obj.png' },
+    { name: 'Tea Time', diamond_count: 50, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7011287955523179526~tplv-obj.png' },
+    { name: 'Glove', diamond_count: 150, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7011288214324203782~tplv-obj.png' },
     { name: 'Corgi', diamond_count: 299, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/1a5e12ecaf4f3dce39c4d93ee8a49c25~tplv-obj.png' },
     { name: 'Swan', diamond_count: 699, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/b0870932822a10cb55ed703c734898fc~tplv-obj.png' },
-    { name: 'Interstellar', diamond_count: 10000, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png' },
+    { name: 'Yacht', diamond_count: 9999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/148386a3bcf447f7d1428f5223078a63~tplv-obj.png' },
     { name: 'Galaxy', diamond_count: 1000, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png' },
+    { name: 'Interstellar', diamond_count: 10000, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e6c70281b37803db02ce1e3eb8c2786~tplv-obj.png' },
     { name: 'Falcon', diamond_count: 10999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6201a073f00155b958c2cb41257ab6b8~tplv-obj.png' },
+    { name: 'Phoenix', diamond_count: 25999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7011295982821143814~tplv-obj.png' },
     { name: 'Lion', diamond_count: 29999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/ada635cc98d023f06dd95c02bbf9dd9d~tplv-obj.png' },
-    { name: 'Universe', diamond_count: 34999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/289fa3ec677e1bf3b4629471d248b1aa~tplv-obj.png' },
     { name: 'Dragon Flame', diamond_count: 26999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7027581223963428357~tplv-obj.png' },
-    { name: 'Zeus', diamond_count: 34999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7106093847250635525~tplv-obj.png' }
+    { name: 'Zeus', diamond_count: 34999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/7106093847250635525~tplv-obj.png' },
+    { name: 'Universe', diamond_count: 34999, image: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/289fa3ec677e1bf3b4629471d248b1aa~tplv-obj.png' }
   ];
   res.json(catalogGifts);
 });

@@ -58,7 +58,7 @@
     .gift-item { background: #1c1b26; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
     .gift-item:hover { border-color: var(--cyan); background: rgba(34,229,224,0.1); }
     .gift-item.selected { border-color: var(--cyan); background: rgba(34,229,224,0.2); box-shadow: 0 0 10px rgba(34,229,224,0.3); }
-    .gift-icon { width: 35px; height: 35px; object-fit: contain; margin-bottom: 4px; }
+    .gift-icon { width: 35px; height: 35px; object-fit: contain; margin-bottom: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; }
     .gift-price { font-size: 11px; color: var(--gold); font-weight: bold; }
   </style>
 </head>
@@ -238,40 +238,12 @@
       if (type === 'elimination') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement de l\'intégralité des cadeaux TikTok officiels...</p>';
+        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
         extraDiv.appendChild(wrap1);
 
         fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
-          let giftHtml = '<div class="gift-grid" id="elim-gift-grid">';
-          finalGifts.forEach((g, i) => {
-             giftHtml += `<div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
-               <img class="gift-icon" src="${g.image}" onerror="this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
-               <div class="gift-price">${g.diamond_count} 💎</div>
-               <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
-             </div>`;
-          });
-          giftHtml += '</div>';
-
-          wrap1.innerHTML = `
-            <h3>1. Configuration du jeu</h3>
-            <div class="form-group">
-              <label>Choisis ton cadeau officiel TikTok</label>
-              ${giftHtml}
-              <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-              <input type="number" id="elim-cout" value="${finalGifts[0].diamond_count}" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-            </div>
-            <div class="form-group" style="margin-top:8px;">
-              <label>Temps d'ouverture des inscriptions (Secondes)</label>
-              <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-            </div>
-            <div class="form-group" style="margin-top:8px;">
-              <label>Temps entre chaque élimination (Secondes)</label>
-              <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-            </div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et lancer le timer</button>
-          `;
-          selectedGiftImage = finalGifts[0].image;
-          selectedGiftPrice = finalGifts[0].diamond_count;
+          window.allGiftsCache = finalGifts;
+          renderGiftGrid(finalGifts);
         });
 
         const wrap2 = document.createElement('div');
@@ -288,7 +260,7 @@
       } else if (type === 'vip') {
         const infoP = document.createElement('p');
         infoP.style.cssText = 'font-size: 13px; color: var(--text-lo); line-height: 1.4; margin-top: 5px;';
-        infoP.textContent = "Cet overlay se connecte au flux pour afficher en direct les messages des joueurs lorsqu'ils envoient un cadeau éligible.";
+        infoP.textContent = "Cet overlay se connecte au flux pour afficher en direct les messages des joueurs.";
         extraDiv.appendChild(infoP);
       } else if (type === 'encheres') {
         const link = document.createElement('a');
@@ -311,7 +283,6 @@
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
         wrap1.innerHTML = `<h3>Coffre-Fort</h3><label>Mot secret</label><input type="text" id="coffre-secret-input" value="777" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"><button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="lancerCoffreFort()">Lancer</button>`;
-        wrap1.appendChild(wrap1);
         extraDiv.appendChild(wrap1);
       }
 
@@ -319,9 +290,60 @@
       mettreAJourLienModal();
     }
 
+    window.renderGiftGrid = function(giftsToDisplay) {
+      let giftHtml = `
+        <div class="form-group" style="margin-bottom:8px;">
+          <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau (ex: Rose, Galaxy, Lion...)" oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
+        </div>
+        <div class="gift-grid" id="elim-gift-grid">
+      `;
+      
+      giftsToDisplay.forEach((g, i) => {
+         giftHtml += `<div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
+           <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+           <div class="gift-price">${g.diamond_count} 💎</div>
+           <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
+         </div>`;
+      });
+      giftHtml += '</div>';
+
+      const wrap1 = document.querySelector('#modal-extra-action div');
+      if(wrap1) {
+        wrap1.innerHTML = `
+          <h3>1. Configuration du jeu</h3>
+          <div class="form-group">
+            <label>Choisis ton cadeau officiel TikTok</label>
+            ${giftHtml}
+            <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
+            <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>Temps d'ouverture des inscriptions (Secondes)</label>
+            <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>Temps entre chaque élimination (Secondes)</label>
+            <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et lancer le timer</button>
+        `;
+        if(giftsToDisplay[0]) {
+          selectedGiftImage = giftsToDisplay[0].image;
+          selectedGiftPrice = giftsToDisplay[0].diamond_count;
+        }
+      }
+    };
+
+    window.filterGifts = function(query) {
+      if(!window.allGiftsCache) return;
+      const filtered = window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      renderGiftGrid(filtered.length > 0 ? filtered : window.allGiftsCache);
+    };
+
     window.selectElimGift = function(imgUrl, price, idx) {
       document.querySelectorAll('.gift-item').forEach(el => el.classList.remove('selected'));
-      document.getElementById(`gift-item-${idx}`).classList.add('selected');
+      const item = document.getElementById(`gift-item-${idx}`);
+      if(item) item.classList.add('selected');
       document.getElementById('elim-cout').value = price;
       selectedGiftImage = imgUrl;
       selectedGiftPrice = price;
