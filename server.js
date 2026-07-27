@@ -389,8 +389,7 @@ app.post('/api/contact', async (req, res) => {
           <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 15px 0;">
           <p><strong>Message :</strong></p>
           <blockquote style="background: #ffffff; padding: 12px; border-left: 4px solid #6366f1; margin: 0; border-radius: 4px;">
-            ${message.replace(/
-/g, '<br>')}
+            ${message.replace(/\n/g, '<br>')}
           </blockquote>
         </div>
       `
