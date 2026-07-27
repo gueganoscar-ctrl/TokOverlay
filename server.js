@@ -1098,20 +1098,22 @@ function processBoucleKill(pseudo, data) {
 
   if (joueursUniquesRestants.size > 1) {
     elim.locked = false;
-    elim.openEndsAt = Date.now() + (8 * 1000);
+    elim.eliminationEnCours = false;
+    elim.openEndsAt = Date.now() + (elim.tempsOuverture * 1000);
     elim.nextElimination = null;
     io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
 
     if (elim.timer) clearTimeout(elim.timer);
     elim.timer = setTimeout(() => {
-      elim.locked = true;
-      elim.openEndsAt = null;
-      elim.nextElimination = Date.now() + (5 * 1000);
-      io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
-
-      if (elim.timer) clearTimeout(elim.timer);
-      elim.timer = setTimeout(() => processBoucleKill(pseudo, data), 5000);
-    }, 8000);
+      if (elim && !elim.gagnant) {
+        elim.locked = true;
+        elim.eliminationEnCours = true;
+        elim.openEndsAt = null;
+        elim.nextElimination = null;
+        io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+        processBoucleKill(pseudo, data);
+      }
+    }, elim.tempsOuverture * 1000);
   } else {
     processBoucleKill(pseudo, data);
   }
@@ -1386,6 +1388,7 @@ io.on('connection', socket => {
         places: [],
         totalCoins: 0,
         totalsParId: Object.create(null),
+        tempsOuverture: openTimeSec,
         openEndsAt: Date.now() + (openTimeSec * 1000),
         openTimer: null,
         nextElimination: null,
@@ -1399,11 +1402,12 @@ io.on('connection', socket => {
         if (data.eliminationBoucle && !data.eliminationBoucle.locked) {
           data.eliminationBoucle.locked = true;
           data.eliminationBoucle.eliminationEnCours = true;
+          data.eliminationBoucle.openEndsAt = null;
+          data.eliminationBoucle.nextElimination = null;
           if (data.eliminationBoucle.timer) clearTimeout(data.eliminationBoucle.timer);
-          data.eliminationBoucle.nextElimination = Date.now() + (5 * 1000);
-          data.eliminationBoucle.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), 5000);
 
           io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+          processBoucleKill(pseudoNettoye, data);
         }
       }, openTimeSec * 1000);
 
@@ -1509,10 +1513,21 @@ io.on('connection', socket => {
         if (elim.timer) { clearTimeout(elim.timer); elim.timer = null; }
       } else if (action === 'resume') {
         if (elim.gagnant) return;
-        elim.eliminationEnCours = true;
-        elim.nextElimination = Date.now() + (5 * 1000);
+        elim.locked = false;
+        elim.eliminationEnCours = false;
+        elim.openEndsAt = Date.now() + (elim.tempsOuverture * 1000);
+        elim.nextElimination = null;
         if (elim.timer) clearTimeout(elim.timer);
-        elim.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), 5000);
+        elim.timer = setTimeout(() => {
+          if (elim && !elim.gagnant) {
+            elim.locked = true;
+            elim.eliminationEnCours = true;
+            elim.openEndsAt = null;
+            elim.nextElimination = null;
+            io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+            processBoucleKill(pseudoNettoye, data);
+          }
+        }, elim.tempsOuverture * 1000);
       } else if (action === 'reset') {
         if (elim.timer) clearTimeout(elim.timer);
         if (elim.openTimer) clearTimeout(elim.openTimer);
