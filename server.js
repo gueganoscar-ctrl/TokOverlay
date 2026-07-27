@@ -484,8 +484,6 @@ app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
 app.get('/elimination-boucle/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination-boucle.html')));
-
-// Route pour la page de simulation de cadeaux
 app.get('/simulation/:username', (req, res) => {
   if (!req.session.user) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'simulation.html'));
@@ -1079,6 +1077,7 @@ function processBoucleKill(pseudo, data) {
     if (survivant) {
       elim.gagnantId = survivant.id;
       elim.gagnant = {
+        id: survivant.id,
         nickname: survivant.nickname,
         avatar: survivant.avatar,
         coins: elim.totalsParId[survivant.id] || 0
@@ -1089,16 +1088,15 @@ function processBoucleKill(pseudo, data) {
     return;
   }
 
-  // Élimine 1 joueur au hasard
   const idx = Math.floor(Math.random() * vivants.length);
   vivants[idx].eliminated = true;
 
-  const restants = elim.places.filter(p => !p.eliminated);
+  const restantsAfterKill = elim.places.filter(p => !p.eliminated);
 
-  if (restants.length > 1) {
-    // S'il reste plus d'un joueur, on rouvre les inscriptions pendant un court moment (ex: 8 secondes)
+  if (restantsAfterKill.length > 1) {
     elim.locked = false;
     elim.openEndsAt = Date.now() + (8 * 1000);
+    elim.nextElimination = null;
     io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
 
     if (elim.timer) clearTimeout(elim.timer);
@@ -1106,15 +1104,13 @@ function processBoucleKill(pseudo, data) {
       elim.locked = true;
       elim.openEndsAt = null;
       elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-      processBoucleKill(pseudo, data);
+      io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+
+      if (elim.timer) clearTimeout(elim.timer);
+      elim.timer = setTimeout(() => processBoucleKill(pseudo, data), elim.intervalle * 1000);
     }, 8000);
   } else {
-    // Mode 1vs1 final direct
-    elim.locked = true;
-    elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-    if (elim.timer) clearTimeout(elim.timer);
-    elim.timer = setTimeout(() => processBoucleKill(pseudo, data), elim.intervalle * 1000);
-    io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+    processBoucleKill(pseudo, data);
   }
 }
 
@@ -1209,7 +1205,6 @@ function terminerEnchere(pseudo) {
 io.on('connection', socket => {
   socket.on('disconnect', () => {});
 
-  // Gestion de la simulation de cadeaux
   socket.on('simulerCadeauTest', (payload = {}) => {
     try {
       const { pseudo, senderPseudo, coins } = payload;
@@ -1225,14 +1220,11 @@ io.on('connection', socket => {
       const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
       const totalPieces = positiveInteger(coins, 10);
 
-      // 1. Top Pièces (Gifters)
       if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
       data.gifters[id].coins += totalPieces;
 
-      // 2. Enchères
       traiterDonPourEnchere(pseudoNettoye, id, nickname, avatar, totalPieces);
 
-      // 3. Élimination Classique
       if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant) {
         const elim = data.elimination;
         const nombreEntrees = Math.floor(totalPieces / elim.cout);
@@ -1244,7 +1236,6 @@ io.on('connection', socket => {
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
       }
 
-      // 4. Élimination en Boucle
       if (data.eliminationBoucle && data.eliminationBoucle.actif && !data.eliminationBoucle.locked && !data.eliminationBoucle.gagnant) {
         const elim = data.eliminationBoucle;
         const nombreEntrees = Math.floor(totalPieces / elim.cout);
@@ -1256,14 +1247,12 @@ io.on('connection', socket => {
         io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
       }
 
-      // 5. Best Gift
       const giftIcon = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
       if (!data.bestGift || totalPieces > data.bestGift.montant) {
         data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
         io.to(`streamer:${pseudoNettoye}`).emit('updateBestGift', data.bestGift);
       }
 
-      // Envoi immédiat des mises à jour aux overlays
       io.to(`streamer:${pseudoNettoye}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
       
       const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
@@ -1357,6 +1346,11 @@ io.on('connection', socket => {
       data.elimination.openTimer = setTimeout(() => {
         if (data.elimination && !data.elimination.locked) {
           data.elimination.locked = true;
+          data.elimination.eliminationEnCours = true;
+          if (data.elimination.timer) clearInterval(data.elimination.timer);
+          data.elimination.nextElimination = Date.now() + (data.elimination.intervalle * 1000);
+          data.elimination.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), data.elimination.intervalle * 1000);
+          
           io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
         }
       }, openTimeSec * 1000);

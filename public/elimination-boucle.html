@@ -112,11 +112,6 @@
     let animationQueue = [];
     let isAnimating = false;
 
-    // BUGFIX: sans ce reset, les indices "éliminés" d'une partie précédente
-    // restaient en mémoire. Comme chaque nouvelle partie (configurerEliminationBoucle)
-    // repart avec un tableau "places" vide (donc des indices qui recommencent à 0),
-    // les nouveaux joueurs de la 2e partie (et suivantes) héritaient à tort du statut
-    // "déjà éliminé" et n'apparaissaient jamais dans la grille.
     function resetState() {
       displayedEliminatedIndexes = new Set();
       queuedIndexes = new Set();
@@ -200,8 +195,6 @@
       }
       container.style.display = 'flex';
 
-      // BUGFIX: si le nombre de places est inférieur à ce qu'on avait vu (nouvelle
-      // partie qui recommence à 0), on réinitialise tout l'état d'animation/affichage.
       if (data.places.length < lastKnownPlacesLength) {
         resetState();
       }

@@ -21,7 +21,6 @@
     .stat-title { font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
     
-    /* Conteneur de taille fixe : il ne grandit jamais, même avec 1000 joueurs */
     .grid-container { 
       background: rgba(10, 5, 15, 0.95); 
       border: 4px solid #a855f7; 
@@ -29,7 +28,7 @@
       padding: 10px; 
       width: 100%; 
       max-width: 700px;
-      height: 420px; /* Taille fixe */
+      height: 420px;
       max-height: 420px;
       box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); 
       display: flex; 
@@ -37,7 +36,7 @@
       gap: 3px; 
       justify-content: center; 
       align-content: flex-start; 
-      overflow-y: auto; /* Scroll interne si vraiment des milliers de joueurs */
+      overflow-y: auto; 
       position: relative; 
     }
     .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 4px; overflow: hidden; position: relative; transition: all 0.15s ease; flex-shrink: 0; }
@@ -114,7 +113,6 @@
     let countdownInterval;
     let latestData = null;
     let lastKnownPlacesLength = 0;
-    let hasInitializedGrid = false;
     let displayedEliminatedIndexes = new Set();
     let queuedIndexes = new Set();
     let animationQueue = [];
@@ -125,12 +123,13 @@
       queuedIndexes = new Set();
       animationQueue = [];
       isAnimating = false;
-      hasInitializedGrid = false;
       latestData = null;
       lastKnownPlacesLength = 0;
       grid.style.display = 'flex';
       winnerScreen.style.display = 'none';
       popup.style.display = 'none';
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
     }
 
     function startTimer(targetTimestamp, isKillTimer = false) {
@@ -180,7 +179,6 @@
       }
     }
 
-    // Calcul dynamique et fluide de la taille des cases pour que le carré ne grandisse jamais
     function renderCells() {
       if (!latestData || !Array.isArray(latestData.places)) return;
 
@@ -191,16 +189,13 @@
       let count = displayed.length;
       if (count === 0) count = 1;
 
-      // Taille fixe du conteneur en pixels (environ 680x400 utilisables)
       const containerWidth = 670;
       const containerHeight = 390;
       const totalArea = containerWidth * containerHeight;
       const areaPerCell = totalArea / count;
       
-      // On calcule la taille idéale de chaque case (largeur/hauteur) pour remplir l'espace sans déborder
       let cellSize = Math.floor(Math.sqrt(areaPerCell)) - 6; 
       
-      // Limites de taille pour garder un affichage propre (min 15px, max 95px)
       if (cellSize > 95) cellSize = 95;
       if (cellSize < 15) cellSize = 15;
 
@@ -220,7 +215,6 @@
     function renderGrid(data) {
       if (!data || !data.actif) {
         container.style.display = 'none';
-        clearInterval(countdownInterval);
         resetState();
         return;
       }
