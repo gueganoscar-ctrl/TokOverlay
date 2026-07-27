@@ -23,6 +23,13 @@
     .grid-container { background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px; padding: 10px; width: 100%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start; min-height: 400px; position: relative; }
     .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 6px; overflow: hidden; position: relative; transition: all 0.3s ease; }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .grid-cell.roulette-highlight {
+  border-color: #ff2a55 !important;
+  box-shadow: 0 0 18px rgba(255, 42, 85, 0.85);
+  transform: scale(1.1);
+  z-index: 2;
+}
+.grid-cell { transition: all 0.15s ease; }
     #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
     #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
@@ -69,132 +76,265 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const pathParts = window.location.pathname.split('/');
-    const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const isDemo = params.get('demo') === '1';
+<script>
+  const pathParts = window.location.pathname.split('/');
+  const pseudo = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  const isDemo = params.get('demo') === '1';
 
-    const socket = io();
-    socket.on('connect', () => { if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' }); });
+  const socket = io();
+  socket.on('connect', () => { if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' }); });
 
-    const container = document.getElementById('game-container');
-    const grid = document.getElementById('grid');
-    const statusBadge = document.getElementById('elim-status');
-    const popup = document.getElementById('elim-popup');
-    const timerDisplay = document.getElementById('elim-timer-display');
-    const winnerScreen = document.getElementById('winner-screen');
-    
-    let prevPlaces = [];
-    let countdownInterval;
+  const container = document.getElementById('game-container');
+  const grid = document.getElementById('grid');
+  const statusBadge = document.getElementById('elim-status');
+  const popup = document.getElementById('elim-popup');
+  const timerDisplay = document.getElementById('elim-timer-display');
+  const winnerScreen = document.getElementById('winner-screen');
 
-    function startTimer(targetTimestamp) {
+  let countdownInterval;
+
+  // --- État côté client : pilote l'animation indépendamment du rythme serveur ---
+  let latestData = null;
+  let lastKnownPlacesLength = 0;
+  let hasInitializedGrid = false;
+  let displayedEliminatedIndexes = new Set(); // éliminations déjà montrées visuellement
+  let queuedIndexes = new Set();              // éliminations déjà en file d'attente
+  let animationQueue = [];                    // file d'attente des éliminations à animer
+  let isAnimating = false;
+
+  function resetState() {
+    displayedEliminatedIndexes = new Set();
+    queuedIndexes = new Set();
+    animationQueue = [];
+    isAnimating = false;
+    hasInitializedGrid = false;
+    latestData = null;
+    lastKnownPlacesLength = 0;
+    grid.style.display = 'flex';
+    winnerScreen.style.display = 'none';
+    popup.style.display = 'none';
+  }
+
+  function startTimer(targetTimestamp) {
+    clearInterval(countdownInterval);
+    if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
+
+    timerDisplay.style.display = 'block';
+    countdownInterval = setInterval(() => {
+      const diff = Math.max(0, targetTimestamp - Date.now());
+      const seconds = Math.ceil(diff / 1000);
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      if (diff <= 0) clearInterval(countdownInterval);
+    }, 100);
+  }
+
+  function updateStatsAndStatus(data) {
+    const trulyAlive = data.places.filter(p => !p.eliminated);
+    document.getElementById('stat-players').textContent = new Set(trulyAlive.map(p => p.id)).size;
+    document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
+    document.getElementById('target-gift-img').src = data.giftImage || 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
+    document.getElementById('target-gift-price').textContent = data.cout;
+
+    if (!data.locked && data.openEndsAt) {
+      startTimer(data.openEndsAt);
+    } else if (data.eliminationEnCours && data.nextElimination) {
+      startTimer(data.nextElimination);
+    } else {
       clearInterval(countdownInterval);
-      if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
-      
-      timerDisplay.style.display = 'block';
-      countdownInterval = setInterval(() => {
-        const diff = Math.max(0, targetTimestamp - Date.now());
-        const seconds = Math.ceil(diff / 1000);
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        if (diff <= 0) clearInterval(countdownInterval);
-      }, 100);
+      timerDisplay.style.display = 'none';
     }
 
-    function renderGrid(data) {
-      if (!data || !data.actif) { container.style.display = 'none'; clearInterval(countdownInterval); return; }
-      container.style.display = 'flex';
+    if (data.locked) {
+      statusBadge.className = 'elim-status';
+      statusBadge.innerHTML = '🔒 LOCKED ENTRIES - DO NOT SEND 🔒';
+    } else {
+      statusBadge.className = 'elim-status open';
+      statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
+    }
+  }
 
-      if (data.gagnant) {
-        clearInterval(countdownInterval);
-        timerDisplay.style.display = 'none';
-        grid.style.display = 'none';
-        winnerScreen.style.display = 'flex';
-        
-        document.getElementById('winner-img').src = data.gagnant.avatar;
-        document.getElementById('winner-name').textContent = data.gagnant.nickname;
-        document.getElementById('winner-coins').textContent = `Total envoyé : ${data.gagnant.coins.toLocaleString()} 💎`;
-        document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'En attente dans le chat...'}</span>`;
+  function renderCells() {
+    if (!latestData) return;
+
+    const displayed = latestData.places
+      .map((p, idx) => ({ ...p, idx }))
+      .filter(p => !displayedEliminatedIndexes.has(p.idx));
+
+    let count = displayed.length;
+    let cellSize = 100;
+    if (count > 9) cellSize = 80;
+    if (count > 25) cellSize = 60;
+    if (count > 49) cellSize = 45;
+    if (count > 100) cellSize = 30;
+    if (count > 200) cellSize = 20;
+
+    Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
+
+    displayed.forEach(place => {
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell';
+      cell.dataset.placeIndex = place.idx;
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname)}&background=random'" alt="${place.nickname}">`;
+      grid.appendChild(cell);
+    });
+  }
+
+  function showWinnerScreen(data) {
+    clearInterval(countdownInterval);
+    timerDisplay.style.display = 'none';
+    grid.style.display = 'none';
+    winnerScreen.style.display = 'flex';
+
+    document.getElementById('winner-img').src = data.gagnant.avatar;
+    document.getElementById('winner-name').textContent = data.gagnant.nickname;
+    document.getElementById('winner-coins').textContent = `Total envoyé : ${data.gagnant.coins.toLocaleString()} 💎`;
+    document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'En attente dans le chat...'}</span>`;
+  }
+
+  function showEliminationPopup(next, prob) {
+    document.getElementById('popup-img').src = next.avatar;
+    document.getElementById('popup-name').textContent = next.nickname;
+    document.getElementById('popup-prob').textContent = prob + '%';
+    popup.style.display = 'block';
+  }
+
+  function hideEliminationPopup() {
+    popup.style.display = 'none';
+  }
+
+  function finalizeElimination(next) {
+    displayedEliminatedIndexes.add(next.idx);
+    renderCells();
+  }
+
+  // Anime une "roulette" : un contour rouge saute au hasard entre les cases,
+  // ralentit progressivement, puis se fige sur la vraie victime avant le popup.
+  function runRouletteAnimation(next) {
+    return new Promise(resolve => {
+      const candidats = Array.from(grid.querySelectorAll('.grid-cell'));
+
+      if (candidats.length === 0) {
+        finalizeElimination(next);
+        resolve();
         return;
-      } else {
-        grid.style.display = 'flex';
-        winnerScreen.style.display = 'none';
       }
 
-      const vivants = data.places.filter(p => !p.eliminated);
-      const uniquePlayers = new Set(vivants.map(p => p.id)).size;
-      document.getElementById('stat-players').textContent = uniquePlayers;
-      document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
-      document.getElementById('target-gift-img').src = data.giftImage || 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
-      document.getElementById('target-gift-price').textContent = data.cout;
+      const totalAliveBefore = candidats.length;
+      const userAliveBefore = candidats.filter(c => {
+        const idx = parseInt(c.dataset.placeIndex, 10);
+        return latestData.places[idx] && latestData.places[idx].id === next.id;
+      }).length;
+      const prob = totalAliveBefore > 0 ? ((userAliveBefore / totalAliveBefore) * 100).toFixed(1) : '0.0';
 
-      if (!data.locked && data.openEndsAt) {
-        startTimer(data.openEndsAt);
-      } else if (data.eliminationEnCours && data.nextElimination) {
-        startTimer(data.nextElimination);
-      } else {
-        clearInterval(countdownInterval);
-        timerDisplay.style.display = 'none';
-      }
+      let step = 0;
+      const totalSteps = 18;
+      let delai = 70;
 
-      if (data.locked) {
-        statusBadge.className = 'elim-status';
-        statusBadge.innerHTML = '🔒 LOCKED ENTRIES - DO NOT SEND 🔒';
-      } else {
-        statusBadge.className = 'elim-status open';
-        statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
-      }
+      function tick() {
+        candidats.forEach(c => c.classList.remove('roulette-highlight'));
 
-      if (prevPlaces.length > 0 && data.eliminationEnCours) {
-        const newlyEliminated = data.places.find((p, i) => p.eliminated && !prevPlaces[i].eliminated);
-        if (newlyEliminated) {
-          const totalAliveBefore = prevPlaces.filter(p => !p.eliminated).length;
-          const userAliveBefore = prevPlaces.filter(p => !p.eliminated && p.id === newlyEliminated.id).length;
-          const prob = ((userAliveBefore / totalAliveBefore) * 100).toFixed(1);
+        let choisi;
+        if (step === totalSteps - 1) {
+          choisi = candidats.find(c => parseInt(c.dataset.placeIndex, 10) === next.idx);
+        } else {
+          choisi = candidats[Math.floor(Math.random() * candidats.length)];
+        }
+        if (choisi) choisi.classList.add('roulette-highlight');
 
-          document.getElementById('popup-img').src = newlyEliminated.avatar;
-          document.getElementById('popup-name').textContent = newlyEliminated.nickname;
-          document.getElementById('popup-prob').textContent = prob + '%';
-          
-          popup.style.display = 'block';
-          setTimeout(() => { popup.style.display = 'none'; }, 2000);
+        step++;
+        delai += 12; // ralentit progressivement, comme une roue qui s'arrête
+
+        if (step < totalSteps) {
+          setTimeout(tick, delai);
+        } else {
+          setTimeout(() => {
+            showEliminationPopup(next, prob);
+            setTimeout(() => {
+              hideEliminationPopup();
+              finalizeElimination(next);
+              resolve();
+            }, 1600);
+          }, 500);
         }
       }
-      prevPlaces = JSON.parse(JSON.stringify(data.places));
 
-      let count = vivants.length;
-      let cellSize = 100;
-      if (count > 9) cellSize = 80;
-      if (count > 25) cellSize = 60;
-      if (count > 49) cellSize = 45;
-      if (count > 100) cellSize = 30;
-      if (count > 200) cellSize = 20;
+      tick();
+    });
+  }
 
-      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
-      
-      vivants.forEach((place) => {
-        const cell = document.createElement('div');
-        cell.className = 'grid-cell';
-        cell.style.width = cellSize + 'px';
-        cell.style.height = cellSize + 'px';
-        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname)}&background=random'" alt="${place.nickname}">`;
-        grid.appendChild(cell);
-      });
+  async function processQueue() {
+    if (isAnimating) return;
+
+    if (animationQueue.length === 0) {
+      if (latestData && latestData.gagnant) {
+        showWinnerScreen(latestData);
+      }
+      return;
     }
 
-    socket.on('updateElimination', renderGrid);
+    isAnimating = true;
+    const next = animationQueue.shift();
+    await runRouletteAnimation(next);
+    isAnimating = false;
+    processQueue();
+  }
 
-    if (isDemo) {
-      let mockData = {
-        actif: true, cout: 10, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 2500,
-        places: Array(15).fill(0).map((_, i) => ({ id: i%3, nickname: `Joueur_${i%3}`, avatar: `https://ui-avatars.com/api/?name=J${i%3}&background=random`, eliminated: false })),
-        openEndsAt: Date.now() + 15000, nextElimination: null, gagnant: null, messageGagnant: ''
-      };
-      renderGrid(mockData);
+  function renderGrid(data) {
+    if (!data || !data.actif) {
+      container.style.display = 'none';
+      clearInterval(countdownInterval);
+      resetState();
+      return;
     }
-  </script>
+    container.style.display = 'flex';
+
+    if (data.places.length < lastKnownPlacesLength) {
+      resetState();
+    }
+    lastKnownPlacesLength = data.places.length;
+    latestData = data;
+
+    updateStatsAndStatus(data);
+
+    if (!hasInitializedGrid) {
+      renderCells();
+      hasInitializedGrid = true;
+    }
+
+    data.places.forEach((p, idx) => {
+      if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
+        queuedIndexes.add(idx);
+        animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
+      }
+    });
+
+    if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
+      showWinnerScreen(data);
+      return;
+    }
+
+    grid.style.display = 'flex';
+    winnerScreen.style.display = 'none';
+
+    processQueue();
+  }
+
+  socket.on('updateElimination', renderGrid);
+
+  if (isDemo) {
+    let mockData = {
+      actif: true, cout: 10, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 2500,
+      places: Array(15).fill(0).map((_, i) => ({ id: i%3, nickname: `Joueur_${i%3}`, avatar: `https://ui-avatars.com/api/?name=J${i%3}&background=random`, eliminated: false })),
+      openEndsAt: Date.now() + 15000, nextElimination: null, gagnant: null, messageGagnant: ''
+    };
+    renderGrid(mockData);
+  }
+</script>
 </body>
 </html>
