@@ -483,6 +483,7 @@ app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'p
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
+app.get('/elimination-boucle/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination-boucle.html')));
 
 const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
 
@@ -681,6 +682,8 @@ function arreterEcouteLive(pseudo, data, reason) {
 
   if (data.elimination?.timer) clearInterval(data.elimination.timer);
   if (data.elimination?.openTimer) clearTimeout(data.elimination.openTimer);
+  if (data.eliminationBoucle?.timer) clearTimeout(data.eliminationBoucle.timer);
+  if (data.eliminationBoucle?.openTimer) clearTimeout(data.eliminationBoucle.openTimer);
 
   if (!data.historySaved) {
     data.historySaved = true;
@@ -717,6 +720,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     enchere: null, 
     bestGift: null,
     elimination: null,
+    eliminationBoucle: null,
     debutLive: new Date(), 
     derniereGagnantId: null, 
     vouchFait: false, 
@@ -822,21 +826,28 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
     
+    // Mode Élimination Classique
     if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
-      
-      // Validation directe basée sur le coût en pièces pour garantir l'affichage immédiat
-      const isCorrectGift = true; 
-      
-      if (isCorrectGift) {
-        const nombreEntrees = Math.floor(totalPieces / elim.cout);
-        for (let i = 0; i < nombreEntrees; i++) {
-          elim.places.push({ id, nickname, avatar, eliminated: false });
-        }
-        elim.totalCoins += totalPieces;
-        elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
-        io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
+      const nombreEntrees = Math.floor(totalPieces / elim.cout);
+      for (let i = 0; i < nombreEntrees; i++) {
+        elim.places.push({ id, nickname, avatar, eliminated: false });
       }
+      elim.totalCoins += totalPieces;
+      elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
+      io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
+    }
+
+    // Mode Élimination en Boucle (Battle Royale)
+    if (data.eliminationBoucle && data.eliminationBoucle.actif && !data.eliminationBoucle.locked && !data.eliminationBoucle.gagnant && totalPieces >= data.eliminationBoucle.cout) {
+      const elim = data.eliminationBoucle;
+      const nombreEntrees = Math.floor(totalPieces / elim.cout);
+      for (let i = 0; i < nombreEntrees; i++) {
+        elim.places.push({ id, nickname, avatar, eliminated: false });
+      }
+      elim.totalCoins += totalPieces;
+      elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
+      io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
     }
 
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
@@ -997,6 +1008,25 @@ function etatElimination(pseudo) {
   };
 }
 
+function etatEliminationBoucle(pseudo) {
+  const elim = connexionsActives[pseudo]?.eliminationBoucle;
+  if (!elim || !elim.actif) return { actif: false };
+  return {
+    actif: true,
+    cout: elim.cout,
+    giftImage: elim.giftImage,
+    giftName: elim.giftName,
+    locked: elim.locked,
+    eliminationEnCours: elim.eliminationEnCours,
+    totalCoins: elim.totalCoins,
+    places: elim.places,
+    openEndsAt: elim.openEndsAt,
+    nextElimination: elim.nextElimination,
+    gagnant: elim.gagnant,
+    messageGagnant: elim.messageGagnant
+  };
+}
+
 function processEliminationKill(pseudo, data) {
   const elim = data?.elimination;
   if (!elim || !elim.eliminationEnCours) return;
@@ -1026,6 +1056,60 @@ function processEliminationKill(pseudo, data) {
   vivants[idx].eliminated = true;
   elim.nextElimination = Date.now() + (elim.intervalle * 1000);
   io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
+}
+
+function processBoucleKill(pseudo, data) {
+  const elim = data?.eliminationBoucle;
+  if (!elim || !elim.eliminationEnCours) return;
+
+  const vivants = elim.places.filter(p => !p.eliminated);
+
+  if (vivants.length <= 1) {
+    if (elim.timer) { clearTimeout(elim.timer); elim.timer = null; }
+    elim.eliminationEnCours = false;
+    elim.nextElimination = null;
+
+    const survivant = vivants[0];
+    if (survivant) {
+      elim.gagnantId = survivant.id;
+      elim.gagnant = {
+        nickname: survivant.nickname,
+        avatar: survivant.avatar,
+        coins: elim.totalsParId[survivant.id] || 0
+      };
+    }
+
+    io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+    return;
+  }
+
+  // Élimine 1 joueur au hasard
+  const idx = Math.floor(Math.random() * vivants.length);
+  vivants[idx].eliminated = true;
+
+  const restants = elim.places.filter(p => !p.eliminated);
+
+  if (restants.length > 1) {
+    // S'il reste plus d'un joueur, on rouvre les inscriptions pendant un court moment (ex: 8 secondes)
+    elim.locked = false;
+    elim.openEndsAt = Date.now() + (8 * 1000);
+    io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+
+    if (elim.timer) clearTimeout(elim.timer);
+    elim.timer = setTimeout(() => {
+      elim.locked = true;
+      elim.openEndsAt = null;
+      elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+      processBoucleKill(pseudo, data);
+    }, 8000);
+  } else {
+    // Mode 1vs1 final direct
+    elim.locked = true;
+    elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+    if (elim.timer) clearTimeout(elim.timer);
+    elim.timer = setTimeout(() => processBoucleKill(pseudo, data), elim.intervalle * 1000);
+    io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
+  }
 }
 
 function etatEnchere(pseudo) {
@@ -1121,7 +1205,7 @@ io.on('connection', socket => {
 
   socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
     try {
-      const { pseudo, token } = payload;
+      const { pseudo, token, type } = payload;
       let pseudoNettoye;
       try {
         pseudoNettoye = normalizePseudo(pseudo);
@@ -1152,7 +1236,12 @@ io.on('connection', socket => {
       if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
       if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
       if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-      if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye)); // C'LIGNE ESSENTIELLE
+      
+      if (type === 'elimination-boucle') {
+        if (data && data.eliminationBoucle) socket.emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+      } else {
+        if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye));
+      }
     } 
     catch {
       ack({ ok: false, error: 'Requête invalide.' });
@@ -1204,6 +1293,51 @@ io.on('connection', socket => {
     } catch {}
   });
 
+  socket.on('configurerEliminationBoucle', (payload = {}) => {
+    try {
+      const { pseudo, cout, intervalle, tempsOuverture, giftImage, giftName } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      if (!data) return;
+
+      if (data.eliminationBoucle?.timer) clearTimeout(data.eliminationBoucle.timer);
+      if (data.eliminationBoucle?.openTimer) clearTimeout(data.eliminationBoucle.openTimer);
+
+      const openTimeSec = positiveInteger(tempsOuverture, 30);
+
+      data.eliminationBoucle = {
+        actif: true,
+        cout: positiveInteger(cout, 1),
+        giftImage: safeText(giftImage, ''),
+        giftName: safeText(giftName, ''),
+        intervalle: positiveInteger(intervalle, 5),
+        locked: false,
+        eliminationEnCours: false,
+        places: [],
+        totalCoins: 0,
+        totalsParId: Object.create(null),
+        openEndsAt: Date.now() + (openTimeSec * 1000),
+        openTimer: null,
+        nextElimination: null,
+        timer: null,
+        gagnant: null,
+        gagnantId: null,
+        messageGagnant: ''
+      };
+
+      data.eliminationBoucle.openTimer = setTimeout(() => {
+        if (data.eliminationBoucle && !data.eliminationBoucle.locked) {
+          data.eliminationBoucle.locked = true;
+          io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+        }
+      }, openTimeSec * 1000);
+
+      io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+    } catch {}
+  });
+
   socket.on('updateEliminationSettings', (payload = {}) => {
     try {
       const { pseudo, cout, intervalle, giftImage, giftName } = payload;
@@ -1229,6 +1363,28 @@ io.on('connection', socket => {
       }
 
       io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+    } catch {}
+  });
+
+  socket.on('updateEliminationBoucleSettings', (payload = {}) => {
+    try {
+      const { pseudo, cout, intervalle, giftImage, giftName } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      const elim = data?.eliminationBoucle;
+      if (!elim) return;
+
+      if (cout !== undefined && cout !== '') elim.cout = positiveInteger(cout, elim.cout);
+      if (giftImage !== undefined && giftImage !== '') elim.giftImage = safeText(giftImage, elim.giftImage);
+      if (giftName !== undefined) elim.giftName = safeText(giftName, elim.giftName);
+
+      if (intervalle !== undefined && intervalle !== '') {
+        elim.intervalle = positiveInteger(intervalle, elim.intervalle);
+      }
+
+      io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
     } catch {}
   });
 
@@ -1266,6 +1422,36 @@ io.on('connection', socket => {
       }
 
       io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+    } catch {}
+  });
+
+  socket.on('actionEliminationBoucle', (payload = {}) => {
+    try {
+      const { pseudo, action } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      const elim = data?.eliminationBoucle;
+      if (!elim) return;
+
+      if (action === 'start_kill') {
+        if (elim.gagnant) return;
+        elim.locked = true;
+        elim.eliminationEnCours = true;
+        if (elim.openTimer) { clearTimeout(elim.openTimer); elim.openTimer = null; }
+        if (elim.timer) clearTimeout(elim.timer);
+        elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+        elim.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), elim.intervalle * 1000);
+      } else if (action === 'reset') {
+        if (elim.timer) clearTimeout(elim.timer);
+        if (elim.openTimer) clearTimeout(elim.openTimer);
+        data.eliminationBoucle = null;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', { actif: false });
+        return;
+      }
+
+      io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
     } catch {}
   });
 
