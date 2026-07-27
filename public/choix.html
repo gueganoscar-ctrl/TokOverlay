@@ -446,7 +446,6 @@
     window.updateElimBoucleSettings = function() {
       socket.emit('updateEliminationBoucleSettings', { 
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        intervalle: document.getElementById('elim-interval').value, 
         giftImage: selectedGiftImage, giftName: selectedGiftName
       });
     };
@@ -464,7 +463,6 @@
     window.lancerElimBoucle = function() {
       socket.emit('configurerEliminationBoucle', { 
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        intervalle: document.getElementById('elim-interval').value,
         tempsOuverture: document.getElementById('elim-open-time').value,
         giftImage: selectedGiftImage, giftName: selectedGiftName
       });
