@@ -256,7 +256,7 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'elimination' || type === 'elimination-boucle') {
+      if (type === 'elimination') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
         wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
@@ -267,13 +267,35 @@
           initElimPanel(finalGifts, type);
         });
 
-        const actionEvt = type === 'elimination-boucle' ? 'actionEliminationBoucle' : 'actionElimination';
         const wrap2 = document.createElement('div');
         wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
         wrap2.innerHTML = `
           <h3>2. Contrôles en direct</h3>
-          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('${actionEvt}', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer la partie / Le massacre</button>
-          <button class="btn btn-secondary" style="margin-top:10px;" onclick="resetElim('${actionEvt}')">🔄 Réinitialiser la grille</button>
+          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer la partie / Le massacre</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" onclick="resetElim('actionElimination')">🔄 Réinitialiser la grille</button>
+        `;
+        extraDiv.appendChild(wrap2);
+
+      } else if (type === 'elimination-boucle') {
+        const wrap1 = document.createElement('div');
+        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
+        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
+        extraDiv.appendChild(wrap1);
+
+        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
+          window.allGiftsCache = finalGifts;
+          initElimBouclePanel(finalGifts);
+        });
+
+        const wrap2 = document.createElement('div');
+        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
+        wrap2.innerHTML = `
+          <h3>2. Contrôles en direct</h3>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex:1; font-weight:bold;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'pause' })">⏸️ Pause</button>
+            <button class="btn btn-primary" style="flex:1; font-weight:bold;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'resume' })">▶️ Reprendre</button>
+          </div>
+          <button class="btn btn-danger" style="margin-top:5px;" onclick="resetElim('actionEliminationBoucle')">🔄 Réinitialiser la grille</button>
         `;
         extraDiv.appendChild(wrap2);
 
@@ -314,9 +336,6 @@
       const wrap1 = document.querySelector('#modal-extra-action div');
       if (!wrap1) return;
 
-      const launchFn = modeType === 'elimination-boucle' ? 'lancerElimBoucle()' : 'lancerElim()';
-      const updateFn = modeType === 'elimination-boucle' ? 'updateElimBoucleSettings()' : 'updateElimSettings()';
-
       wrap1.innerHTML = `
         <h3>1. Configuration du jeu</h3>
         <div class="form-group">
@@ -334,9 +353,9 @@
         </div>
         <div class="form-group" style="margin-top:8px;">
           <label>Temps entre chaque élimination (Secondes)</label>
-          <input type="number" id="elim-interval" value="5" min="1" oninput="${updateFn}" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="${launchFn}">🟢 Ouvrir la grille et démarrer</button>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et démarrer</button>
       `;
 
       if (giftsToDisplay[0]) {
@@ -346,6 +365,41 @@
       }
 
       renderGiftGrid(giftsToDisplay, modeType);
+    };
+
+    window.initElimBouclePanel = function(giftsToDisplay) {
+      const wrap1 = document.querySelector('#modal-extra-action div');
+      if (!wrap1) return;
+
+      wrap1.innerHTML = `
+        <h3>1. Configuration du jeu</h3>
+        <div class="form-group">
+          <label>Choisis ton cadeau officiel TikTok</label>
+          <div class="form-group" style="margin-bottom:8px;">
+            <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau..." oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
+          </div>
+          <div class="gift-grid" id="elim-gift-grid"></div>
+          <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('elimination-boucle')" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>Temps d'ouverture initial (Secondes)</label>
+          <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>Temps entre chaque élimination (Secondes)</label>
+          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimBoucleSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu (Lancer le timer)</button>
+      `;
+
+      if (giftsToDisplay[0]) {
+        selectedGiftImage = giftsToDisplay[0].image;
+        selectedGiftPrice = giftsToDisplay[0].diamond_count;
+        selectedGiftName = giftsToDisplay[0].name;
+      }
+
+      renderGiftGrid(giftsToDisplay, 'elimination-boucle');
     };
 
     window.renderGiftGrid = function(giftsToDisplay, modeType) {
