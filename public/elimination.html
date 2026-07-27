@@ -192,7 +192,7 @@
       document.getElementById('winner-img').src = data.gagnant.avatar;
       document.getElementById('winner-name').textContent = data.gagnant.nickname;
       document.getElementById('winner-coins').textContent = `Total envoyé : ${data.gagnant.coins.toLocaleString()} 💎`;
-      document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'En attente dans le chat...'}</span>`;
+      document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'GG le live !'}</span>`;
     }
 
     function showEliminationPopup(next, prob) {
@@ -229,8 +229,8 @@
         const prob = totalAliveBefore > 0 ? ((userAliveBefore / totalAliveBefore) * 100).toFixed(1) : '0.0';
 
         let step = 0;
-        const totalSteps = 18;
-        let delai = 70;
+        const totalSteps = 12;
+        let delai = 60;
 
         function tick() {
           candidats.forEach(c => c.classList.remove('roulette-highlight'));
@@ -244,7 +244,7 @@
           if (choisi) choisi.classList.add('roulette-highlight');
 
           step++;
-          delai += 12;
+          delai += 10;
 
           if (step < totalSteps) {
             setTimeout(tick, delai);
@@ -255,8 +255,8 @@
                 hideEliminationPopup();
                 finalizeElimination(next);
                 resolve();
-              }, 1600);
-            }, 500);
+              }, 1200);
+            }, 400);
           }
         }
 
@@ -329,12 +329,59 @@
     socket.on('updateElimination', renderGrid);
 
     if (isDemo) {
-      let mockData = {
-        actif: true, cout: 10, giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png', locked: false, eliminationEnCours: false, totalCoins: 2500,
-        places: Array(15).fill(0).map((_, i) => ({ id: i%3, nickname: `Joueur_${i%3}`, avatar: `https://ui-avatars.com/api/?name=J${i%3}&background=random`, eliminated: false })),
-        openEndsAt: Date.now() + 15000, nextElimination: null, gagnant: null, messageGagnant: ''
+      // Simulation complète du mode démo jusqu'au grand gagnant
+      let demoData = {
+        actif: true,
+        cout: 10,
+        giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png',
+        locked: true,
+        eliminationEnCours: true,
+        totalCoins: 1250,
+        openEndsAt: 0,
+        nextElimination: Date.now() + 5000,
+        gagnant: null,
+        messageGagnant: 'Merci pour ce super mode !',
+        places: [
+          { id: 'u1', nickname: 'Alex_Stream', avatar: 'https://ui-avatars.com/api/?name=Alex&background=random', eliminated: false },
+          { id: 'u2', nickname: 'Sarah_92', avatar: 'https://ui-avatars.com/api/?name=Sarah&background=random', eliminated: false },
+          { id: 'u3', nickname: 'LucasGamer', avatar: 'https://ui-avatars.com/api/?name=Lucas&background=random', eliminated: false },
+          { id: 'u4', nickname: 'Emma_Tiktok', avatar: 'https://ui-avatars.com/api/?name=Emma&background=random', eliminated: false },
+          { id: 'u5', nickname: 'Thomas_Off', avatar: 'https://ui-avatars.com/api/?name=Thomas&background=random', eliminated: false }
+        ]
       };
-      renderGrid(mockData);
+
+      renderGrid(demoData);
+
+      // Séquence d'élimination automatique simulée pour la démo
+      setTimeout(() => {
+        demoData.places[0].eliminated = true; // Élimine Alex
+        renderGrid(demoData);
+      }, 3000);
+
+      setTimeout(() => {
+        demoData.places[1].eliminated = true; // Élimine Sarah
+        renderGrid(demoData);
+      }, 7000);
+
+      setTimeout(() => {
+        demoData.places[2].eliminated = true; // Élimine Lucas
+        renderGrid(demoData);
+      }, 11000);
+
+      setTimeout(() => {
+        demoData.places[3].eliminated = true; // Élimine Emma
+        renderGrid(demoData);
+      }, 15000);
+
+      setTimeout(() => {
+        // Il ne reste que Thomas_Off -> Grand Gagnant !
+        demoData.gagnant = {
+          nickname: 'Thomas_Off',
+          avatar: 'https://ui-avatars.com/api/?name=Thomas&background=random',
+          coins: 450
+        };
+        renderGrid(demoData);
+      }, 19000);
     }
   </script>
 </body>
