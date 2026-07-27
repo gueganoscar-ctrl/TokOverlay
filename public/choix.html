@@ -90,12 +90,21 @@
         <span class="click-hint">Personnaliser & Lien →</span>
       </div>
 
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
         <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div><h3>Mode Élimination (Grid)</h3></div>
-          <p>Grille interactive : 1 place = X pièces. Élimination aléatoire pour 1 seul gagnant !</p>
+          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div><h3>Mode Élimination (Classique)</h3></div>
+          <p>Grille interactive : 1 place = X pièces. Élimination en série jusqu'au 1vs1 final !</p>
         </div>
         <span class="click-hint" style="color: #c084fc;">Ouvrir la télécommande →</span>
+      </div>
+
+      <!-- NOUVEAU WIDGET POUR LE MODE BOUCLE -->
+      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination en Boucle (Battle Royale)', '⚡')" style="border-color: rgba(99, 102, 241, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #11112b 100%);">
+        <div class="widget-top">
+          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">⚡</div><h3>Mode Élimination (En Boucle)</h3></div>
+          <p>Inscriptions continues : 1 élimination par tour, les joueurs peuvent racheter leur place en boucle jusqu'au vainqueur !</p>
+        </div>
+        <span class="click-hint" style="color: #818cf8;">Ouvrir la télécommande →</span>
       </div>
 
       <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
@@ -236,7 +245,7 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'elimination') {
+      if (type === 'elimination' || type === 'elimination-boucle') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
         wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
@@ -244,17 +253,16 @@
 
         fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
           window.allGiftsCache = finalGifts;
-          initElimPanel(finalGifts);
+          initElimPanel(finalGifts, type);
         });
 
+        const actionEvt = type === 'elimination-boucle' ? 'actionEliminationBoucle' : 'actionElimination';
         const wrap2 = document.createElement('div');
         wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
         wrap2.innerHTML = `
           <h3>2. Contrôles en direct</h3>
-          <button class="btn btn-secondary" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'lock' })">🔒 Verrouiller immédiatement (Stop Dons)</button>
-          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer le massacre</button>
-          <button class="btn btn-secondary" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'stop_kill' })">⏸️ Pause</button>
-          <button class="btn btn-secondary" style="margin-top:10px;" onclick="resetElim()">🔄 Réinitialiser la grille</button>
+          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('${actionEvt}', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer la partie / Le massacre</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" onclick="resetElim('${actionEvt}')">🔄 Réinitialiser la grille</button>
         `;
         extraDiv.appendChild(wrap2);
 
@@ -291,9 +299,12 @@
       mettreAJourLienModal();
     }
 
-    window.initElimPanel = function(giftsToDisplay) {
+    window.initElimPanel = function(giftsToDisplay, modeType) {
       const wrap1 = document.querySelector('#modal-extra-action div');
       if (!wrap1) return;
+
+      const launchFn = modeType === 'elimination-boucle' ? 'lancerElimBoucle()' : 'lancerElim()';
+      const updateFn = modeType === 'elimination-boucle' ? 'updateElimBoucleSettings()' : 'updateElimSettings()';
 
       wrap1.innerHTML = `
         <h3>1. Configuration du jeu</h3>
@@ -304,17 +315,17 @@
           </div>
           <div class="gift-grid" id="elim-gift-grid"></div>
           <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('${modeType}')" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
         <div class="form-group" style="margin-top:8px;">
-          <label>Temps d'ouverture des inscriptions (Secondes)</label>
+          <label>Temps d'ouverture initial (Secondes)</label>
           <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
         <div class="form-group" style="margin-top:8px;">
           <label>Temps entre chaque élimination (Secondes)</label>
-          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <input type="number" id="elim-interval" value="5" min="1" oninput="${updateFn}" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et lancer le timer</button>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="${launchFn}">🟢 Ouvrir la grille et démarrer</button>
       `;
 
       if (giftsToDisplay[0]) {
@@ -323,15 +334,15 @@
         selectedGiftName = giftsToDisplay[0].name;
       }
 
-      renderGiftGrid(giftsToDisplay);
+      renderGiftGrid(giftsToDisplay, modeType);
     };
 
-    window.renderGiftGrid = function(giftsToDisplay) {
+    window.renderGiftGrid = function(giftsToDisplay, modeType) {
       const grid = document.getElementById('elim-gift-grid');
       if (!grid) return;
 
       grid.innerHTML = giftsToDisplay.map((g, i) => `
-        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}')">
+        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}', '${modeType}')">
           <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
           <div class="gift-price">${g.diamond_count} 💎</div>
           <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
@@ -342,10 +353,10 @@
     window.filterGifts = function(query) {
       if(!window.allGiftsCache) return;
       const filtered = window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
-      renderGiftGrid(filtered.length > 0 ? filtered : window.allGiftsCache);
+      renderGiftGrid(filtered, typeActuel);
     };
 
-    window.selectElimGift = function(imgUrl, price, idx, name) {
+    window.selectElimGift = function(imgUrl, price, idx, name, modeType) {
       document.querySelectorAll('.gift-item').forEach(el => el.classList.remove('selected'));
       const item = document.getElementById(`gift-item-${idx}`);
       if(item) item.classList.add('selected');
@@ -353,20 +364,29 @@
       selectedGiftImage = imgUrl;
       selectedGiftPrice = price;
       selectedGiftName = name || '';
-      updateElimSettings();
+      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
+      else updateElimSettings();
     };
 
-    window.setManualGift = function() {
+    window.setManualGift = function(modeType) {
       selectedGiftName = '';
-      updateElimSettings();
+      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
+      else updateElimSettings();
     };
 
     window.updateElimSettings = function() {
       socket.emit('updateEliminationSettings', { 
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
         intervalle: document.getElementById('elim-interval').value, 
-        giftImage: selectedGiftImage,
-        giftName: selectedGiftName
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+    };
+
+    window.updateElimBoucleSettings = function() {
+      socket.emit('updateEliminationBoucleSettings', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        intervalle: document.getElementById('elim-interval').value, 
+        giftImage: selectedGiftImage, giftName: selectedGiftName
       });
     };
 
@@ -375,21 +395,35 @@
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
         intervalle: document.getElementById('elim-interval').value,
         tempsOuverture: document.getElementById('elim-open-time').value,
-        giftImage: selectedGiftImage,
-        giftName: selectedGiftName
+        giftImage: selectedGiftImage, giftName: selectedGiftName
       });
-      alert("Grille ouverte avec le timer d'inscription !");
+      alert("Mode Élimination Classique ouvert !");
     };
 
-    window.resetElim = function() {
-      if(confirm('Vider la grille ?')) socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'reset' });
+    window.lancerElimBoucle = function() {
+      socket.emit('configurerEliminationBoucle', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        intervalle: document.getElementById('elim-interval').value,
+        tempsOuverture: document.getElementById('elim-open-time').value,
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+      alert("Mode Élimination en Boucle (Battle Royale) ouvert !");
+    };
+
+    window.resetElim = function(actionEvt) {
+      if(confirm('Vider la grille ?')) socket.emit(actionEvt, { pseudo: pseudoGlobal, action: 'reset' });
     };
 
     function fermerPersonnalisation() { document.getElementById('modal-overlay').style.display = 'none'; }
     function mettreAJourLienModal() {
-      let lien = typeActuel === 'elimination' 
-        ? `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`
-        : `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
+      let lien = '';
+      if (typeActuel === 'elimination') {
+        lien = `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+      } else if (typeActuel === 'elimination-boucle') {
+        lien = `${baseUrl}/elimination-boucle/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+      } else {
+        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
+      }
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
