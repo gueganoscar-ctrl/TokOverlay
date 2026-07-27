@@ -324,7 +324,26 @@
       } else if (type === 'coffre') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrap1.innerHTML = `<h3>Coffre-Fort</h3><label>Mot secret</label><input type="text" id="coffre-secret-input" value="777" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"><button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="lancerCoffreFort()">Lancer</button>`;
+        wrap1.innerHTML = `
+          <h3>1. Configuration du jeu</h3>
+          <div class="form-group">
+            <label>Mot / code secret</label>
+            <input type="text" id="coffre-secret-input" value="777" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>Récompense</label>
+            <input type="text" id="coffre-recompense-input" value="Abo" placeholder="ex: 1 Abo Offert" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+          <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="lancerCoffreFort()">🟢 Lancer le coffre</button>
+          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+            <h3>2. Contrôles en direct</h3>
+            <button class="btn btn-secondary" style="width:100%; font-weight:bold;" onclick="devoilerCoffreHasard()">🎲 Révéler une case au hasard</button>
+            <div style="display:flex; gap:8px; margin-top:4px;">
+              <input type="number" id="coffre-index-input" min="1" placeholder="N° de case (ex: 1)" style="flex:1; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
+              <button class="btn btn-secondary" style="font-weight:bold;" onclick="devoilerCoffreIndex()">🎯 Révéler cette case</button>
+            </div>
+          </div>
+        `;
         extraDiv.appendChild(wrap1);
       }
 
@@ -489,7 +508,14 @@
     function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien copié !"); }
     function sauvegarderRoue() { socket.emit('configurerRoue', { pseudo: pseudoGlobal, options: document.getElementById('roue-options-input').value.split(','), montantMin: 10 }); alert("Roue enregistrée !"); }
     function demarrerObjectif() { socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible: document.getElementById('objectif-cible-input').value, metrique: document.getElementById('objectif-metrique-input').value, label: 'Objectif' }); alert("Objectif lancé !"); }
-    function lancerCoffreFort() { socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret: document.getElementById('coffre-secret-input').value, recompense: 'Abo' }); alert("Coffre lancé !"); }
+    function lancerCoffreFort() { socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret: document.getElementById('coffre-secret-input').value, recompense: document.getElementById('coffre-recompense-input').value }); alert("Coffre lancé !"); }
+    function devoilerCoffreHasard() { socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal }); }
+    function devoilerCoffreIndex() {
+      const index = document.getElementById('coffre-index-input').value;
+      if (!index) { alert("Indique le numéro de la case à révéler."); return; }
+      socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index });
+      document.getElementById('coffre-index-input').value = '';
+    }
     function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
     function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
     function sauvegarderProfil(e) { e.preventDefault(); fetch('/api/update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pseudo: document.getElementById('input-pseudo').value, apiKey: document.getElementById('input-apikey').value }) }).then(r => r.json()).then(d => { if (d.success) location.reload(); }); }

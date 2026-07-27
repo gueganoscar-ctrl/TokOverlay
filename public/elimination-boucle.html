@@ -153,6 +153,31 @@
       }
     }
 
+    // Calcule la taille de case optimale (en px) pour que `count` cases carrées
+    // remplissent au mieux l'espace disponible du conteneur, quel que soit le
+    // nombre de joueurs (ex: 2 joueurs -> grandes cases ~50% de la largeur,
+    // 4 joueurs -> cases plus petites ~25%, etc.), en testant toutes les
+    // dispositions en colonnes possibles.
+    function computeCellSize(count, container) {
+      if (count <= 0) return 15;
+      const styles = getComputedStyle(container);
+      const paddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
+      const paddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
+      const availW = Math.max(0, container.clientWidth - paddingX);
+      const availH = Math.max(0, container.clientHeight - paddingY);
+      const gap = 3;
+
+      let best = 15;
+      for (let cols = 1; cols <= count; cols++) {
+        const rows = Math.ceil(count / cols);
+        const cellW = (availW - gap * (cols - 1)) / cols;
+        const cellH = (availH - gap * (rows - 1)) / rows;
+        const size = Math.min(cellW, cellH);
+        if (size > best) best = size;
+      }
+      return Math.floor(Math.max(15, best));
+    }
+
     function renderCells() {
       if (!latestData || !Array.isArray(latestData.places)) return;
       const displayed = latestData.places
@@ -160,7 +185,7 @@
         .filter(p => !displayedEliminatedIndexes.has(p.idx));
 
       let count = displayed.length || 1;
-      const cellSize = Math.min(95, Math.max(15, Math.floor(Math.sqrt((670 * 390) / count)) - 6));
+      const cellSize = computeCellSize(count, grid);
 
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
@@ -189,10 +214,6 @@
       lastKnownPlacesLength = data.places.length;
       latestData = data;
 
-      if (!isAnimating && animationQueue.length === 0) {
-        updateStatsAndStatus(data);
-      }
-
       renderCells();
 
       data.places.forEach((p, idx) => {
@@ -201,6 +222,14 @@
           animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
         }
       });
+
+      // Le timer de la prochaine élimination ne doit démarrer / se mettre à
+      // jour que si aucune animation d'élimination n'est en cours ni en
+      // attente — on vérifie donc APRÈS avoir mis en file les nouvelles
+      // éliminations reçues dans ce paquet de données.
+      if (!isAnimating && animationQueue.length === 0) {
+        updateStatsAndStatus(data);
+      }
 
       if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
         clearInterval(countdownInterval);
