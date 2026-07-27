@@ -383,14 +383,10 @@
           <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('elimination-boucle')" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
         <div class="form-group" style="margin-top:8px;">
-          <label>Temps d'ouverture initial (Secondes)</label>
+          <label>Temps d'envoi (Secondes)</label>
           <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label>Temps entre chaque élimination (Secondes)</label>
-          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimBoucleSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-        </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu (Lancer le timer)</button>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu</button>
       `;
 
       if (giftsToDisplay[0]) {

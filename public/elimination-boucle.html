@@ -10,10 +10,8 @@
     * { box-sizing: border-box; }
     body { margin: 0; padding: 15px; font-family: 'Inter', sans-serif; color: white; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 700px; }
-    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -10px; font-variant-numeric: tabular-nums; }
+    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -5px; font-variant-numeric: tabular-nums; }
     .elim-title { background: #6366f1; color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; padding: 6px 24px; border-radius: 99px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5); }
-    .elim-status { background: #f59e0b; color: white; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 16px; border-radius: 8px; }
-    .elim-status.open { background: #10b981; }
     .elim-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center; }
     .stat-block { background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px; padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .stat-block.gift-block { flex-direction: row; gap: 8px; font-size: 18px; font-weight: 900; color: #ffbe3d; }
@@ -60,7 +58,6 @@
   <div class="elim-layout" id="game-container" style="display: none;">
     <div class="elim-timer" id="elim-timer-display" style="display:none;">0:00</div>
     <div class="elim-title">⚡ BATTLE ROYALE BOUCLE ⚡</div>
-    <div class="elim-status" id="elim-status">🔒 LOCKED 🔒</div>
     
     <div class="elim-stats">
       <div class="stat-block gift-block">
@@ -99,7 +96,6 @@
 
     const container = document.getElementById('game-container');
     const grid = document.getElementById('grid');
-    const statusBadge = document.getElementById('elim-status');
     const popup = document.getElementById('elim-popup');
     const timerDisplay = document.getElementById('elim-timer-display');
     const winnerScreen = document.getElementById('winner-screen');
@@ -154,14 +150,6 @@
       } else {
         clearInterval(countdownInterval);
         timerDisplay.style.display = 'none';
-      }
-
-      if (data.locked) {
-        statusBadge.className = 'elim-status';
-        statusBadge.innerHTML = '🔒 LOCKED - PROCHAINE ÉLIMINATION 🔒';
-      } else {
-        statusBadge.className = 'elim-status open';
-        statusBadge.innerHTML = '🟢 INSCRIPTIONS OUVERTES - ENVOYEZ VOS CADEAUX 🟢';
       }
     }
 
