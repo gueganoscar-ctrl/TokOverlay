@@ -825,7 +825,9 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
       
-      const isCorrectGift = !elim.giftName || giftName === elim.giftName.toLowerCase();
+      // Sécurité : Si aucun giftName n'est défini (prix manuel), ou si le nom correspond, ou si le giftName est vide/générique
+      const cleanTargetName = elim.giftName ? elim.giftName.toLowerCase().trim() : '';
+      const isCorrectGift = !cleanTargetName || giftName.includes(cleanTargetName) || cleanTargetName.includes(giftName);
       
       if (isCorrectGift) {
         const nombreEntrees = Math.floor(totalPieces / elim.cout);
