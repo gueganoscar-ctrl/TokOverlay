@@ -686,7 +686,7 @@ function arreterEcouteLive(pseudo, data, reason) {
 
   if (data.elimination?.timer) clearInterval(data.elimination.timer);
   if (data.elimination?.openTimer) clearTimeout(data.elimination.openTimer);
-  if (data.eliminationBoucle?.timer) clearInterval(data.eliminationBoucle.timer);
+  if (data.eliminationBoucle?.timer) clearTimeout(data.eliminationBoucle.timer);
   if (data.eliminationBoucle?.openTimer) clearTimeout(data.eliminationBoucle.openTimer);
 
   if (!data.historySaved) {
@@ -1036,8 +1036,9 @@ function processEliminationKill(pseudo, data) {
   if (!elim || !elim.eliminationEnCours) return;
 
   const vivants = elim.places.filter(p => !p.eliminated);
+  const joueursUniquesVivants = new Set(vivants.map(p => p.id));
 
-  if (vivants.length <= 1) {
+  if (joueursUniquesVivants.size <= 1) {
     if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
     elim.eliminationEnCours = false;
     elim.nextElimination = null;
@@ -1067,8 +1068,9 @@ function processBoucleKill(pseudo, data) {
   if (!elim || !elim.eliminationEnCours) return;
 
   const vivants = elim.places.filter(p => !p.eliminated);
+  const joueursUniquesVivants = new Set(vivants.map(p => p.id));
 
-  if (vivants.length <= 1) {
+  if (joueursUniquesVivants.size <= 1) {
     if (elim.timer) { clearTimeout(elim.timer); elim.timer = null; }
     elim.eliminationEnCours = false;
     elim.nextElimination = null;
@@ -1091,9 +1093,10 @@ function processBoucleKill(pseudo, data) {
   const idx = Math.floor(Math.random() * vivants.length);
   vivants[idx].eliminated = true;
 
-  const restantsAfterKill = elim.places.filter(p => !p.eliminated);
+  const restantsVivants = elim.places.filter(p => !p.eliminated);
+  const joueursUniquesRestants = new Set(restantsVivants.map(p => p.id));
 
-  if (restantsAfterKill.length > 1) {
+  if (joueursUniquesRestants.size > 1) {
     elim.locked = false;
     elim.openEndsAt = Date.now() + (8 * 1000);
     elim.nextElimination = null;
