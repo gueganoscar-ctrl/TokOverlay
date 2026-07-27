@@ -114,7 +114,7 @@
       popup.style.display = 'none';
     }
 
-    function startTimer(targetTimestamp) {
+    function startTimer(targetTimestamp, isKillTimer = false) {
       clearInterval(countdownInterval);
       if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
 
@@ -125,7 +125,15 @@
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        if (diff <= 0) clearInterval(countdownInterval);
+        
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          // Si c'etait le timer d'ouverture, on verrouille automatiquement visuellement
+          if (!isKillTimer && pseudo && !isDemo) {
+            statusBadge.className = 'elim-status';
+            statusBadge.innerHTML = '🔒 LOCKED ENTRIES - WAITING KILL 🔒';
+          }
+        }
       }, 100);
     }
 
@@ -137,9 +145,9 @@
       document.getElementById('target-gift-price').textContent = data.cout;
 
       if (!data.locked && data.openEndsAt) {
-        startTimer(data.openEndsAt);
+        startTimer(data.openEndsAt, false);
       } else if (data.eliminationEnCours && data.nextElimination) {
-        startTimer(data.nextElimination);
+        startTimer(data.nextElimination, true);
       } else {
         clearInterval(countdownInterval);
         timerDisplay.style.display = 'none';

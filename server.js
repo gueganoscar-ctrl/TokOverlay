@@ -1152,9 +1152,9 @@ io.on('connection', socket => {
       if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
       if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
       if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-      if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye));
-      socket.emit('initVouch', { vouches: vouchesGlobalCount });
-    } catch {
+      if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye)); // C'LIGNE ESSENTIELLE
+    } 
+    catch {
       ack({ ok: false, error: 'Requête invalide.' });
     }
   });
