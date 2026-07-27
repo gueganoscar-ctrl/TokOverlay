@@ -155,7 +155,7 @@
     }
 
     function renderCells() {
-      if (!latestData) return;
+      if (!latestData || !Array.isArray(latestData.places)) return;
 
       const displayed = latestData.places
         .map((p, idx) => ({ ...p, idx }))
@@ -169,7 +169,10 @@
       if (count > 100) cellSize = 30;
       if (count > 200) cellSize = 20;
 
-      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
+      // Nettoyage propre de la grille en conservant le popup
+      Array.from(grid.children).forEach(child => { 
+        if (child.id !== 'elim-popup') child.remove(); 
+      });
 
       displayed.forEach(place => {
         const cell = document.createElement('div');
@@ -177,37 +180,49 @@
         cell.dataset.placeIndex = place.idx;
         cell.style.width = cellSize + 'px';
         cell.style.height = cellSize + 'px';
-        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname)}&background=random'" alt="${place.nickname}">`;
+        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname || 'User')}&background=random'" alt="${place.nickname || 'User'}">`;
         grid.appendChild(cell);
       });
     }
 
-    function showWinnerScreen(data) {
-      clearInterval(countdownInterval);
-      timerDisplay.style.display = 'none';
-      grid.style.display = 'none';
-      winnerScreen.style.display = 'flex';
+    function renderGrid(data) {
+      if (!data || !data.actif) {
+        container.style.display = 'none';
+        clearInterval(countdownInterval);
+        resetState();
+        return;
+      }
+      container.style.display = 'flex';
 
-      document.getElementById('winner-img').src = data.gagnant.avatar;
-      document.getElementById('winner-name').textContent = data.gagnant.nickname;
-      document.getElementById('winner-coins').textContent = `Total envoyé : ${data.gagnant.coins.toLocaleString()} 💎`;
-      document.getElementById('winner-chat').innerHTML = `<strong>Message:</strong> <span>${data.messageGagnant ? '"'+data.messageGagnant+'"' : 'GG le live !'}</span>`;
-    }
+      if (data.places.length < lastKnownPlacesLength) {
+        resetState();
+      }
+      lastKnownPlacesLength = data.places.length;
+      latestData = data;
 
-    function showEliminationPopup(next, prob) {
-      document.getElementById('popup-img').src = next.avatar;
-      document.getElementById('popup-name').textContent = next.nickname;
-      document.getElementById('popup-prob').textContent = prob + '%';
-      popup.style.display = 'block';
-    }
+      if (!isAnimating && animationQueue.length === 0) {
+        updateStatsAndStatus(data);
+      }
 
-    function hideEliminationPopup() {
-      popup.style.display = 'none';
-    }
-
-    function finalizeElimination(next) {
-      displayedEliminatedIndexes.add(next.idx);
+      // Force l'affichage des cellules dès qu'il y a des joueurs reçus
       renderCells();
+
+      data.places.forEach((p, idx) => {
+        if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
+          queuedIndexes.add(idx);
+          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
+        }
+      });
+
+      if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
+        showWinnerScreen(data);
+        return;
+      }
+
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+
+      processQueue();
     }
 
     function runRouletteAnimation(next) {
