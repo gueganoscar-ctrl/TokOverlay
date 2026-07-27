@@ -841,15 +841,16 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
     }
     
-    if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && diamondCount === data.elimination.cout) {
+    if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
+      const nombreEntrees = Math.floor(totalPieces / elim.cout);
       // On mémorise l'image réelle envoyée par TikTok à cet instant : fiable, contrairement à une URL codée en dur.
       elim.giftImage = giftIcon;
-      for (let i = 0; i < repeatCount; i++) {
+      for (let i = 0; i < nombreEntrees; i++) {
         elim.places.push({ id, nickname, avatar, eliminated: false });
       }
-      elim.totalCoins += diamondCount * repeatCount;
-      elim.totalsParId[id] = (elim.totalsParId[id] || 0) + (diamondCount * repeatCount);
+      elim.totalCoins += totalPieces;
+      elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
       io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
     }
 

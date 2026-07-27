@@ -243,7 +243,7 @@
 
         fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
           window.allGiftsCache = finalGifts;
-          renderGiftGrid(finalGifts);
+          initElimPanel(finalGifts);
         });
 
         const wrap2 = document.createElement('div');
@@ -290,48 +290,51 @@
       mettreAJourLienModal();
     }
 
-    window.renderGiftGrid = function(giftsToDisplay) {
-      let giftHtml = `
-        <div class="form-group" style="margin-bottom:8px;">
-          <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau (ex: Rose, Galaxy, Lion...)" oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
-        </div>
-        <div class="gift-grid" id="elim-gift-grid">
-      `;
-      
-      giftsToDisplay.forEach((g, i) => {
-         giftHtml += `<div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
-           <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
-           <div class="gift-price">${g.diamond_count} 💎</div>
-           <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
-         </div>`;
-      });
-      giftHtml += '</div>';
-
+    window.initElimPanel = function(giftsToDisplay) {
       const wrap1 = document.querySelector('#modal-extra-action div');
-      if(wrap1) {
-        wrap1.innerHTML = `
-          <h3>1. Configuration du jeu</h3>
-          <div class="form-group">
-            <label>Choisis ton cadeau officiel TikTok</label>
-            ${giftHtml}
-            <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-            <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+      if (!wrap1) return;
+
+      wrap1.innerHTML = `
+        <h3>1. Configuration du jeu</h3>
+        <div class="form-group">
+          <label>Choisis ton cadeau officiel TikTok</label>
+          <div class="form-group" style="margin-bottom:8px;">
+            <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau (ex: Rose, Galaxy, Lion...)" oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
           </div>
-          <div class="form-group" style="margin-top:8px;">
-            <label>Temps d'ouverture des inscriptions (Secondes)</label>
-            <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-          </div>
-          <div class="form-group" style="margin-top:8px;">
-            <label>Temps entre chaque élimination (Secondes)</label>
-            <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-          </div>
-          <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et lancer le timer</button>
-        `;
-        if(giftsToDisplay[0]) {
-          selectedGiftImage = giftsToDisplay[0].image;
-          selectedGiftPrice = giftsToDisplay[0].diamond_count;
-        }
+          <div class="gift-grid" id="elim-gift-grid"></div>
+          <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>Temps d'ouverture des inscriptions (Secondes)</label>
+          <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>Temps entre chaque élimination (Secondes)</label>
+          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et lancer le timer</button>
+      `;
+
+      if (giftsToDisplay[0]) {
+        selectedGiftImage = giftsToDisplay[0].image;
+        selectedGiftPrice = giftsToDisplay[0].diamond_count;
       }
+
+      renderGiftGrid(giftsToDisplay);
+    };
+
+    window.renderGiftGrid = function(giftsToDisplay) {
+      const grid = document.getElementById('elim-gift-grid');
+      if (!grid) return;
+
+      grid.innerHTML = giftsToDisplay.map((g, i) => `
+        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
+          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+          <div class="gift-price">${g.diamond_count} 💎</div>
+          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
+        </div>
+      `).join('');
     };
 
     window.filterGifts = function(query) {
