@@ -286,6 +286,37 @@
       });
     }
 
+    function showEliminationPopup(next, prob) {
+      document.getElementById('popup-img').src = next.avatar || '';
+      document.getElementById('popup-name').textContent = next.nickname || 'Anonyme';
+      document.getElementById('popup-prob').textContent = `${prob}%`;
+      popup.style.display = 'block';
+    }
+
+    function hideEliminationPopup() {
+      popup.style.display = 'none';
+    }
+
+    function finalizeElimination(next) {
+      displayedEliminatedIndexes.add(next.idx);
+      queuedIndexes.delete(next.idx);
+      const cell = grid.querySelector(`.grid-cell[data-place-index="${next.idx}"]`);
+      if (cell) cell.remove();
+    }
+
+    function showWinnerScreen(data) {
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
+      grid.style.display = 'none';
+      popup.style.display = 'none';
+      winnerScreen.style.display = 'flex';
+      document.getElementById('winner-img').src = data.gagnant.avatar || '';
+      document.getElementById('winner-name').textContent = data.gagnant.nickname || 'Anonyme';
+      document.getElementById('winner-coins').textContent = `Total envoyé: ${(data.gagnant.coins || 0).toLocaleString()} 💎`;
+      const chatSpan = document.querySelector('#winner-chat span');
+      if (chatSpan) chatSpan.textContent = data.messageGagnant || 'En attente...';
+    }
+
     async function processQueue() {
       if (isAnimating) return;
 
@@ -303,48 +334,6 @@
       const next = animationQueue.shift();
       await runRouletteAnimation(next);
       isAnimating = false;
-      processQueue();
-    }
-
-    function renderGrid(data) {
-      if (!data || !data.actif) {
-        container.style.display = 'none';
-        clearInterval(countdownInterval);
-        resetState();
-        return;
-      }
-      container.style.display = 'flex';
-
-      if (data.places.length < lastKnownPlacesLength) {
-        resetState();
-      }
-      lastKnownPlacesLength = data.places.length;
-      latestData = data;
-
-      if (!isAnimating && animationQueue.length === 0) {
-        updateStatsAndStatus(data);
-      }
-
-      if (!hasInitializedGrid) {
-        renderCells();
-        hasInitializedGrid = true;
-      }
-
-      data.places.forEach((p, idx) => {
-        if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
-          queuedIndexes.add(idx);
-          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
-        }
-      });
-
-      if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
-        showWinnerScreen(data);
-        return;
-      }
-
-      grid.style.display = 'flex';
-      winnerScreen.style.display = 'none';
-
       processQueue();
     }
 
