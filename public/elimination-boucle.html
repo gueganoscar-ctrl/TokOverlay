@@ -106,9 +106,30 @@
 
     let countdownInterval;
     let latestData = null;
+    let lastKnownPlacesLength = 0;
     let displayedEliminatedIndexes = new Set();
+    let queuedIndexes = new Set();
     let animationQueue = [];
     let isAnimating = false;
+
+    // BUGFIX: sans ce reset, les indices "éliminés" d'une partie précédente
+    // restaient en mémoire. Comme chaque nouvelle partie (configurerEliminationBoucle)
+    // repart avec un tableau "places" vide (donc des indices qui recommencent à 0),
+    // les nouveaux joueurs de la 2e partie (et suivantes) héritaient à tort du statut
+    // "déjà éliminé" et n'apparaissaient jamais dans la grille.
+    function resetState() {
+      displayedEliminatedIndexes = new Set();
+      queuedIndexes = new Set();
+      animationQueue = [];
+      isAnimating = false;
+      latestData = null;
+      lastKnownPlacesLength = 0;
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+      popup.style.display = 'none';
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
+    }
 
     function startTimer(targetTimestamp) {
       clearInterval(countdownInterval);
@@ -166,7 +187,7 @@
         cell.dataset.placeIndex = place.idx;
         cell.style.width = cellSize + 'px';
         cell.style.height = cellSize + 'px';
-        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=User&background=random'">`;
+        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(place.nickname || 'User')}&background=random'" alt="${place.nickname || 'User'}">`;
         grid.appendChild(cell);
       });
     }
@@ -174,10 +195,17 @@
     function renderGrid(data) {
       if (!data || !data.actif) {
         container.style.display = 'none';
-        clearInterval(countdownInterval);
+        resetState();
         return;
       }
       container.style.display = 'flex';
+
+      // BUGFIX: si le nombre de places est inférieur à ce qu'on avait vu (nouvelle
+      // partie qui recommence à 0), on réinitialise tout l'état d'animation/affichage.
+      if (data.places.length < lastKnownPlacesLength) {
+        resetState();
+      }
+      lastKnownPlacesLength = data.places.length;
       latestData = data;
 
       if (!isAnimating && animationQueue.length === 0) {
@@ -187,9 +215,9 @@
       renderCells();
 
       data.places.forEach((p, idx) => {
-        if (p.eliminated && !displayedEliminatedIndexes.has(idx)) {
-          displayedEliminatedIndexes.add(idx);
-          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar });
+        if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
+          queuedIndexes.add(idx);
+          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
         }
       });
 
@@ -210,7 +238,21 @@
     }
 
     async function processQueue() {
-      if (isAnimating || animationQueue.length === 0) return;
+      if (isAnimating || animationQueue.length === 0) {
+        if (!isAnimating && animationQueue.length === 0 && latestData) {
+          updateStatsAndStatus(latestData);
+          if (latestData.gagnant) {
+            clearInterval(countdownInterval);
+            timerDisplay.style.display = 'none';
+            grid.style.display = 'none';
+            winnerScreen.style.display = 'flex';
+            document.getElementById('winner-img').src = latestData.gagnant.avatar;
+            document.getElementById('winner-name').textContent = latestData.gagnant.nickname;
+            document.getElementById('winner-coins').textContent = `Total envoyé: ${latestData.gagnant.coins.toLocaleString()} 💎`;
+          }
+        }
+        return;
+      }
       isAnimating = true;
       const next = animationQueue.shift();
 
@@ -236,6 +278,8 @@
                 popup.style.display = 'block';
                 setTimeout(() => {
                   popup.style.display = 'none';
+                  displayedEliminatedIndexes.add(next.idx);
+                  queuedIndexes.delete(next.idx);
                   renderCells();
                   resolve();
                 }, 1000);
@@ -244,6 +288,9 @@
           }
           tick();
         });
+      } else {
+        displayedEliminatedIndexes.add(next.idx);
+        queuedIndexes.delete(next.idx);
       }
       isAnimating = false;
       processQueue();
