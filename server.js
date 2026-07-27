@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
 const TikTokModule = require('tiktok-live-connector');
@@ -486,6 +487,8 @@ app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname
 app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'layout.html')));
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
 
+const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
+
 // Catalogue de cadeaux pour le mode élimination : on récupère la vraie liste
 // (avec de vraies images valides) directement depuis TikTok via le connecteur,
 // tant que le live est actif. Si le live n'est pas connecté, on renvoie une
@@ -496,6 +499,19 @@ app.get('/api/gifts/:username', async (req, res) => {
     const pseudo = normalizePseudo(req.params.username);
     if (!req.session.user || !canManage(req.session.user, pseudo)) {
       return res.status(401).json({ error: "Non autorisé" });
+    }
+
+    // 1. Catalogue local téléchargé une fois pour toutes via
+    //    scripts/download-gifts.js : fiable, ne dépend pas du live.
+    if (fs.existsSync(GIFTS_CATALOG_PATH)) {
+      try {
+        const catalogueLocal = JSON.parse(fs.readFileSync(GIFTS_CATALOG_PATH, 'utf8'));
+        if (Array.isArray(catalogueLocal) && catalogueLocal.length > 0) {
+          return res.json(catalogueLocal);
+        }
+      } catch (err) {
+        console.error('Erreur lecture gifts-catalog.json :', err);
+      }
     }
 
     const data = connexionsActives[pseudo];
