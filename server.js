@@ -1059,7 +1059,7 @@ function processEliminationKill(pseudo, data) {
 
   const idx = Math.floor(Math.random() * vivants.length);
   vivants[idx].eliminated = true;
-  elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+  elim.nextElimination = Date.now() + (5 * 1000);
   io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
 }
 
@@ -1106,11 +1106,11 @@ function processBoucleKill(pseudo, data) {
     elim.timer = setTimeout(() => {
       elim.locked = true;
       elim.openEndsAt = null;
-      elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+      elim.nextElimination = Date.now() + (5 * 1000);
       io.to(`streamer:${pseudo}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudo));
 
       if (elim.timer) clearTimeout(elim.timer);
-      elim.timer = setTimeout(() => processBoucleKill(pseudo, data), elim.intervalle * 1000);
+      elim.timer = setTimeout(() => processBoucleKill(pseudo, data), 5000);
     }, 8000);
   } else {
     processBoucleKill(pseudo, data);
@@ -1351,8 +1351,8 @@ io.on('connection', socket => {
           data.elimination.locked = true;
           data.elimination.eliminationEnCours = true;
           if (data.elimination.timer) clearInterval(data.elimination.timer);
-          data.elimination.nextElimination = Date.now() + (data.elimination.intervalle * 1000);
-          data.elimination.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), data.elimination.intervalle * 1000);
+          data.elimination.nextElimination = Date.now() + (5 * 1000);
+          data.elimination.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), 5000);
           
           io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
         }
@@ -1364,7 +1364,7 @@ io.on('connection', socket => {
 
   socket.on('configurerEliminationBoucle', (payload = {}) => {
     try {
-      const { pseudo, cout, intervalle, tempsOuverture, giftImage, giftName } = payload;
+      const { pseudo, cout, tempsOuverture, giftImage, giftName } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
 
@@ -1381,7 +1381,6 @@ io.on('connection', socket => {
         cout: positiveInteger(cout, 1),
         giftImage: safeText(giftImage, ''),
         giftName: safeText(giftName, ''),
-        intervalle: positiveInteger(intervalle, 5),
         locked: false,
         eliminationEnCours: false,
         places: [],
@@ -1401,9 +1400,9 @@ io.on('connection', socket => {
           data.eliminationBoucle.locked = true;
           data.eliminationBoucle.eliminationEnCours = true;
           if (data.eliminationBoucle.timer) clearTimeout(data.eliminationBoucle.timer);
-          data.eliminationBoucle.nextElimination = Date.now() + (data.eliminationBoucle.intervalle * 1000);
-          data.eliminationBoucle.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), data.eliminationBoucle.intervalle * 1000);
-          
+          data.eliminationBoucle.nextElimination = Date.now() + (5 * 1000);
+          data.eliminationBoucle.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), 5000);
+
           io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
         }
       }, openTimeSec * 1000);
@@ -1442,7 +1441,7 @@ io.on('connection', socket => {
 
   socket.on('updateEliminationBoucleSettings', (payload = {}) => {
     try {
-      const { pseudo, cout, intervalle, giftImage, giftName } = payload;
+      const { pseudo, cout, giftImage, giftName } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
 
@@ -1453,10 +1452,6 @@ io.on('connection', socket => {
       if (cout !== undefined && cout !== '') elim.cout = positiveInteger(cout, elim.cout);
       if (giftImage !== undefined && giftImage !== '') elim.giftImage = safeText(giftImage, elim.giftImage);
       if (giftName !== undefined) elim.giftName = safeText(giftName, elim.giftName);
-
-      if (intervalle !== undefined && intervalle !== '') {
-        elim.intervalle = positiveInteger(intervalle, elim.intervalle);
-      }
 
       io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
     } catch {}
@@ -1481,8 +1476,8 @@ io.on('connection', socket => {
         elim.eliminationEnCours = true;
         if (elim.openTimer) { clearTimeout(elim.openTimer); elim.openTimer = null; }
         if (elim.timer) clearInterval(elim.timer);
-        elim.nextElimination = Date.now() + (elim.intervalle * 1000);
-        elim.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), elim.intervalle * 1000);
+        elim.nextElimination = Date.now() + (5 * 1000);
+        elim.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), 5000);
       } else if (action === 'stop_kill') {
         elim.eliminationEnCours = false;
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
@@ -1515,9 +1510,9 @@ io.on('connection', socket => {
       } else if (action === 'resume') {
         if (elim.gagnant) return;
         elim.eliminationEnCours = true;
-        elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+        elim.nextElimination = Date.now() + (5 * 1000);
         if (elim.timer) clearTimeout(elim.timer);
-        elim.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), elim.intervalle * 1000);
+        elim.timer = setTimeout(() => processBoucleKill(pseudoNettoye, data), 5000);
       } else if (action === 'reset') {
         if (elim.timer) clearTimeout(elim.timer);
         if (elim.openTimer) clearTimeout(elim.openTimer);
