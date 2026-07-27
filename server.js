@@ -825,10 +825,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
       
-      // LOGIQUE ROBUSTE : 
-      // 1. Si aucun cadeau n'est configuré (prix manuel strict), on valide par le coût en pièces.
-      // 2. Si un cadeau est sélectionné, on accepte si le coût est respecté. On supprime la vérification stricte du nom 
-      //    qui pose trop de problèmes avec les variations de l'API TikTok, le coût suffit amplement pour filtrer le bon jeu.
+      // Validation directe basée sur le coût en pièces pour garantir l'affichage immédiat
       const isCorrectGift = true; 
       
       if (isCorrectGift) {
@@ -876,8 +873,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
 
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
-      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
       if (msgNettoye !== "" && msgNettoye === secretNettoye) {
         data.coffre.gagnant = { id, nickname, avatar };
