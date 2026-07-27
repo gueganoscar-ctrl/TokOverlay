@@ -485,6 +485,12 @@ app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
 app.get('/elimination-boucle/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination-boucle.html')));
 
+// Route pour la page de simulation de cadeaux
+app.get('/simulation/:username', (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'simulation.html'));
+});
+
 const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
 
 app.get('/api/gifts/:username', async (req, res) => {
@@ -682,7 +688,7 @@ function arreterEcouteLive(pseudo, data, reason) {
 
   if (data.elimination?.timer) clearInterval(data.elimination.timer);
   if (data.elimination?.openTimer) clearTimeout(data.elimination.openTimer);
-  if (data.eliminationBoucle?.timer) clearTimeout(data.eliminationBoucle.timer);
+  if (data.eliminationBoucle?.timer) clearInterval(data.eliminationBoucle.timer);
   if (data.eliminationBoucle?.openTimer) clearTimeout(data.eliminationBoucle.openTimer);
 
   if (!data.historySaved) {
@@ -1202,6 +1208,72 @@ function terminerEnchere(pseudo) {
 
 io.on('connection', socket => {
   socket.on('disconnect', () => {});
+
+  // Gestion de la simulation de cadeaux
+  socket.on('simulerCadeauTest', (payload = {}) => {
+    try {
+      const { pseudo, senderPseudo, coins } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+      
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      if (!data) return;
+
+      const id = `simul_${senderPseudo}`;
+      const nickname = senderPseudo;
+      const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+      const totalPieces = positiveInteger(coins, 10);
+
+      // 1. Top Pièces (Gifters)
+      if (!data.gifters[id]) data.gifters[id] = { nickname, profilePictureUrl: avatar, coins: 0 };
+      data.gifters[id].coins += totalPieces;
+
+      // 2. Enchères
+      traiterDonPourEnchere(pseudoNettoye, id, nickname, avatar, totalPieces);
+
+      // 3. Élimination Classique
+      if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant) {
+        const elim = data.elimination;
+        const nombreEntrees = Math.floor(totalPieces / elim.cout);
+        for (let i = 0; i < nombreEntrees; i++) {
+          elim.places.push({ id, nickname, avatar, eliminated: false });
+        }
+        elim.totalCoins += totalPieces;
+        elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+      }
+
+      // 4. Élimination en Boucle
+      if (data.eliminationBoucle && data.eliminationBoucle.actif && !data.eliminationBoucle.locked && !data.eliminationBoucle.gagnant) {
+        const elim = data.eliminationBoucle;
+        const nombreEntrees = Math.floor(totalPieces / elim.cout);
+        for (let i = 0; i < nombreEntrees; i++) {
+          elim.places.push({ id, nickname, avatar, eliminated: false });
+        }
+        elim.totalCoins += totalPieces;
+        elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+      }
+
+      // 5. Best Gift
+      const giftIcon = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
+      if (!data.bestGift || totalPieces > data.bestGift.montant) {
+        data.bestGift = { pseudo: nickname, montant: totalPieces, icon: giftIcon };
+        io.to(`streamer:${pseudoNettoye}`).emit('updateBestGift', data.bestGift);
+      }
+
+      // Envoi immédiat des mises à jour aux overlays
+      io.to(`streamer:${pseudoNettoye}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
+      
+      const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
+      const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
+      io.to(`streamer:${pseudoNettoye}`).emit('updateStatsLive', { totalDiamonds, totalLikes });
+
+    } catch (err) {
+      console.error("Erreur simulation cadeau :", err);
+    }
+  });
 
   socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
     try {

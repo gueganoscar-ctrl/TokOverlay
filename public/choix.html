@@ -98,7 +98,6 @@
         <span class="click-hint" style="color: #c084fc;">Ouvrir la télécommande →</span>
       </div>
 
-      <!-- NOUVEAU WIDGET POUR LE MODE BOUCLE -->
       <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination en Boucle (Battle Royale)', '⚡')" style="border-color: rgba(99, 102, 241, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #11112b 100%);">
         <div class="widget-top">
           <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">⚡</div><h3>Mode Élimination (En Boucle)</h3></div>
@@ -129,7 +128,19 @@
 
       <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div><p>S'active automatiquement aux dons pour distribuer des gages ou lots.</p></div>
-        <span class="click-hint">Configurer les options & Lien →</span>
+        <span class="click-hint" style="color: var(--cyan);">Configurer les options & Lien →</span>
+      </div>
+
+      <!-- WIDGET SIMULATEUR DE CADEAUX -->
+      <div class="widget-card card" onclick="window.open('/simulation/' + encodeURIComponent(pseudoGlobal), '_blank')" style="border-color: rgba(236, 72, 153, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #291122 100%);">
+        <div class="widget-top">
+          <div class="widget-icon-title">
+            <div class="widget-icon" style="background: rgba(236, 72, 153, 0.1); border-color: rgba(236, 72, 153, 0.3);">🧪</div>
+            <h3>Simulateur de Cadeaux</h3>
+          </div>
+          <p>Envoie de faux cadeaux pour tester tes overlays et animations en direct.</p>
+        </div>
+        <span class="click-hint" style="color: #ec4899;">Ouvrir le simulateur →</span>
       </div>
 
       <div class="widget-card card" onclick="allerAuxStatistiques()" style="border-color: rgba(34, 211, 238, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #082f49 100%);">
