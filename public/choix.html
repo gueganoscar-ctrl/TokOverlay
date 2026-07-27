@@ -103,7 +103,7 @@
         <span class="click-hint">Configurer & Indices →</span>
       </div>
 
-      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
+      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d'Enchères & Overlay', '⚖️')">
         <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
         <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
       </div>
@@ -205,6 +205,7 @@
 
     let selectedGiftImage = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
     let selectedGiftPrice = 1;
+    let selectedGiftName = '';
 
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/'; return; }
@@ -303,7 +304,7 @@
           </div>
           <div class="gift-grid" id="elim-gift-grid"></div>
           <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
         </div>
         <div class="form-group" style="margin-top:8px;">
           <label>Temps d'ouverture des inscriptions (Secondes)</label>
@@ -319,6 +320,7 @@
       if (giftsToDisplay[0]) {
         selectedGiftImage = giftsToDisplay[0].image;
         selectedGiftPrice = giftsToDisplay[0].diamond_count;
+        selectedGiftName = giftsToDisplay[0].name;
       }
 
       renderGiftGrid(giftsToDisplay);
@@ -329,7 +331,7 @@
       if (!grid) return;
 
       grid.innerHTML = giftsToDisplay.map((g, i) => `
-        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i})">
+        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}')">
           <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
           <div class="gift-price">${g.diamond_count} 💎</div>
           <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
@@ -343,20 +345,28 @@
       renderGiftGrid(filtered.length > 0 ? filtered : window.allGiftsCache);
     };
 
-    window.selectElimGift = function(imgUrl, price, idx) {
+    window.selectElimGift = function(imgUrl, price, idx, name) {
       document.querySelectorAll('.gift-item').forEach(el => el.classList.remove('selected'));
       const item = document.getElementById(`gift-item-${idx}`);
       if(item) item.classList.add('selected');
       document.getElementById('elim-cout').value = price;
       selectedGiftImage = imgUrl;
       selectedGiftPrice = price;
+      selectedGiftName = name || '';
+      updateElimSettings();
+    };
+
+    window.setManualGift = function() {
+      selectedGiftName = '';
       updateElimSettings();
     };
 
     window.updateElimSettings = function() {
       socket.emit('updateEliminationSettings', { 
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        intervalle: document.getElementById('elim-interval').value, giftImage: selectedGiftImage 
+        intervalle: document.getElementById('elim-interval').value, 
+        giftImage: selectedGiftImage,
+        giftName: selectedGiftName
       });
     };
 
@@ -365,7 +375,8 @@
         pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
         intervalle: document.getElementById('elim-interval').value,
         tempsOuverture: document.getElementById('elim-open-time').value,
-        giftImage: selectedGiftImage
+        giftImage: selectedGiftImage,
+        giftName: selectedGiftName
       });
       alert("Grille ouverte avec le timer d'inscription !");
     };

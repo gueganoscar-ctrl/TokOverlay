@@ -275,7 +275,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Route 1 : Demande de réinitialisation de mot de passe (Envoi d'e-mail via Resend)
 app.post('/api/forgot-password', async (req, res) => {
   let { email } = req.body;
   try {
@@ -289,7 +288,7 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = Date.now() + 15 * 60 * 1000; // Valide 15 minutes
+    const resetExpires = Date.now() + 15 * 60 * 1000;
 
     await db.collection('users').updateOne(
       { email },
@@ -328,7 +327,6 @@ app.post('/api/forgot-password', async (req, res) => {
   }
 });
 
-// Route 2 : Validation du nouveau mot de passe
 app.post('/api/reset-password', async (req, res) => {
   let { email, token, newPassword } = req.body;
   try {
@@ -366,7 +364,6 @@ app.post('/api/reset-password', async (req, res) => {
   }
 });
 
-// Route 3 : Envoi de suggestions / contact depuis la page choix.html
 app.post('/api/contact', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Vous devez être connecté." });
@@ -392,7 +389,8 @@ app.post('/api/contact', async (req, res) => {
           <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 15px 0;">
           <p><strong>Message :</strong></p>
           <blockquote style="background: #ffffff; padding: 12px; border-left: 4px solid #6366f1; margin: 0; border-radius: 4px;">
-            ${message.replace(/\n/g, '<br>')}
+            ${message.replace(/
+/g, '<br>')}
           </blockquote>
         </div>
       `
@@ -489,11 +487,6 @@ app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname
 
 const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
 
-// Catalogue de cadeaux pour le mode élimination : on récupère la vraie liste
-// (avec de vraies images valides) directement depuis TikTok via le connecteur,
-// tant que le live est actif. Si le live n'est pas connecté, on renvoie une
-// liste vide : le champ "prix manuel" du panneau reste utilisable, et l'image
-// réelle du cadeau sera capturée automatiquement dès qu'il sera envoyé en direct.
 app.get('/api/gifts/:username', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.username);
@@ -501,8 +494,6 @@ app.get('/api/gifts/:username', async (req, res) => {
       return res.status(401).json({ error: "Non autorisé" });
     }
 
-    // 1. Catalogue local téléchargé une fois pour toutes via
-    //    scripts/download-gifts.js : fiable, ne dépend pas du live.
     if (fs.existsSync(GIFTS_CATALOG_PATH)) {
       try {
         const catalogueLocal = JSON.parse(fs.readFileSync(GIFTS_CATALOG_PATH, 'utf8'));
@@ -539,7 +530,6 @@ app.get('/api/gifts/:username', async (req, res) => {
   }
 });
 
-// Route de test pour simuler l'affichage VIP
 app.get('/api/test-vip/:username', (req, res) => {
   const pseudo = req.params.username;
   io.to(`streamer:${pseudo}`).emit('vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
@@ -590,9 +580,6 @@ app.get('/admin-live/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-live.html'));
 });
 
-// ----------------------------------------------------
-// ROUTES VIP / SUPER ADMIN
-// ----------------------------------------------------
 app.get('/api/admin/stats-globales', async (req, res) => {
   if (!req.session.user || !isAdmin(req.session.user)) {
     return res.status(403).json({ error: "Accès refusé. Réservé à l'administrateur." });
@@ -628,7 +615,6 @@ app.get('/vip-room', (req, res) => {
   }
   res.sendFile(path.join(__dirname, 'public', 'vip.html'));
 });
-// ----------------------------------------------------
 
 app.get('/api/historique/:pseudo', async (req, res) => {
   try {
@@ -675,10 +661,6 @@ app.get('/api/live-stats/:pseudo', async (req, res) => {
     res.status(400).json({ error: "Requête invalide." });
   }
 });
-
-// ----------------------------------------------------
-// GESTION DU LIVE TIKTOK & NETTOYAGE DES RESSOURCES
-// ----------------------------------------------------
 
 const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
@@ -843,15 +825,18 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
-      const nombreEntrees = Math.floor(totalPieces / elim.cout);
-      // On mémorise l'image réelle envoyée par TikTok à cet instant : fiable, contrairement à une URL codée en dur.
-      elim.giftImage = giftIcon;
-      for (let i = 0; i < nombreEntrees; i++) {
-        elim.places.push({ id, nickname, avatar, eliminated: false });
+      
+      const isCorrectGift = !elim.giftName || giftName === elim.giftName.toLowerCase();
+      
+      if (isCorrectGift) {
+        const nombreEntrees = Math.floor(totalPieces / elim.cout);
+        for (let i = 0; i < nombreEntrees; i++) {
+          elim.places.push({ id, nickname, avatar, eliminated: false });
+        }
+        elim.totalCoins += totalPieces;
+        elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
+        io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
       }
-      elim.totalCoins += totalPieces;
-      elim.totalsParId[id] = (elim.totalsParId[id] || 0) + totalPieces;
-      io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
     }
 
     if (!data.bestGift || totalPieces > data.bestGift.montant) {
@@ -888,8 +873,8 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
 
     if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
-      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const msgNettoye = message.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
       
       if (msgNettoye !== "" && msgNettoye === secretNettoye) {
         data.coffre.gagnant = { id, nickname, avatar };
@@ -1000,6 +985,7 @@ function etatElimination(pseudo) {
     actif: true,
     cout: elim.cout,
     giftImage: elim.giftImage,
+    giftName: elim.giftName,
     locked: elim.locked,
     eliminationEnCours: elim.eliminationEnCours,
     totalCoins: elim.totalCoins,
@@ -1130,10 +1116,6 @@ function terminerEnchere(pseudo) {
   });
 }
 
-// ----------------------------------------------------
-// GESTION DES WEBSOCKETS
-// ----------------------------------------------------
-
 io.on('connection', socket => {
   socket.on('disconnect', () => {});
 
@@ -1179,7 +1161,7 @@ io.on('connection', socket => {
 
   socket.on('configurerElimination', (payload = {}) => {
     try {
-      const { pseudo, cout, intervalle, tempsOuverture, giftImage } = payload;
+      const { pseudo, cout, intervalle, tempsOuverture, giftImage, giftName } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
 
@@ -1195,6 +1177,7 @@ io.on('connection', socket => {
         actif: true,
         cout: positiveInteger(cout, 1),
         giftImage: safeText(giftImage, ''),
+        giftName: safeText(giftName, ''),
         intervalle: positiveInteger(intervalle, 5),
         locked: false,
         eliminationEnCours: false,
@@ -1223,7 +1206,7 @@ io.on('connection', socket => {
 
   socket.on('updateEliminationSettings', (payload = {}) => {
     try {
-      const { pseudo, cout, intervalle, giftImage } = payload;
+      const { pseudo, cout, intervalle, giftImage, giftName } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
 
@@ -1233,12 +1216,11 @@ io.on('connection', socket => {
 
       if (cout !== undefined && cout !== '') elim.cout = positiveInteger(cout, elim.cout);
       if (giftImage !== undefined && giftImage !== '') elim.giftImage = safeText(giftImage, elim.giftImage);
+      if (giftName !== undefined) elim.giftName = safeText(giftName, elim.giftName);
 
       if (intervalle !== undefined && intervalle !== '') {
         elim.intervalle = positiveInteger(intervalle, elim.intervalle);
 
-        // Le massacre tourne déjà : on relance juste le timer avec le nouvel
-        // intervalle, sans toucher à la grille ni aux joueurs déjà inscrits.
         if (elim.eliminationEnCours && elim.timer) {
           clearInterval(elim.timer);
           elim.nextElimination = Date.now() + (elim.intervalle * 1000);
@@ -1277,7 +1259,7 @@ io.on('connection', socket => {
         elim.nextElimination = null;
       } else if (action === 'reset') {
         if (elim.timer) clearInterval(elim.timer);
-        if (elim.openTimer) clearTimeout(elim.openTimer);
+        if (elim.openTimer) clearInterval(elim.openTimer);
         data.elimination = null;
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', { actif: false });
         return;
