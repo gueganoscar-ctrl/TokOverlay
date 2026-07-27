@@ -825,9 +825,11 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.elimination && data.elimination.actif && !data.elimination.locked && !data.elimination.gagnant && totalPieces >= data.elimination.cout) {
       const elim = data.elimination;
       
-      // Sécurité : Si aucun giftName n'est défini (prix manuel), ou si le nom correspond, ou si le giftName est vide/générique
-      const cleanTargetName = elim.giftName ? elim.giftName.toLowerCase().trim() : '';
-      const isCorrectGift = !cleanTargetName || giftName.includes(cleanTargetName) || cleanTargetName.includes(giftName);
+      // LOGIQUE ROBUSTE : 
+      // 1. Si aucun cadeau n'est configuré (prix manuel strict), on valide par le coût en pièces.
+      // 2. Si un cadeau est sélectionné, on accepte si le coût est respecté. On supprime la vérification stricte du nom 
+      //    qui pose trop de problèmes avec les variations de l'API TikTok, le coût suffit amplement pour filtrer le bon jeu.
+      const isCorrectGift = true; 
       
       if (isCorrectGift) {
         const nombreEntrees = Math.floor(totalPieces / elim.cout);
