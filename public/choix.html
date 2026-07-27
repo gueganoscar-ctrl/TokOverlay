@@ -375,7 +375,7 @@
     function mettreAJourLienModal() {
       let lien = typeActuel === 'elimination' 
         ? `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`
-        : `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}/${encodeURIComponent(typeActuel)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+        : `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
