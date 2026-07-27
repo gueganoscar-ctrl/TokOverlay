@@ -20,8 +20,27 @@
     .stat-block.gift-block img { width: 30px; height: 30px; object-fit: contain; }
     .stat-title { font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
-    .grid-container { background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px; padding: 10px; width: 100%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start; min-height: 400px; position: relative; }
-    .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 6px; overflow: hidden; position: relative; transition: all 0.15s ease; }
+    
+    /* Conteneur de taille fixe : il ne grandit jamais, même avec 1000 joueurs */
+    .grid-container { 
+      background: rgba(10, 5, 15, 0.95); 
+      border: 4px solid #a855f7; 
+      border-radius: 16px; 
+      padding: 10px; 
+      width: 100%; 
+      max-width: 700px;
+      height: 420px; /* Taille fixe */
+      max-height: 420px;
+      box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 3px; 
+      justify-content: center; 
+      align-content: flex-start; 
+      overflow-y: auto; /* Scroll interne si vraiment des milliers de joueurs */
+      position: relative; 
+    }
+    .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 4px; overflow: hidden; position: relative; transition: all 0.15s ease; flex-shrink: 0; }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
     .grid-cell.roulette-highlight {
       border-color: #ff2a55 !important;
@@ -31,7 +50,7 @@
     }
     #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
+    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; height: 420px; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
     .winner-title { color: #ffbe3d; font-family: 'Space Grotesk', sans-serif; font-size: 32px; text-transform: uppercase; font-weight: 900; margin: 0; }
     .winner-img { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #ffbe3d; object-fit: cover; box-shadow: 0 0 20px rgba(255, 190, 61, 0.6); }
     .winner-name { font-size: 28px; font-weight: 900; margin: 0; }
@@ -128,7 +147,6 @@
         
         if (diff <= 0) {
           clearInterval(countdownInterval);
-          // Si c'etait le timer d'ouverture, on verrouille automatiquement visuellement
           if (!isKillTimer && pseudo && !isDemo) {
             statusBadge.className = 'elim-status';
             statusBadge.innerHTML = '🔒 LOCKED ENTRIES - WAITING KILL 🔒';
@@ -162,6 +180,7 @@
       }
     }
 
+    // Calcul dynamique et fluide de la taille des cases pour que le carré ne grandisse jamais
     function renderCells() {
       if (!latestData || !Array.isArray(latestData.places)) return;
 
@@ -170,17 +189,22 @@
         .filter(p => !displayedEliminatedIndexes.has(p.idx));
 
       let count = displayed.length;
-      let cellSize = 100;
-      if (count > 9) cellSize = 80;
-      if (count > 25) cellSize = 60;
-      if (count > 49) cellSize = 45;
-      if (count > 100) cellSize = 30;
-      if (count > 200) cellSize = 20;
+      if (count === 0) count = 1;
 
-      // Nettoyage propre de la grille en conservant le popup
-      Array.from(grid.children).forEach(child => { 
-        if (child.id !== 'elim-popup') child.remove(); 
-      });
+      // Taille fixe du conteneur en pixels (environ 680x400 utilisables)
+      const containerWidth = 670;
+      const containerHeight = 390;
+      const totalArea = containerWidth * containerHeight;
+      const areaPerCell = totalArea / count;
+      
+      // On calcule la taille idéale de chaque case (largeur/hauteur) pour remplir l'espace sans déborder
+      let cellSize = Math.floor(Math.sqrt(areaPerCell)) - 6; 
+      
+      // Limites de taille pour garder un affichage propre (min 15px, max 95px)
+      if (cellSize > 95) cellSize = 95;
+      if (cellSize < 15) cellSize = 15;
+
+      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
       displayed.forEach(place => {
         const cell = document.createElement('div');
@@ -212,7 +236,6 @@
         updateStatsAndStatus(data);
       }
 
-      // Force l'affichage des cellules dès qu'il y a des joueurs reçus
       renderCells();
 
       data.places.forEach((p, idx) => {
@@ -300,8 +323,7 @@
     function finalizeElimination(next) {
       displayedEliminatedIndexes.add(next.idx);
       queuedIndexes.delete(next.idx);
-      const cell = grid.querySelector(`.grid-cell[data-place-index="${next.idx}"]`);
-      if (cell) cell.remove();
+      renderCells();
     }
 
     function showWinnerScreen(data) {
@@ -340,7 +362,6 @@
     socket.on('updateElimination', renderGrid);
 
     if (isDemo) {
-      // Simulation complète du mode démo jusqu'au grand gagnant
       let demoData = {
         actif: true,
         cout: 10,
@@ -360,39 +381,7 @@
           { id: 'u5', nickname: 'Thomas_Off', avatar: 'https://ui-avatars.com/api/?name=Thomas&background=random', eliminated: false }
         ]
       };
-
       renderGrid(demoData);
-
-      // Séquence d'élimination automatique simulée pour la démo
-      setTimeout(() => {
-        demoData.places[0].eliminated = true; // Élimine Alex
-        renderGrid(demoData);
-      }, 3000);
-
-      setTimeout(() => {
-        demoData.places[1].eliminated = true; // Élimine Sarah
-        renderGrid(demoData);
-      }, 7000);
-
-      setTimeout(() => {
-        demoData.places[2].eliminated = true; // Élimine Lucas
-        renderGrid(demoData);
-      }, 11000);
-
-      setTimeout(() => {
-        demoData.places[3].eliminated = true; // Élimine Emma
-        renderGrid(demoData);
-      }, 15000);
-
-      setTimeout(() => {
-        // Il ne reste que Thomas_Off -> Grand Gagnant !
-        demoData.gagnant = {
-          nickname: 'Thomas_Off',
-          avatar: 'https://ui-avatars.com/api/?name=Thomas&background=random',
-          coins: 450
-        };
-        renderGrid(demoData);
-      }, 19000);
     }
   </script>
 </body>
