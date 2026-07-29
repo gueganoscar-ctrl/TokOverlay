@@ -11,9 +11,10 @@
     * { box-sizing: border-box; }
     body { margin: 0; padding: 15px; font-family: 'Inter', sans-serif; color: white; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 700px; }
-    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -10px; font-variant-numeric: tabular-nums; }
+    
+    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 58px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -10px; font-variant-numeric: tabular-nums; }
     .elim-title { background: #ff2a55; color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; padding: 6px 24px; border-radius: 99px; box-shadow: 0 4px 15px rgba(255, 42, 85, 0.5); }
-    .elim-status { background: #f59e0b; color: white; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 16px; border-radius: 8px; }
+    .elim-status { background: #f59e0b; color: white; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 16px; border-radius: 8px; }
     .elim-status.open { background: #10b981; }
     .elim-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center; }
     .stat-block { background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px; padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -23,19 +24,30 @@
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
     
     .grid-container { 
-      background: rgba(10, 5, 15, 0.95); border: 4px solid #a855f7; border-radius: 16px; padding: 10px; width: 100%; max-width: 700px;
-      height: 420px; max-height: 420px; box-shadow: 0 0 40px rgba(168, 85, 247, 0.2); display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; align-content: flex-start; overflow-y: auto; position: relative; 
+      background: rgba(10, 5, 15, 0.95); border: 4px solid #22e5e0; border-radius: 16px; padding: 10px; width: 100%; max-width: 700px;
+      height: 420px; max-height: 420px; box-shadow: 0 0 40px rgba(34, 229, 224, 0.25); display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; align-content: flex-start; overflow-y: auto; position: relative; 
     }
     .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 4px; overflow: hidden; position: relative; transition: all 0.15s ease; flex-shrink: 0; }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
     .grid-cell.roulette-highlight { border-color: #ff2a55 !important; box-shadow: 0 0 18px rgba(255, 42, 85, 0.85); transform: scale(1.1); z-index: 2; }
-    #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6); }
-    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; height: 420px; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
     
-    /* Variantes de style */
-    body.style-2 .grid-container { border-color: #ffbe3d; box-shadow: 0 0 40px rgba(255, 190, 61, 0.2); }
-    body.style-3 .grid-container { border-color: #fe2c55; box-shadow: 0 0 40px rgba(254, 44, 85, 0.2); }
+    #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #ff2a55; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(255, 42, 85, 0.6); animation: popIn 0.3s ease-out; }
+    @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    
+    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; height: 420px; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
+    .winner-title { color: #ffbe3d; font-family: 'Space Grotesk', sans-serif; font-size: 32px; text-transform: uppercase; font-weight: 900; margin: 0; }
+    .winner-img { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #ffbe3d; object-fit: cover; box-shadow: 0 0 20px rgba(255, 190, 61, 0.6); }
+    .winner-name { font-size: 28px; font-weight: 900; margin: 0; }
+    .winner-coins { font-family: 'Space Grotesk', sans-serif; font-size: 20px; color: #ffbe3d; background: rgba(255,190,61,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,190,61,0.4); }
+    .winner-chat { font-style: italic; font-size: 18px; color: #a1a1aa; margin-top: 10px; max-width: 80%; }
+    
+    /* Déclinaisons de Thèmes CSS */
+    body.style-2 .grid-container { border-color: #ffbe3d; box-shadow: 0 0 40px rgba(255, 190, 61, 0.3); }
+    body.style-2 .elim-title { background: #ffbe3d; color: #000; }
+    body.style-3 .grid-container { border-color: #fe2c55; box-shadow: 0 0 40px rgba(254, 44, 85, 0.3); }
+    body.style-3 .elim-title { background: #fe2c55; }
     body.style-4 .grid-container { border-color: #ffffff; box-shadow: none; }
+    body.style-4 .elim-title { background: #26262f; }
   </style>
 </head>
 <body>
@@ -59,14 +71,16 @@
         <img id="popup-img" src="" referrerpolicy="no-referrer" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #ff2a55; object-fit: cover;">
         <h2 id="popup-name" style="margin:0; color:white; font-family:'Space Grotesk'; font-size:22px;">Pseudo</h2>
         <p style="color:#ff2a55; font-weight:900; font-size:28px; margin:5px 0;">ÉLIMINÉ 💀</p>
+        <p style="color:#a1a1aa; margin:0; font-size: 14px;">Chance d'élimination : <span id="popup-prob" style="color:white; font-weight:bold; font-size: 18px;">0%</span></p>
       </div>
     </div>
     
     <div id="winner-screen">
-      <h1 class="winner-title" style="color:#ffbe3d; font-family:'Space Grotesk'; font-size:32px; font-weight:900; margin:0;">👑 GRAND GAGNANT 👑</h1>
-      <img id="winner-img" src="" referrerpolicy="no-referrer" style="width:120px; height:120px; border-radius:50%; border:4px solid #ffbe3d; object-fit:cover;">
-      <h2 id="winner-name" style="font-size:28px; font-weight:900; margin:0;">Pseudo</h2>
-      <div id="winner-coins" style="font-family:'Space Grotesk'; font-size:20px; color:#ffbe3d; background:rgba(255,190,61,0.1); padding:5px 15px; border-radius:20px;">Total envoyé: 0 💎</div>
+      <h1 class="winner-title">👑 GRAND GAGNANT 👑</h1>
+      <img id="winner-img" class="winner-img" src="" referrerpolicy="no-referrer">
+      <h2 id="winner-name" class="winner-name">Pseudo</h2>
+      <div id="winner-coins" class="winner-coins">Total envoyé: 0 💎</div>
+      <div id="winner-chat" class="winner-chat"><strong>Message:</strong> <span>En attente...</span></div>
     </div>
   </div>
 
@@ -98,15 +112,57 @@
     let animationQueue = [];
     let isAnimating = false;
 
-    function renderGrid(data) {
-      if (!data || !data.actif) { container.style.display = 'none'; return; }
-      container.style.display = 'flex';
-      latestData = data;
-      
-      document.getElementById('stat-players').textContent = new Set(data.places.filter(p => !p.eliminated).map(p => p.id)).size;
+    function resetState() {
+      displayedEliminatedIndexes = new Set();
+      queuedIndexes = new Set();
+      animationQueue = [];
+      isAnimating = false;
+      latestData = null;
+      lastKnownPlacesLength = 0;
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+      popup.style.display = 'none';
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
+    }
+
+    function startTimer(targetTimestamp, isKillTimer = false) {
+      clearInterval(countdownInterval);
+      if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
+
+      timerDisplay.style.display = 'block';
+      countdownInterval = setInterval(() => {
+        const diff = Math.max(0, targetTimestamp - Date.now());
+        const seconds = Math.ceil(diff / 1000);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          if (!isKillTimer && pseudo) {
+            statusBadge.className = 'elim-status';
+            statusBadge.innerHTML = '🔒 INSCRIPTIONS FERMÉES - ÉLIMINATION EN COURS 🔒';
+          }
+        }
+      }, 100);
+    }
+
+    function updateStatsAndStatus(data) {
+      const trulyAlive = data.places.filter(p => !p.eliminated);
+      document.getElementById('stat-players').textContent = new Set(trulyAlive.map(p => p.id)).size;
       document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
       document.getElementById('target-gift-img').src = data.giftImage || '';
       document.getElementById('target-gift-price').textContent = data.cout;
+
+      if (!data.locked && data.openEndsAt) {
+        startTimer(data.openEndsAt, false);
+      } else if (data.eliminationEnCours && data.nextElimination) {
+        startTimer(data.nextElimination, true);
+      } else {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
+      }
 
       if (data.locked) {
         statusBadge.className = 'elim-status';
@@ -115,25 +171,183 @@
         statusBadge.className = 'elim-status open';
         statusBadge.innerHTML = '🟢 ENVOYEZ DES CADEAUX POUR REJOINDRE 🟢';
       }
+    }
 
-      const displayed = data.places.map((p, idx) => ({ ...p, idx })).filter(p => !p.eliminated);
-      grid.querySelectorAll('.grid-cell').forEach(c => c.remove());
+    function computeCellSize(count, container) {
+      if (count <= 0) return 15;
+      const styles = getComputedStyle(container);
+      const paddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
+      const paddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
+      const availW = Math.max(0, container.clientWidth - paddingX);
+      const availH = Math.max(0, container.clientHeight - paddingY);
+      const gap = 3;
+
+      let best = 15;
+      for (let cols = 1; cols <= count; cols++) {
+        const rows = Math.ceil(count / cols);
+        const cellW = (availW - gap * (cols - 1)) / cols;
+        const cellH = (availH - gap * (rows - 1)) / rows;
+        const size = Math.min(cellW, cellH);
+        if (size > best) best = size;
+      }
+      return Math.floor(Math.max(15, best));
+    }
+
+    function renderCells() {
+      if (!latestData || !Array.isArray(latestData.places)) return;
+
+      const displayed = latestData.places
+        .map((p, idx) => ({ ...p, idx }))
+        .filter(p => !displayedEliminatedIndexes.has(p.idx));
+
+      let count = displayed.length || 1;
+      const cellSize = computeCellSize(count, grid);
+
+      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
       displayed.forEach(place => {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
-        cell.style.width = '60px'; cell.style.height = '60px';
+        cell.dataset.placeIndex = place.idx;
+        cell.style.width = cellSize + 'px';
+        cell.style.height = cellSize + 'px';
         cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer">`;
         grid.appendChild(cell);
       });
+    }
 
-      if (data.gagnant) {
-        grid.style.display = 'none';
-        winnerScreen.style.display = 'flex';
-        document.getElementById('winner-img').src = data.gagnant.avatar;
-        document.getElementById('winner-name').textContent = data.gagnant.nickname;
-        document.getElementById('winner-coins').textContent = `Total envoyé: ${data.gagnant.coins.toLocaleString()} 💎`;
+    function renderGrid(data) {
+      if (!data || !data.actif) {
+        container.style.display = 'none';
+        resetState();
+        return;
       }
+      container.style.display = 'flex';
+
+      if (data.places.length < lastKnownPlacesLength) {
+        resetState();
+      }
+      lastKnownPlacesLength = data.places.length;
+      latestData = data;
+
+      renderCells();
+
+      data.places.forEach((p, idx) => {
+        if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
+          queuedIndexes.add(idx);
+          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
+        }
+      });
+
+      if (!isAnimating && animationQueue.length === 0) {
+        updateStatsAndStatus(data);
+      }
+
+      if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
+        showWinnerScreen(data);
+        return;
+      }
+
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+      processQueue();
+    }
+
+    function runRouletteAnimation(next) {
+      return new Promise(resolve => {
+        const candidats = Array.from(grid.querySelectorAll('.grid-cell'));
+
+        if (candidats.length === 0) {
+          finalizeElimination(next);
+          resolve();
+          return;
+        }
+
+        const totalAliveBefore = candidats.length;
+        const userAliveBefore = candidats.filter(c => {
+          const idx = parseInt(c.dataset.placeIndex, 10);
+          return latestData.places[idx] && latestData.places[idx].id === next.id;
+        }).length;
+        const prob = totalAliveBefore > 0 ? ((userAliveBefore / totalAliveBefore) * 100).toFixed(1) : '0.0';
+
+        let step = 0;
+        const totalSteps = 12;
+        let delai = 60;
+
+        function tick() {
+          candidats.forEach(c => c.classList.remove('roulette-highlight'));
+
+          let choisi;
+          if (step === totalSteps - 1) {
+            choisi = candidats.find(c => parseInt(c.dataset.placeIndex, 10) === next.idx);
+          } else {
+            choisi = candidats[Math.floor(Math.random() * candidats.length)];
+          }
+          if (choisi) choisi.classList.add('roulette-highlight');
+
+          step++;
+          delai += 10;
+
+          if (step < totalSteps) {
+            setTimeout(tick, delai);
+          } else {
+            setTimeout(() => {
+              showEliminationPopup(next, prob);
+              setTimeout(() => {
+                hideEliminationPopup();
+                finalizeElimination(next);
+                resolve();
+              }, 1200);
+            }, 400);
+          }
+        }
+
+        tick();
+      });
+    }
+
+    function showEliminationPopup(next, prob) {
+      document.getElementById('popup-img').src = next.avatar || '';
+      document.getElementById('popup-name').textContent = next.nickname || 'Anonyme';
+      document.getElementById('popup-prob').textContent = `${prob}%`;
+      popup.style.display = 'block';
+    }
+
+    function hideEliminationPopup() { popup.style.display = 'none'; }
+
+    function finalizeElimination(next) {
+      displayedEliminatedIndexes.add(next.idx);
+      queuedIndexes.delete(next.idx);
+      renderCells();
+    }
+
+    function showWinnerScreen(data) {
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
+      grid.style.display = 'none';
+      popup.style.display = 'none';
+      winnerScreen.style.display = 'flex';
+      document.getElementById('winner-img').src = data.gagnant.avatar || '';
+      document.getElementById('winner-name').textContent = data.gagnant.nickname || 'Anonyme';
+      document.getElementById('winner-coins').textContent = `Total envoyé: ${(data.gagnant.coins || 0).toLocaleString()} 💎`;
+      const chatSpan = document.querySelector('#winner-chat span');
+      if (chatSpan) chatSpan.textContent = data.messageGagnant || 'En attente...';
+    }
+
+    async function processQueue() {
+      if (isAnimating) return;
+
+      if (animationQueue.length === 0) {
+        if (latestData) updateStatsAndStatus(latestData);
+        if (latestData && latestData.gagnant) showWinnerScreen(latestData);
+        return;
+      }
+
+      isAnimating = true;
+      const next = animationQueue.shift();
+      await runRouletteAnimation(next);
+      isAnimating = false;
+      processQueue();
     }
 
     socket.on('updateElimination', renderGrid);

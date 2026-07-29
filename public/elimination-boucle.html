@@ -11,7 +11,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; padding: 15px; font-family: 'Inter', sans-serif; color: white; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .elim-layout { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 700px; }
-    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 60px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -5px; font-variant-numeric: tabular-nums; }
+    .elim-timer { font-family: 'Space Grotesk', sans-serif; font-size: 58px; font-weight: 900; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); margin-bottom: -5px; font-variant-numeric: tabular-nums; }
     .elim-title { background: #6366f1; color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; padding: 6px 24px; border-radius: 99px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5); }
     .elim-stats { display: flex; gap: 10px; width: 100%; margin-bottom: 5px; justify-content: center; }
     .stat-block { background: rgba(10, 5, 15, 0.95); border: 2px solid #3f3f46; border-radius: 12px; padding: 8px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -26,7 +26,11 @@
     }
     .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 4px; overflow: hidden; position: relative; transition: all 0.15s ease; flex-shrink: 0; }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .grid-cell.roulette-highlight { border-color: #6366f1 !important; box-shadow: 0 0 18px rgba(99, 102, 241, 0.85); transform: scale(1.1); z-index: 2; }
+    #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #6366f1; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(99, 102, 241, 0.6); }
+    #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; height: 420px; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
     
+    /* Variantes de style */
     body.style-2 .grid-container { border-color: #ffbe3d; }
     body.style-3 .grid-container { border-color: #fe2c55; }
     body.style-4 .grid-container { border-color: #ffffff; }
@@ -47,9 +51,15 @@
       <div class="stat-block"><div class="stat-title">PIÈCES</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
     </div>
 
-    <div class="grid-container" id="grid"></div>
+    <div class="grid-container" id="grid">
+      <div id="elim-popup">
+        <img id="popup-img" src="" referrerpolicy="no-referrer" style="width:90px; height:90px; border-radius:50%; margin-bottom:10px; border: 3px solid #6366f1; object-fit: cover;">
+        <h2 id="popup-name" style="margin:0; color:white; font-family:'Space Grotesk'; font-size:22px;">Pseudo</h2>
+        <p style="color:#6366f1; font-weight:900; font-size:28px; margin:5px 0;">ÉLIMINÉ 💀</p>
+      </div>
+    </div>
     
-    <div id="winner-screen" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:15px; background:rgba(10, 5, 15, 0.95); border:4px solid #ffbe3d; border-radius:16px; padding:40px; width:100%; height:420px; text-align:center;">
+    <div id="winner-screen">
       <h1 style="color:#ffbe3d; font-family:'Space Grotesk'; font-size:32px; font-weight:900; margin:0;">👑 GRAND GAGNANT FINAL 👑</h1>
       <img id="winner-img" src="" referrerpolicy="no-referrer" style="width:120px; height:120px; border-radius:50%; border:4px solid #ffbe3d; object-fit:cover;">
       <h2 id="winner-name" style="font-size:28px; font-weight:900; margin:0;">Pseudo</h2>
@@ -72,35 +82,205 @@
 
     const container = document.getElementById('game-container');
     const grid = document.getElementById('grid');
+    const popup = document.getElementById('elim-popup');
+    const timerDisplay = document.getElementById('elim-timer-display');
     const winnerScreen = document.getElementById('winner-screen');
 
-    function renderGrid(data) {
-      if (!data || !data.actif) { container.style.display = 'none'; return; }
-      container.style.display = 'flex';
-      
-      document.getElementById('stat-players').textContent = new Set(data.places.filter(p => !p.eliminated).map(p => p.id)).size;
+    let countdownInterval;
+    let latestData = null;
+    let lastKnownPlacesLength = 0;
+    let displayedEliminatedIndexes = new Set();
+    let queuedIndexes = new Set();
+    let animationQueue = [];
+    let isAnimating = false;
+
+    function resetState() {
+      displayedEliminatedIndexes = new Set();
+      queuedIndexes = new Set();
+      animationQueue = [];
+      isAnimating = false;
+      latestData = null;
+      lastKnownPlacesLength = 0;
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+      popup.style.display = 'none';
+      clearInterval(countdownInterval);
+      timerDisplay.style.display = 'none';
+    }
+
+    function startTimer(targetTimestamp) {
+      clearInterval(countdownInterval);
+      if (!targetTimestamp) { timerDisplay.style.display = 'none'; return; }
+      timerDisplay.style.display = 'block';
+      countdownInterval = setInterval(() => {
+        const diff = Math.max(0, targetTimestamp - Date.now());
+        const seconds = Math.ceil(diff / 1000);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        if (diff <= 0) clearInterval(countdownInterval);
+      }, 100);
+    }
+
+    function updateStatsAndStatus(data) {
+      const trulyAlive = data.places.filter(p => !p.eliminated);
+      document.getElementById('stat-players').textContent = new Set(trulyAlive.map(p => p.id)).size;
       document.getElementById('stat-coins').textContent = data.totalCoins.toLocaleString();
       document.getElementById('target-gift-img').src = data.giftImage || '';
       document.getElementById('target-gift-price').textContent = data.cout;
 
-      const displayed = data.places.map((p, idx) => ({ ...p, idx })).filter(p => !p.eliminated);
-      grid.querySelectorAll('.grid-cell').forEach(c => c.remove());
+      if (!data.locked && data.openEndsAt) {
+        startTimer(data.openEndsAt);
+      } else if (data.eliminationEnCours && data.nextElimination) {
+        startTimer(data.nextElimination);
+      } else {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
+      }
+    }
+
+    function computeCellSize(count, container) {
+      if (count <= 0) return 15;
+      const styles = getComputedStyle(container);
+      const paddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
+      const paddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
+      const availW = Math.max(0, container.clientWidth - paddingX);
+      const availH = Math.max(0, container.clientHeight - paddingY);
+      const gap = 3;
+
+      let best = 15;
+      for (let cols = 1; cols <= count; cols++) {
+        const rows = Math.ceil(count / cols);
+        const cellW = (availW - gap * (cols - 1)) / cols;
+        const cellH = (availH - gap * (rows - 1)) / rows;
+        const size = Math.min(cellW, cellH);
+        if (size > best) best = size;
+      }
+      return Math.floor(Math.max(15, best));
+    }
+
+    function renderCells() {
+      if (!latestData || !Array.isArray(latestData.places)) return;
+      const displayed = latestData.places
+        .map((p, idx) => ({ ...p, idx }))
+        .filter(p => !displayedEliminatedIndexes.has(p.idx));
+
+      let count = displayed.length || 1;
+      const cellSize = computeCellSize(count, grid);
+
+      Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
       displayed.forEach(place => {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
-        cell.style.width = '60px'; cell.style.height = '60px';
+        cell.dataset.placeIndex = place.idx;
+        cell.style.width = cellSize + 'px';
+        cell.style.height = cellSize + 'px';
         cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer">`;
         grid.appendChild(cell);
       });
+    }
 
-      if (data.gagnant) {
+    function renderGrid(data) {
+      if (!data || !data.actif) {
+        container.style.display = 'none';
+        resetState();
+        return;
+      }
+      container.style.display = 'flex';
+
+      if (data.places.length < lastKnownPlacesLength) {
+        resetState();
+      }
+      lastKnownPlacesLength = data.places.length;
+      latestData = data;
+
+      renderCells();
+
+      data.places.forEach((p, idx) => {
+        if (p.eliminated && !displayedEliminatedIndexes.has(idx) && !queuedIndexes.has(idx)) {
+          queuedIndexes.add(idx);
+          animationQueue.push({ idx, nickname: p.nickname, avatar: p.avatar, id: p.id });
+        }
+      });
+
+      if (!isAnimating && animationQueue.length === 0) {
+        updateStatsAndStatus(data);
+      }
+
+      if (data.gagnant && animationQueue.length === 0 && !isAnimating) {
+        clearInterval(countdownInterval);
+        timerDisplay.style.display = 'none';
         grid.style.display = 'none';
         winnerScreen.style.display = 'flex';
         document.getElementById('winner-img').src = data.gagnant.avatar;
         document.getElementById('winner-name').textContent = data.gagnant.nickname;
         document.getElementById('winner-coins').textContent = `Total envoyé: ${data.gagnant.coins.toLocaleString()} 💎`;
+        return;
       }
+
+      grid.style.display = 'flex';
+      winnerScreen.style.display = 'none';
+      processQueue();
+    }
+
+    async function processQueue() {
+      if (isAnimating || animationQueue.length === 0) {
+        if (!isAnimating && animationQueue.length === 0 && latestData) {
+          updateStatsAndStatus(latestData);
+          if (latestData.gagnant) {
+            clearInterval(countdownInterval);
+            timerDisplay.style.display = 'none';
+            grid.style.display = 'none';
+            winnerScreen.style.display = 'flex';
+            document.getElementById('winner-img').src = latestData.gagnant.avatar;
+            document.getElementById('winner-name').textContent = latestData.gagnant.nickname;
+            document.getElementById('winner-coins').textContent = `Total envoyé: ${latestData.gagnant.coins.toLocaleString()} 💎`;
+          }
+        }
+        return;
+      }
+      isAnimating = true;
+      const next = animationQueue.shift();
+
+      const candidats = Array.from(grid.querySelectorAll('.grid-cell'));
+      if (candidats.length > 0) {
+        let step = 0;
+        const totalSteps = 10;
+        let delai = 50;
+
+        await new Promise(resolve => {
+          function tick() {
+            candidats.forEach(c => c.classList.remove('roulette-highlight'));
+            let choisi = (step === totalSteps - 1) 
+              ? candidats.find(c => parseInt(c.dataset.placeIndex, 10) === next.idx)
+              : candidats[Math.floor(Math.random() * candidats.length)];
+            if (choisi) choisi.classList.add('roulette-highlight');
+            step++;
+            if (step < totalSteps) setTimeout(tick, delai += 8);
+            else {
+              setTimeout(() => {
+                popup.querySelector('#popup-img').src = next.avatar;
+                popup.querySelector('#popup-name').textContent = next.nickname;
+                popup.style.display = 'block';
+                setTimeout(() => {
+                  popup.style.display = 'none';
+                  displayedEliminatedIndexes.add(next.idx);
+                  queuedIndexes.delete(next.idx);
+                  renderCells();
+                  resolve();
+                }, 1000);
+              }, 200);
+            }
+          }
+          tick();
+        });
+      } else {
+        displayedEliminatedIndexes.add(next.idx);
+        queuedIndexes.delete(next.idx);
+      }
+      isAnimating = false;
+      processQueue();
     }
 
     socket.on('updateEliminationBoucle', renderGrid);
