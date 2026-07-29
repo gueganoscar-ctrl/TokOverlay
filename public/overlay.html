@@ -227,10 +227,6 @@
 
     document.body.className = `style-${style}`;
 
-    function safeTextNode(text) {
-      return document.createTextNode(String(text || ''));
-    }
-
     function safeImageUrl(url, fallback) {
       if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/'))) {
         return url;

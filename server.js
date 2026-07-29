@@ -10,7 +10,6 @@ const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
 const { Resend } = require('resend');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = http.createServer(app);
@@ -59,13 +58,43 @@ io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, next);
 });
 
-// Rate Limiter pour la sécurité de l'authentification
-const authLimiter = rateLimit({
+// Rate Limiter Natif sans dépendance externe npm
+function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 15, message = "Trop de tentatives. Réessayez plus tard." }) {
+  const requests = new Map();
+
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of requests.entries()) {
+      if (now > data.resetTime) {
+        requests.delete(ip);
+      }
+    }
+  }, 5 * 60 * 1000);
+
+  return function (req, res, next) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+
+    let record = requests.get(ip);
+    if (!record || now > record.resetTime) {
+      record = { count: 1, resetTime: now + windowMs };
+      requests.set(ip, record);
+      return next();
+    }
+
+    record.count++;
+    if (record.count > max) {
+      return res.status(429).json({ error: message });
+    }
+
+    next();
+  };
+}
+
+const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 15,
-  message: "Trop de tentatives de connexion/inscription. Réessayez dans 15 minutes.",
-  standardHeaders: true,
-  legacyHeaders: false
+  message: "Trop de tentatives. Réessayez dans 15 minutes."
 });
 
 app.use('/login', authLimiter);
@@ -95,7 +124,7 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Helpers de sécurité et normalisation
+// Helpers de sécurité
 function normalizePseudo(value) {
   if (typeof value !== 'string') throw new Error('Pseudo invalide.');
   const pseudo = value.replace(/^@/, '').trim().toLowerCase();
@@ -205,7 +234,7 @@ function reloadGiftsCatalog() {
       console.log("✅ Catalogue cadeaux chargé en mémoire cache.");
     }
   } catch (err) {
-    console.error(" Erreur chargement gifts-catalog.json :", err);
+    console.error("Erreur chargement gifts-catalog.json :", err);
   }
 }
 reloadGiftsCatalog();
@@ -696,7 +725,6 @@ const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
 
-// Nettoyage automatique de la Map waitingUsers toutes les 5 minutes (Anti Fuite Mémoire)
 setInterval(() => {
   const maintenant = Date.now();
   for (const [cle, expiration] of waitingUsers.entries()) {

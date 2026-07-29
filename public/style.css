@@ -41,7 +41,7 @@ body {
 
 .hidden { display: none !important; }
 
-/* Stabilisation des barres de défilement (Anti Layout Shift) */
+/* Stabilisation des barres de défilement */
 .main-viewport, .sidebar, .gift-grid, .modal-box {
   scrollbar-gutter: stable;
 }
