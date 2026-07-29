@@ -51,7 +51,7 @@
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
       backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px;
     }
-    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: var(--shadow-card); }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-card); max-height: 90vh; overflow-y: auto; }
     .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 450px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-card); }
     .obs-link-box { background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .obs-url { font-size: 11px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
@@ -68,6 +68,23 @@
       border-color: var(--cyan); background: rgba(34, 229, 224, 0.08);
     }
     .style-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Grille de sélection des cadeaux TikTok */
+    .gift-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px;
+      max-height: 200px; overflow-y: auto; background: var(--ink); padding: 10px;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .gift-item {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px; text-align: center; cursor: pointer; transition: 0.2s;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .gift-item:hover, .gift-item.selected {
+      border-color: var(--cyan); background: rgba(34,229,224,0.12); box-shadow: 0 0 10px rgba(34,229,224,0.2);
+    }
+    .gift-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px; }
+    .gift-price { font-size: 11px; color: var(--gold); font-weight: bold; }
   </style>
 </head>
 <body>
@@ -124,7 +141,7 @@
               </div>
               <p>Inscriptions fermées après le timer, élimination progressive en direct.</p>
             </div>
-            <span class="click-hint">Personnaliser Style &amp; Lien OBS →</span>
+            <span class="click-hint">Personnaliser &amp; Télécommande →</span>
           </div>
 
           <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination Classique', '⚡')">
@@ -135,7 +152,7 @@
               </div>
               <p>Inscriptions continues en boucle avec option de rachat de place.</p>
             </div>
-            <span class="click-hint">Personnaliser Style &amp; Lien OBS →</span>
+            <span class="click-hint">Personnaliser &amp; Télécommande →</span>
           </div>
 
           <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
@@ -146,7 +163,7 @@
               </div>
               <p>Le chat devine un mot secret case par case avec validation automatique.</p>
             </div>
-            <span class="click-hint" style="color: var(--gold);">Personnaliser Style &amp; Configuration →</span>
+            <span class="click-hint" style="color: var(--gold);">Configurer &amp; Indices →</span>
           </div>
 
           <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
@@ -157,7 +174,7 @@
               </div>
               <p>Enchères en direct avec règles anti-snipe et détection des vouchs.</p>
             </div>
-            <span class="click-hint" style="color: var(--cyan);">Ouvrir la régie &amp; Style →</span>
+            <span class="click-hint" style="color: var(--cyan);">Ouvrir la régie →</span>
           </div>
 
         </div>
@@ -289,6 +306,10 @@
     let styleActuel = '1';
     let socket = null;
 
+    let selectedGiftImage = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
+    let selectedGiftPrice = 1;
+    let selectedGiftName = '';
+
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
@@ -329,34 +350,223 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'elimination' || type === 'elimination-boucle') {
+      if (type === 'elimination') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px;';
-        wrap1.innerHTML = '<h3>Configuration du jeu</h3><div style="margin-top:8px;"><label>Prix en pièces (Diamants)</label><input type="number" id="elim-cout" value="10" min="1"></div><button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim(\'' + type + '\')">🟢 Lancer la partie</button>';
+        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
         extraDiv.appendChild(wrap1);
+
+        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
+          window.allGiftsCache = finalGifts;
+          initElimPanel(finalGifts, type);
+        });
+
+        const wrap2 = document.createElement('div');
+        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
+        wrap2.innerHTML = `
+          <h3>2. Contrôles en direct</h3>
+          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer le massacre</button>
+          <button class="btn btn-secondary" onclick="resetElim('actionElimination')">🔄 Réinitialiser la grille</button>
+        `;
+        extraDiv.appendChild(wrap2);
+
+      } else if (type === 'elimination-boucle') {
+        const wrap1 = document.createElement('div');
+        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px;';
+        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
+        extraDiv.appendChild(wrap1);
+
+        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
+          window.allGiftsCache = finalGifts;
+          initElimBouclePanel(finalGifts);
+        });
+
+        const wrap2 = document.createElement('div');
+        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
+        wrap2.innerHTML = `
+          <h3>2. Contrôles en direct</h3>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'pause' })">⏸️ Pause</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'resume' })">▶️ Reprendre</button>
+          </div>
+          <button class="btn btn-danger" style="margin-top:5px;" onclick="resetElim('actionEliminationBoucle')">🔄 Réinitialiser la grille</button>
+        `;
+        extraDiv.appendChild(wrap2);
+
       } else if (type === 'encheres') {
         const link = document.createElement('a');
         link.href = `/encheres/${encodeURIComponent(pseudoGlobal)}`;
         link.className = 'btn btn-primary';
         link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block; margin-top: 15px;';
-        link.textContent = "Ouvrir la régie d'enchères →";
+        link.textContent = "Ouvrir le panneau d'enchères →";
         extraDiv.appendChild(link);
       } else if (type === 'coffre') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; display:flex; flex-direction:column; gap:10px;';
-        wrap1.innerHTML = '<div><label>Mot secret</label><input type="text" id="coffre-secret" value="777"></div><div><label>Récompense</label><input type="text" id="coffre-recompense" value="1 Abo Offert"></div><button class="btn btn-primary" onclick="lancerCoffre()">🟢 Lancer le coffre</button>';
+        wrap1.innerHTML = `
+          <h3>1. Configuration du coffre</h3>
+          <div><label>Mot secret</label><input type="text" id="coffre-secret" value="777"></div>
+          <div><label>Récompense</label><input type="text" id="coffre-recompense" value="1 Abo Offert"></div>
+          <button class="btn btn-primary" onclick="lancerCoffre()">🟢 Lancer le coffre</button>
+          <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <h3>2. Révélation d'indices</h3>
+            <button class="btn btn-secondary" onclick="devoilerCoffreHasard()">🎲 Révéler une case au hasard</button>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="coffre-index-input" min="1" placeholder="N° case (ex: 1)" style="flex:1;">
+              <button class="btn btn-secondary" onclick="devoilerCoffreIndex()">🎯 Révéler cette case</button>
+            </div>
+          </div>
+        `;
         extraDiv.appendChild(wrap1);
+      } else if (type === 'objectif') {
+        const fg1 = document.createElement('div');
+        fg1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; display:flex; flex-direction:column; gap:10px;';
+        fg1.innerHTML = `
+          <div><label>Métrique</label><select id="objectif-metrique-input"><option value="diamants">Pièces</option><option value="likes">Likes</option></select></div>
+          <div><label>Cible</label><input type="number" id="objectif-cible-input" value="1000"></div>
+          <button class="btn btn-primary" style="width:100%;" onclick="demarrerObjectif()">Lancer l'objectif</button>
+        `;
+        extraDiv.appendChild(fg1);
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
       mettreAJourLienModal();
     }
 
-    function lancerElim(type) {
-      const cout = document.getElementById('elim-cout').value;
-      const evt = type === 'elimination' ? 'configurerElimination' : 'configurerEliminationBoucle';
-      socket.emit(evt, { pseudo: pseudoGlobal, cout: Number(cout), tempsOuverture: 30 });
-      alert("Jeu lancé !");
+    function initElimPanel(giftsToDisplay, modeType) {
+      const wrap1 = document.querySelector('#modal-extra-action div');
+      if (!wrap1) return;
+      wrap1.innerHTML = `
+        <h3>1. Configuration du jeu</h3>
+        <div style="margin-bottom:8px;">
+          <label>Cadeau requis</label>
+          <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau (ex: Rose, Galaxy...)" oninput="filterGifts(this.value)" style="margin-bottom:8px;">
+          <div class="gift-grid" id="elim-gift-grid"></div>
+        </div>
+        <div style="margin-top:8px;">
+          <label>Ou prix manuel (Pièces)</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('${modeType}')">
+        </div>
+        <div style="margin-top:8px;">
+          <label>Temps d'ouverture (s)</label>
+          <input type="number" id="elim-open-time" value="30" min="5">
+        </div>
+        <div style="margin-top:8px;">
+          <label>Intervalle d'élimination (s)</label>
+          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Démarrer le jeu</button>
+      `;
+
+      if (giftsToDisplay[0]) {
+        selectedGiftImage = giftsToDisplay[0].image;
+        selectedGiftPrice = giftsToDisplay[0].diamond_count;
+        selectedGiftName = giftsToDisplay[0].name;
+      }
+      renderGiftGrid(giftsToDisplay, modeType);
+    }
+
+    function initElimBouclePanel(giftsToDisplay) {
+      const wrap1 = document.querySelector('#modal-extra-action div');
+      if (!wrap1) return;
+      wrap1.innerHTML = `
+        <h3>1. Configuration du jeu</h3>
+        <div style="margin-bottom:8px;">
+          <label>Cadeau requis</label>
+          <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau..." oninput="filterGifts(this.value)" style="margin-bottom:8px;">
+          <div class="gift-grid" id="elim-gift-grid"></div>
+        </div>
+        <div style="margin-top:8px;">
+          <label>Ou prix manuel (Pièces)</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('elimination-boucle')">
+        </div>
+        <div style="margin-top:8px;">
+          <label>Temps d'envoi (s)</label>
+          <input type="number" id="elim-open-time" value="30" min="5">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu</button>
+      `;
+
+      if (giftsToDisplay[0]) {
+        selectedGiftImage = giftsToDisplay[0].image;
+        selectedGiftPrice = giftsToDisplay[0].diamond_count;
+        selectedGiftName = giftsToDisplay[0].name;
+      }
+      renderGiftGrid(giftsToDisplay, 'elimination-boucle');
+    }
+
+    function renderGiftGrid(giftsToDisplay, modeType) {
+      const grid = document.getElementById('elim-gift-grid');
+      if (!grid) return;
+      grid.innerHTML = giftsToDisplay.map((g, i) => `
+        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}', '${modeType}')">
+          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+          <div class="gift-price">${g.diamond_count} 💎</div>
+          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
+        </div>
+      `).join('');
+    }
+
+    function filterGifts(query) {
+      if(!window.allGiftsCache) return;
+      const filtered = window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      renderGiftGrid(filtered, typeActuel);
+    }
+
+    function selectElimGift(imgUrl, price, idx, name, modeType) {
+      document.querySelectorAll('.gift-item').forEach(el => el.classList.remove('selected'));
+      const item = document.getElementById(`gift-item-${idx}`);
+      if(item) item.classList.add('selected');
+      document.getElementById('elim-cout').value = price;
+      selectedGiftImage = imgUrl;
+      selectedGiftPrice = price;
+      selectedGiftName = name || '';
+      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
+      else updateElimSettings();
+    }
+
+    function setManualGift(modeType) {
+      selectedGiftName = '';
+      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
+      else updateElimSettings();
+    }
+
+    function updateElimSettings() {
+      socket.emit('updateEliminationSettings', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        intervalle: document.getElementById('elim-interval') ? document.getElementById('elim-interval').value : 5, 
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+    }
+
+    function updateElimBoucleSettings() {
+      socket.emit('updateEliminationBoucleSettings', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+    }
+
+    function lancerElim() {
+      socket.emit('configurerElimination', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        intervalle: document.getElementById('elim-interval').value,
+        tempsOuverture: document.getElementById('elim-open-time').value,
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+      alert("Mode Élimination Fermée ouvert !");
+    }
+
+    function lancerElimBoucle() {
+      socket.emit('configurerEliminationBoucle', { 
+        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
+        tempsOuverture: document.getElementById('elim-open-time').value,
+        giftImage: selectedGiftImage, giftName: selectedGiftName
+      });
+      alert("Mode Élimination Classique ouvert !");
+    }
+
+    function resetElim(actionEvt) {
+      if(confirm('Vider la grille ?')) socket.emit(actionEvt, { pseudo: pseudoGlobal, action: 'reset' });
     }
 
     function lancerCoffre() {
@@ -364,6 +574,24 @@
       const recompense = document.getElementById('coffre-recompense').value;
       socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
       alert("Coffre-Fort configuré !");
+    }
+
+    function devoilerCoffreHasard() { socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal }); }
+    function devoilerCoffreIndex() {
+      const index = document.getElementById('coffre-index-input').value;
+      if (!index) { alert("Indique le numéro de la case."); return; }
+      socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index });
+      document.getElementById('coffre-index-input').value = '';
+    }
+
+    function demarrerObjectif() {
+      socket.emit('definirObjectif', { 
+        pseudo: pseudoGlobal, 
+        cible: document.getElementById('objectif-cible-input').value, 
+        metrique: document.getElementById('objectif-metrique-input').value, 
+        label: 'Objectif' 
+      });
+      alert("Objectif lancé !");
     }
 
     function fermerPersonnalisation() { document.getElementById('modal-overlay').style.display = 'none'; }
@@ -381,7 +609,7 @@
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
 
-    function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien OBS copié avec le style choisi !"); }
+    function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien OBS copié !"); }
     function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
     function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
     function sauvegarderProfil(e) { e.preventDefault(); fetch('/api/update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pseudo: document.getElementById('input-pseudo').value, apiKey: document.getElementById('input-apikey').value }) }).then(r => r.json()).then(d => { if (d.success) location.reload(); }); }

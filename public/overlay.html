@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TokOverlay - Multi-Styles</title>
+  <title>TokOverlay - Multi-Styles &amp; Multi-Widgets</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
@@ -86,6 +86,32 @@
     #objectif-barre-fond { width: 100%; height: 22px; background: #18181f; border: 1px solid #29283a; border-radius: 999px; overflow: hidden; }
     #objectif-barre-remplissage { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), var(--fuchsia)); transition: width 0.4s ease; }
     #objectif-texte { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f4f4f5; display: flex; justify-content: space-between; }
+
+    /* Coffre-Fort Panel Styles */
+    #coffre-panel {
+      width: 320px; background: var(--bg-dark); border: 2px solid var(--gold); border-radius: 20px;
+      padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(255, 190, 61, 0.2); display: none; flex-direction: column; gap: 14px;
+    }
+    .coffre-header { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+    .coffre-recompense { font-size: 12px; color: #a1a1aa; font-weight: 600; background: #18181f; padding: 6px 12px; border-radius: 8px; border: 1px solid #29283a; }
+    .coffre-cases-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+    .case-char {
+      width: 32px; height: 38px; background: #18181f; border: 2px solid #29283a; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; font-weight: 800; color: var(--gold); text-transform: uppercase;
+    }
+    .case-char.devoile { border-color: var(--gold); background: rgba(255, 190, 61, 0.1); color: #ffffff; }
+
+    /* Enchères Panel Styles */
+    #enchere-panel {
+      width: 300px; padding: 20px; border-radius: 18px; background: var(--bg-dark);
+      border: 1px solid #29283a; text-align: center; color: white; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: none;
+    }
+    #enchere-chrono { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 800; color: #ffffff; }
+    .carte-podium { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #18181f; border: 1px solid #29283a; width: 100%; margin-top: 6px; }
+    .carte-podium .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+    .carte-podium .nickname { font-size: 12px; font-weight: 700; color: #f4f4f5; }
+    .carte-podium .valeur { font-size: 11px; font-weight: 700; color: var(--cyan); }
   </style>
 </head>
 <body>
@@ -110,6 +136,23 @@
     </div>
   </div>
 
+  <!-- Panel Coffre-Fort -->
+  <div id="coffre-panel">
+    <div class="coffre-header">
+      <span class="coffre-icon" id="coffre-icon-etat">🔒</span>
+      <span id="coffre-titre-texte">Coffre-Fort Verrouillé</span>
+    </div>
+    <div class="coffre-recompense" id="coffre-recompense-texte">Récompense : --</div>
+    <div class="coffre-cases-grid" id="coffre-cases-grid"></div>
+  </div>
+
+  <!-- Panel Enchères -->
+  <div id="enchere-panel">
+    <div style="font-size:11px; font-weight:800; color:#a1a1aa; text-transform:uppercase; margin-bottom:4px;">Enchère en cours</div>
+    <div id="enchere-chrono">--</div>
+    <div id="enchere-classement" style="display:flex; flex-direction:column; gap:6px; margin-top:10px;"></div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const pathParts = window.location.pathname.split('/');
@@ -120,7 +163,6 @@
     const style = params.get('style') || '1';
     const isDemo = params.get('demo') === '1';
 
-    // Application dynamique du thème sur le body
     document.body.className = `style-${style}`;
 
     function creerCarteJoueur(user, rank, cle, emoji) {
@@ -178,6 +220,42 @@
       }
 
       socket.on(type === 'donateurs' ? 'updateTopGifters' : 'updateTopLikers', top3 => afficherClassementSimple(top3, type === 'donateurs' ? 'coins' : 'likes', type === 'donateurs' ? '💎 ' : '❤️ '));
+    }
+
+    if (type === 'coffre') {
+      const coffrePanel = document.getElementById('coffre-panel');
+      coffrePanel.style.display = 'flex';
+
+      socket.on('updateCoffre', coffre => {
+        if (!coffre) return;
+        const grid = document.getElementById('coffre-cases-grid');
+        grid.innerHTML = '';
+        coffre.caracteres.forEach(char => {
+          const div = document.createElement('div');
+          div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
+          div.textContent = char !== '_' ? char : '?';
+          grid.appendChild(div);
+        });
+        document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
+      });
+    }
+
+    if (type === 'encheres') {
+      const encherePanel = document.getElementById('enchere-panel');
+      encherePanel.style.display = 'block';
+
+      socket.on('updateEnchere', etat => {
+        if (!etat) return;
+        document.getElementById('enchere-chrono').textContent = Math.ceil(etat.tempsRestant / 1000) + 's';
+        const classEl = document.getElementById('enchere-classement');
+        classEl.innerHTML = '';
+        etat.classement.forEach((user, i) => {
+          const div = document.createElement('div');
+          div.className = 'carte-podium';
+          div.innerHTML = `<img class="avatar" src="${user.profilePictureUrl}"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span class="nickname">${user.nickname}</span><span class="valeur">${user.coins.toLocaleString()} 💎</span></div>`;
+          classEl.appendChild(div);
+        });
+      });
     }
 
     if (type === 'objectif') {
