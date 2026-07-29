@@ -10,38 +10,12 @@
   <style>
     body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
     .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
-
-    .header-card { padding: 24px; display: flex; justify-content: space-between; align-items: center; }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    p.subtitle { color: var(--text-lo); font-size: 13px; margin: 4px 0 0; }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-    .stat-title { font-size: 12px; font-weight: 600; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-value { font-size: 30px; font-weight: 700; color: var(--text-hi); }
-    .stat-subtext { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-
-    .live-feed-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
-    .live-feed-card h2 { font-size: 16px; display: flex; align-items: center; gap: 10px; }
-    .alert-box { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-size: 14px; color: var(--cyan); display: flex; align-items: center; gap: 12px; }
-
-    .historique-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
-    .historique-card { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .historique-card h2 { font-size: 14px; }
-    .historique-liste { display: flex; flex-direction: column; gap: 8px; }
-    .historique-item {
-      background: var(--ink); border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px;
-    }
-    .historique-item .ligne-haut { display: flex; justify-content: space-between; font-weight: 700; color: var(--text-hi); }
-    .historique-item .ligne-bas { color: var(--text-faint); font-size: 11px; }
-    .historique-vide { color: var(--text-faint); font-size: 12px; text-align: center; padding: 10px 0; }
   </style>
 </head>
 <body class="app-bg">
   <div class="container">
-    <div class="header-card card">
+    
+    <div class="header-card">
       <div class="header-left">
         <span class="live-dot"></span>
         <div>
@@ -52,47 +26,49 @@
       <a href="/choix.html" class="btn btn-secondary">← Retour au dashboard</a>
     </div>
 
-    <!-- Les blocs de stats (Pièces et Likes) -->
+    <!-- Blocs de statistiques -->
     <div class="stats-grid">
-      <div class="stat-card card">
+      <div class="stat-card">
         <span class="stat-title">Total Pièces (Gifts)</span>
         <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
-      <div class="stat-card card">
+      <div class="stat-card">
         <span class="stat-title">Total Likes</span>
         <span class="stat-value" id="stat-likes" style="color: var(--fuchsia);">0</span>
       </div>
     </div>
 
-    <div class="live-feed-card card">
+    <!-- Activité live en direct -->
+    <div class="live-feed-card">
       <h2>Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
       </div>
     </div>
 
+    <!-- Historique -->
     <div class="historique-grid">
-      <div class="historique-card card">
-        <h2>📅 Historique des lives</h2>
+      <div class="historique-card">
+        <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card card">
-        <h2>⚖️ Historique des enchères</h2>
+      <div class="historique-card">
+        <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
     </div>
+
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     let utilisateurGlobal = null;
-    
     const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
 
     socket.on('connect', () => {
@@ -105,7 +81,7 @@
       .then(res => res.json())
       .then(user => {
         if (!user || !user.pseudo) {
-          window.location.href = '/';
+          window.location.href = '/login.html';
           return;
         }
         utilisateurGlobal = user;
@@ -118,10 +94,10 @@
         }
 
         socket.on('updateTopGifters', top3 => {
-          if (top3[0]) afficherAlerte(`💎 ${top3[0].nickname} est en tête des donateurs avec ${top3[0].coins.toLocaleString()} pièces`);
+          if (top3 && top3[0]) afficherAlerte(`💎 ${top3[0].nickname} est en tête des donateurs avec ${top3[0].coins.toLocaleString()} pièces`);
         });
         socket.on('updateTopLikers', top3 => {
-          if (top3[0]) afficherAlerte(`❤️ ${top3[0].nickname} est en tête des likes avec ${top3[0].likes.toLocaleString()} likes`);
+          if (top3 && top3[0]) afficherAlerte(`❤️ ${top3[0].nickname} est en tête des likes avec ${top3[0].likes.toLocaleString()} likes`);
         });
         socket.on('erreurConnexion', msg => afficherAlerte(msg));
 
@@ -141,18 +117,16 @@
           .catch(() => {});
 
         socket.on('updateStatsLive', stats => actualiserStatsUI(stats));
-
         chargerHistorique(user.pseudo);
       })
       .catch(() => {
-        window.location.href = '/';
+        window.location.href = '/login.html';
       });
 
     function formaterDate(dateStr) {
       return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
-    // Fonction sécurisée anti-XSS pour injecter l'historique sans innerHTML
     function chargerHistorique(pseudo) {
       fetch('/api/historique/' + encodeURIComponent(pseudo))
         .then(res => res.json())
