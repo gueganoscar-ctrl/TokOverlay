@@ -3,20 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TokOverlay — La Suite d'Overlays & Games pour TikTok Live</title>
+  <title>TokOverlay — La Suite N°1 d'Overlays TikTok Live</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <style>
+    .landing-nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 72px;
+      background: rgba(16, 16, 22, 0.7); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; z-index: 1000;
+    }
+
+    .hero-section {
+      padding: 160px 20px 90px; text-align: center; max-width: 900px;
+      margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(37, 244, 238, 0.1); border: 1px solid rgba(37, 244, 238, 0.3);
+      color: var(--electric-cyan); padding: 7px 18px; border-radius: 99px;
+      font-size: 13px; font-weight: 700; box-shadow: var(--glow-cyan);
+    }
+
+    .hero-title {
+      font-size: 56px; line-height: 1.1; font-weight: 800;
+      background: linear-gradient(135deg, #FFFFFF 30%, var(--electric-cyan) 80%, var(--cyber-pink) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc { font-size: 18px; color: #8D8D99; max-width: 680px; line-height: 1.6; }
+
+    .hero-ctas { display: flex; gap: 16px; margin-top: 10px; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px; max-width: 1200px; margin: 60px auto; padding: 0 20px;
+    }
+
+    .cta-card {
+      max-width: 950px; margin: 60px auto 100px; padding: 48px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      background: linear-gradient(135deg, rgba(22, 22, 30, 0.8) 0%, rgba(35, 18, 55, 0.6) 100%);
+      border-color: rgba(125, 60, 255, 0.3); box-shadow: var(--glow-purple);
+    }
+  </style>
 </head>
 <body class="app-bg">
 
-  <!-- Top Navigation Landing -->
+  <!-- Top Glass Navigation -->
   <nav class="landing-nav">
-    <div class="brand-row">
+    <div class="brand-row" style="display:flex; align-items:center; gap:12px;">
       <span class="live-dot"></span>
       <span class="chroma-title" data-text="TokOverlay">TokOverlay</span>
     </div>
-    <div style="display: flex; gap: 12px; align-items: center;">
+    <div style="display: flex; gap: 14px; align-items: center;">
       <a href="/login.html" class="btn btn-secondary">Connexion</a>
       <a href="/login.html?tab=register" class="btn btn-primary">Créer un compte</a>
     </div>
@@ -25,73 +68,67 @@
   <!-- Hero Section -->
   <section class="hero-section">
     <div class="hero-badge">
-      <span class="live-dot"></span> 100% Gratuit &amp; Synchronisé au Chat TikTok Live
+      <span class="live-dot"></span> 100% Gratuit &amp; Synchronisé avec TikTok Live
     </div>
-    <h1 class="hero-title">Maximisez les dons et l'engagement sur vos TikTok Live</h1>
+    <h1 class="hero-title">Maximisez les dons et l'engagement de votre Live TikTok</h1>
     <p class="hero-desc">
-      Une suite complète d'overlays interactifs et de jeux en direct pour OBS &amp; TikTok Live Studio : Mode Élimination, Roue de la Fortune, Enchères, Jeu du Coffre-Fort et Top Donateurs.
+      Une suite complète d'overlays interactifs et de jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Roue de la Fortune, Enchères, Jeu du Coffre-Fort et Top Donateurs.
     </p>
     <div class="hero-ctas">
-      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 28px; font-size: 15px;">Démarrer gratuitement →</a>
+      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px;">Démarrer maintenant →</a>
       <a href="#features" class="btn btn-secondary" style="padding: 14px 24px; font-size: 15px;">Découvrir les Overlays</a>
     </div>
   </section>
 
-  <!-- Features Grid -->
-  <section id="features" class="features-section">
-    <div class="section-header" style="justify-content: center; margin-bottom: 40px; font-size: 14px;">Overlays &amp; Jeux Disponibles</div>
-    
-    <div class="features-grid">
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div>
-        <h3>Mode Élimination (Battle Royale)</h3>
-        <p>Grille interactive synchronisée aux cadeaux envoyés. 1 don = 1 place. Éliminations en série animées avec effets sonores et visuels.</p>
-      </div>
+  <!-- Features Bento Grid -->
+  <section id="features" class="features-grid">
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper" style="background: rgba(125, 60, 255, 0.15); border-color: rgba(125, 60, 255, 0.3);">💀</div>
+      <h3>Mode Élimination Battle Royale</h3>
+      <p>Grille interactive : 1 don = 1 place. Les joueurs s'éliminent automatiquement en direct jusqu'au duel final !</p>
+    </div>
 
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(34, 229, 224, 0.1); border-color: rgba(34, 229, 224, 0.3);">⚖️</div>
-        <h3>Panneau d'Enchères Live</h3>
-        <p>Proposez des récompenses ou gages aux enchères avec décompte automatique, règles Anti-Snipe et validation directe dans le chat.</p>
-      </div>
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper">⚖️</div>
+      <h3>Panneau d'Enchères Live</h3>
+      <p>Gérez des enchères en direct avec système Anti-Snipe, décompte visuel et confirmation automatique via le chat.</p>
+    </div>
 
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">🔐</div>
-        <h3>Jeu du Coffre-Fort</h3>
-        <p>Engagez votre chat ! Vos spectateurs doivent deviner un mot ou code secret masqué case par case avec détection automatique.</p>
-      </div>
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">🔐</div>
+      <h3>Jeu du Coffre-Fort</h3>
+      <p>Le chat devine un mot secret case par case. Révélation automatique dès que la réponse est envoyée.</p>
+    </div>
 
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(236, 72, 153, 0.1); border-color: rgba(236, 72, 153, 0.3);">🎡</div>
-        <h3>Roue de la Fortune</h3>
-        <p>Déclenchée automatiquement lors de la réception d'un cadeau défini ou d'un abonnement pour attribuer un lot ou un défi en direct.</p>
-      </div>
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper" style="background: rgba(254, 44, 85, 0.1); border-color: rgba(254, 44, 85, 0.3);">🎡</div>
+      <h3>Roue de la Fortune</h3>
+      <p>Déclenchée automatiquement aux abonnements ou cadeaux définis pour attribuer des lots et gages en direct.</p>
+    </div>
 
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.3);">💎</div>
-        <h3>Classements Donateurs &amp; Likers</h3>
-        <p>Affichage esthétique et dynamique du Top 3 Donateurs (Pièces) et Top Likers en temps réel sur votre écran de live.</p>
-      </div>
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper">💎</div>
+      <h3>Top Donateurs &amp; Likers</h3>
+      <p>Affichage esthétique et dynamique du classement de vos plus gros supporters pendant le live.</p>
+    </div>
 
-      <div class="feature-card card">
-        <div class="feature-icon" style="background: rgba(34, 211, 238, 0.1); border-color: rgba(34, 211, 238, 0.3);">🎯</div>
-        <h3>Objectifs &amp; Best Gift</h3>
-        <p>Barres de progression personnalisables (Objectif de Pièces ou Likes) et widget valorisant le plus gros cadeau du live.</p>
-      </div>
+    <div class="overlay-card glass-panel">
+      <div class="overlay-icon-wrapper" style="background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.3);">🎯</div>
+      <h3>Objectifs &amp; Best Gift</h3>
+      <p>Barre de progression vers vos objectifs de pièces/likes et mise en valeur du plus gros cadeau reçu.</p>
     </div>
   </section>
 
   <!-- CTA Banner -->
-  <section class="cta-banner card">
-    <h2>Prêt à dynamiser votre prochain Live TikTok ?</h2>
-    <p>Rejoignez les streamers qui utilisent TokOverlay. Configuration simple en moins de 2 minutes.</p>
-    <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 28px; font-size: 15px;">Créer mon compte streamer →</a>
+  <section class="cta-card glass-panel">
+    <h2 style="font-size: 32px;">Prêt à dynamiser votre prochain Live TikTok ?</h2>
+    <p style="color: #8D8D99; max-width: 550px;">Rejoignez les streamers qui utilisent TokOverlay. Configuration en moins de 2 minutes sur OBS.</p>
+    <a href="/login.html?tab=register" class="btn btn-cyber" style="padding: 14px 32px; font-size: 15px;">Créer mon compte streamer →</a>
   </section>
 
   <!-- Footer -->
-  <footer class="landing-footer">
-    <div>
-      <a href="/mentions-legales.html">Mentions Légales</a> &bull; &copy; 2026 TokOverlay
-    </div>
+  <footer style="text-align: center; padding: 40px; color: #55555F; font-size: 12px; border-top: 1px solid var(--glass-border);">
+    <a href="/mentions-legales.html" style="color: #8D8D99;">Mentions Légales</a> &bull; &copy; 2026 TokOverlay
   </footer>
 
 </body>

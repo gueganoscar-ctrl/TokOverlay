@@ -4,231 +4,349 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>TokOverlay - Tableau de bord</title>
+  <title>TokOverlay - Studio &amp; Bento Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--ink); margin: 0; }
-    
-    /* Top Navbar */
-    .top-navbar {
-      height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
-      flex-shrink: 0; z-index: 10;
-    }
-    .user-badge {
-      display: inline-flex; align-items: center; gap: 8px; background: var(--ink);
-      border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px;
-      font-size: 12px; font-weight: 600; color: var(--text-lo);
-    }
-    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
-    .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.5); }
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg-dark); }
 
-    /* Layout principal */
+    /* Top Glass Navbar */
+    .top-navbar {
+      height: 68px;
+      background: rgba(16, 16, 22, 0.75);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(10, 10, 15, 0.6); border: 1px solid var(--glass-border);
+      padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; color: #8D8D99;
+    }
+
     .app-layout { display: flex; flex: 1; overflow: hidden; }
 
-    /* Sidebar Latérale */
+    /* Glass Sidebar */
     .sidebar {
-      width: 250px; background: var(--surface); border-right: 1px solid var(--border);
-      padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+      width: 260px;
+      background: rgba(16, 16, 22, 0.6);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--glass-border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
       overflow-y: auto;
     }
-    .sidebar-section-label {
-      font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase;
-      letter-spacing: 1.2px; margin: 16px 0 6px 8px;
+
+    .sidebar-label {
+      font-size: 10px; font-weight: 800; color: #8D8D99; text-transform: uppercase;
+      letter-spacing: 1.2px; margin: 18px 0 6px 8px;
     }
-    .sidebar-section-label:first-child { margin-top: 0; }
+    .sidebar-label:first-child { margin-top: 0; }
+
     .sidebar-link {
-      padding: 10px 14px; border-radius: var(--r-sm); color: var(--text-lo);
+      padding: 11px 16px; border-radius: var(--r-md); color: #8D8D99;
       font-size: 13px; font-weight: 600; text-decoration: none; display: flex;
-      align-items: center; gap: 10px; transition: all 0.15s ease; cursor: pointer;
+      align-items: center; gap: 12px; transition: all 0.2s ease; cursor: pointer;
     }
-    .sidebar-link:hover, .sidebar-link.active { background: var(--surface-2); color: var(--text-hi); }
-    .sidebar-link.active { border-left: 3px solid var(--cyan); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(255, 255, 255, 0.06); color: #FFFFFF;
+    }
+    .sidebar-link.active {
+      border-left: 3px solid var(--electric-cyan);
+      background: linear-gradient(90deg, rgba(37, 244, 238, 0.1), transparent);
+    }
 
-    /* Zone de contenu principal */
-    .main-viewport { flex: 1; padding: 28px 36px; overflow-y: auto; display: flex; flex-direction: column; gap: 28px; }
+    /* Main Viewport & Bento Grid Area */
+    .main-viewport {
+      flex: 1;
+      padding: 28px 36px;
+      overflow-y: auto;
+      display: flex;
+      gap: 32px;
+    }
 
-    .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-    .widget-card { padding: 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; transition: transform 0.2s ease, border-color 0.2s ease; cursor: pointer; }
-    .widget-card:hover { border-color: var(--cyan); transform: translateY(-3px); }
-    .widget-top { display: flex; flex-direction: column; gap: 10px; }
-    .widget-icon-title { display: flex; align-items: center; gap: 12px; }
-    .widget-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
-    .widget-card h3 { font-size: 16px; margin: 0; }
-    .widget-card p { font-size: 13px; color: var(--text-lo); line-height: 1.4; margin: 0; }
-    .click-hint { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; }
+    .bento-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 12px; font-weight: 800; color: var(--electric-cyan);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::before {
+      content: ''; width: 4px; height: 14px; background: var(--cyber-pink); border-radius: 2px;
+    }
+
+    /* Right Preview Sidebar with 9:16 Canvas */
+    .preview-panel {
+      width: 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
 
     /* Modals */
-    #modal-overlay, #modal-profil, #modal-contact { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
-    .modal-box { background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); position: relative; max-height: 90vh; overflow-y: auto; }
-    .modal-content { background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 450px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; }
-    .modal-header h2 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
-    .close-btn { background: none; border: none; color: var(--text-lo); font-size: 20px; cursor: pointer; }
-    .close-btn:hover { color: white; }
-    .obs-link-box { background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .obs-url { font-size: 11px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
-    .gift-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; background: var(--ink); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
-    .gift-item { background: #1c1b26; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
-    .gift-item:hover, .gift-item.selected { border-color: var(--cyan); background: rgba(34,229,224,0.15); }
+    #modal-overlay, #modal-profil, #modal-contact {
+      display: none; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.85);
+      backdrop-filter: blur(12px); align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    }
+
+    .obs-link-box {
+      background: rgba(10, 10, 15, 0.8); border: 1px solid var(--glass-border-light);
+      border-radius: var(--r-md); padding: 12px 16px; display: flex;
+      align-items: center; justify-content: space-between; gap: 12px;
+    }
+
+    .obs-url {
+      font-size: 11px; color: #8D8D99; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; font-family: var(--font-mono);
+    }
+
+    .gift-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      max-height: 180px; overflow-y: auto; background: rgba(10, 10, 15, 0.6);
+      padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--glass-border);
+    }
+    .gift-item {
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);
+      border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: 0.2s;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .gift-item:hover, .gift-item.selected {
+      border-color: var(--electric-cyan); background: rgba(37, 244, 238, 0.15); box-shadow: var(--glow-cyan);
+    }
     .gift-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px; }
     .gift-price { font-size: 10px; color: var(--gold); font-weight: bold; }
   </style>
 </head>
-<body>
+<body class="app-bg">
 
-  <!-- Top Navbar -->
+  <!-- Top Glass Navbar -->
   <header class="top-navbar">
-    <div class="brand-row">
+    <div class="brand-row" style="display: flex; align-items: center; gap: 12px;">
       <span class="live-dot"></span>
       <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 20px;">TokOverlay</h1>
     </div>
 
     <div style="display: flex; align-items: center; gap: 16px;">
-      <div class="user-badge"><span class="dot offline" id="status-dot"></span><span id="user-pseudo-display">Connexion...</span></div>
-      <button class="btn btn-secondary" onclick="ouvrirContact()" style="font-size: 12px;">💡 Suggestion / Bug</button>
-      <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="font-size: 12px;">⚙️ Profil</button>
-      <a href="/logout" class="btn btn-danger" style="font-size: 12px;">Déconnexion</a>
+      <div class="user-badge">
+        <span class="dot offline" id="status-dot"></span>
+        <span id="user-pseudo-display">Connexion...</span>
+      </div>
+      <button class="btn btn-secondary" onclick="ouvrirContact()">💡 Idée / Bug</button>
+      <button class="btn btn-secondary" onclick="ouvrirModalProfil()">⚙️ Profil</button>
+      <a href="/logout" class="btn btn-danger">Déconnexion</a>
     </div>
   </header>
 
-  <!-- Main App Layout -->
+  <!-- App Layout -->
   <div class="app-layout">
-    
-    <!-- Sidebar -->
+
+    <!-- Glass Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-section-label">Overlays &amp; Jeux</div>
+      <div class="sidebar-label">Overlays &amp; Jeux</div>
       <a href="#section-jeux" class="sidebar-link active">🎮 Jeux Interactifs</a>
-      <a href="#section-widgets" class="sidebar-link">📊 Widgets &amp; Live</a>
+      <a href="#section-widgets" class="sidebar-link">📊 Overlays &amp; Live</a>
 
-      <div class="sidebar-section-label">Outils Streamer</div>
-      <a onclick="allerAuPanneauAdmin()" class="sidebar-link">⚙️ Admin Live Control</a>
+      <div class="sidebar-label">Régie Streamer</div>
+      <a onclick="allerAuPanneauAdmin()" class="sidebar-link">⚙️ Panneau Admin Live</a>
       <a onclick="allerAuxStatistiques()" class="sidebar-link">📈 Stats &amp; Historique</a>
-      <a onclick="ouvrirSimulateur()" class="sidebar-link" style="color: #ec4899;">🧪 Simulateur de Cadeaux</a>
+      <a onclick="ouvrirSimulateur()" class="sidebar-link" style="color: var(--cyber-pink);">🧪 Simulateur Cadeaux</a>
 
-      <div id="vip-menu-section" style="display:none; margin-top: 10px;">
-        <div class="sidebar-section-label">Super Admin</div>
-        <a onclick="ouvrirVIPOverlay()" class="sidebar-link" style="color: #00f2fe;">🌟 Overlay VIP</a>
-        <a onclick="ouvrirVIPRoom()" class="sidebar-link" style="color: #ffbe3d;">👑 VIP Room</a>
+      <div id="vip-menu-section" style="display:none;">
+        <div class="sidebar-label">Super Admin</div>
+        <a onclick="ouvrirVIPOverlay()" class="sidebar-link" style="color: var(--electric-cyan);">🌟 Overlay VIP</a>
+        <a onclick="ouvrirVIPRoom()" class="sidebar-link" style="color: var(--gold);">👑 VIP Room</a>
       </div>
     </aside>
 
-    <!-- Main Viewport -->
+    <!-- Main Viewport with Bento Grid -->
     <main class="main-viewport">
+      <div class="bento-container">
 
-      <!-- Section 1 : Jeux Interactifs -->
-      <div id="section-jeux">
-        <div class="section-header">Jeux Interactifs TikTok Live</div>
-        <div class="grid-widgets">
-          
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
-            <div class="widget-top">
-              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div><h3>Mode Élimination (Classique)</h3></div>
-              <p>Grille interactive : 1 don = X places. Élimination en série avec effets visuels jusqu'au duel final !</p>
-            </div>
-            <span class="click-hint" style="color: #c084fc;">Télécommande &amp; Lien OBS →</span>
+        <!-- Section 1 : Jeux Interactifs -->
+        <div id="section-jeux" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="section-title-row">
+            <div class="section-title">Jeux Interactifs TikTok Live</div>
           </div>
 
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination en Boucle (Battle Royale)', '⚡')" style="border-color: rgba(99, 102, 241, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #11112b 100%);">
-            <div class="widget-top">
-              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">⚡</div><h3>Mode Élimination (En Boucle)</h3></div>
-              <p>Inscriptions continues : 1 élimination par tour. Les joueurs éliminés peuvent racheter leur place !</p>
+          <div class="bento-grid">
+            <!-- Game 1: Elimination Classique -->
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')" style="border-color: rgba(125, 60, 255, 0.3); background: linear-gradient(135deg, rgba(22, 22, 30, 0.7) 0%, rgba(35, 18, 55, 0.5) 100%);">
+              <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div class="overlay-icon-wrapper" style="background: rgba(125, 60, 255, 0.15); border-color: rgba(125, 60, 255, 0.3);">💀</div>
+                  <h3>Mode Élimination (Classique)</h3>
+                </div>
+                <p>Grille interactive : 1 don = X places. Éliminations animées en direct jusqu'au duel final !</p>
+              </div>
+              <span class="click-hint" style="color: var(--deep-purple);">Télécommande &amp; Lien OBS →</span>
             </div>
-            <span class="click-hint" style="color: #818cf8;">Télécommande &amp; Lien OBS →</span>
-          </div>
 
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
-            <div class="widget-top">
-              <div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div>
-              <p>Le chat devine un mot ou chiffre secret masque case par case avec validation automatique dans le chat.</p>
+            <!-- Game 2: Elimination Boucle -->
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Battle Royale', '⚡')" style="border-color: rgba(37, 244, 238, 0.3); background: linear-gradient(135deg, rgba(22, 22, 30, 0.7) 0%, rgba(12, 40, 48, 0.5) 100%);">
+              <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div class="overlay-icon-wrapper">⚡</div>
+                  <h3>Mode Battle Royale (En Boucle)</h3>
+                </div>
+                <p>Inscriptions continues : 1 élimination par tour. Les joueurs peuvent racheter leur place !</p>
+              </div>
+              <span class="click-hint">Télécommande &amp; Lien OBS →</span>
             </div>
-            <span class="click-hint">Configurer &amp; Indices →</span>
-          </div>
 
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
-            <div class="widget-top">
-              <div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div>
-              <p>S'active automatiquement aux cadeaux définis ou abonnements pour offrir des lots ou gages.</p>
+            <!-- Game 3: Coffre-Fort -->
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
+              <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div class="overlay-icon-wrapper" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">🔐</div>
+                  <h3>Jeu du Coffre-Fort</h3>
+                </div>
+                <p>Le chat devine un mot ou code secret masqué case par case avec détection automatique du winner.</p>
+              </div>
+              <span class="click-hint" style="color: var(--gold);">Configurer &amp; Indices →</span>
             </div>
-            <span class="click-hint">Configurer Récompenses →</span>
-          </div>
 
+            <!-- Game 4: Roue de la Fortune -->
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
+              <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div class="overlay-icon-wrapper" style="background: rgba(254, 44, 85, 0.1); border-color: rgba(254, 44, 85, 0.3);">🎡</div>
+                  <h3>Roue de la Fortune</h3>
+                </div>
+                <p>S'active automatiquement aux cadeaux définis ou abonnements pour distribuer gages et récompenses.</p>
+              </div>
+              <span class="click-hint" style="color: var(--cyber-pink);">Configurer Récompenses →</span>
+            </div>
+          </div>
         </div>
+
+        <!-- Section 2 : Overlays & Live -->
+        <div id="section-widgets" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="section-title-row">
+            <div class="section-title">Overlays &amp; Suivi Live</div>
+          </div>
+
+          <div class="bento-grid">
+            <div class="bento-col-4 overlay-card glass-panel" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
+              <div><div class="overlay-icon-wrapper" style="margin-bottom:12px;">💎</div><h3>Top Donateurs</h3><p>Classement dynamique des spectateurs donateurs.</p></div>
+              <span class="click-hint">Lien OBS →</span>
+            </div>
+
+            <div class="bento-col-4 overlay-card glass-panel" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
+              <div><div class="overlay-icon-wrapper" style="background: rgba(254, 44, 85, 0.1); border-color: rgba(254, 44, 85, 0.3); margin-bottom:12px;">❤️</div><h3>Top Likers</h3><p>Classement des spectateurs tapoteurs d'écran.</p></div>
+              <span class="click-hint" style="color: var(--cyber-pink);">Lien OBS →</span>
+            </div>
+
+            <div class="bento-col-4 overlay-card glass-panel" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères', '⚖️')">
+              <div><div class="overlay-icon-wrapper" style="margin-bottom:12px;">⚖️</div><h3>Panneau d'Enchères</h3><p>Gérez vos enchères live avec règles anti-snipe.</p></div>
+              <span class="click-hint">Ouvrir la régie →</span>
+            </div>
+
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
+              <div><div class="overlay-icon-wrapper" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3); margin-bottom:12px;">👑</div><h3>Widget Best Gift</h3><p>Mettez en valeur le plus gros cadeau reçu pendant le live.</p></div>
+              <span class="click-hint" style="color: var(--gold);">Lien OBS →</span>
+            </div>
+
+            <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
+              <div><div class="overlay-icon-wrapper" style="margin-bottom:12px;">🎯</div><h3>Objectif de Live</h3><p>Barre de progression pour vos objectifs de pièces ou likes.</p></div>
+              <span class="click-hint">Lien OBS →</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Section 2 : Widgets & Live -->
-      <div id="section-widgets">
-        <div class="section-header">Overlays de Suivi &amp; Live</div>
-        <div class="grid-widgets">
+      <!-- Right 9:16 Canvas Phone Preview -->
+      <aside class="preview-panel">
+        <div style="font-size:11px; font-weight:800; color: var(--electric-cyan); text-transform:uppercase; letter-spacing:1px;">👁️ Aperçu smartphone 9:16</div>
+        
+        <div class="phone-canvas-container">
+          <div class="phone-notch"></div>
+          <div class="phone-bg-simulated"></div>
 
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
-            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">💎</div><h3>Top Pièces (Donateurs)</h3></div><p>Classement dynamique en temps réel des donateurs de votre live.</p></div>
-            <span class="click-hint">Personnaliser &amp; Lien →</span>
-          </div>
-
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
-            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">❤️</div><h3>Top Likers</h3></div><p>Classement des spectateurs qui tapotent l'écran pendant le live.</p></div>
-            <span class="click-hint">Personnaliser &amp; Lien →</span>
-          </div>
-
-          <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
-            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères &amp; Overlay</h3></div><p>Gérez vos enchères en direct avec système anti-snipe et vouchs.</p></div>
-            <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
-          </div>
-
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
-            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div><p>Affiche et met en valeur le plus gros cadeau reçu pendant la session.</p></div>
-            <span class="click-hint">Personnaliser &amp; Lien →</span>
-          </div>
-
-          <div class="widget-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
-            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎯</div><h3>Objectif de Live</h3></div><p>Barre de progression en temps réel pour vos objectifs de pièces ou likes.</p></div>
-            <span class="click-hint">Personnaliser &amp; Lien →</span>
-          </div>
-
-          <div class="widget-card card" onclick="allerAuPanneauAdmin()" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
-            <div class="widget-top">
-              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">⚙️</div><h3>Panneau Admin Live</h3></div>
-              <p>Visualisez votre chat en direct, vos alertes et vos événements en direct.</p>
+          <div class="phone-overlay-area">
+            <!-- Simulated Top Gift Overlay -->
+            <div style="background: rgba(16, 16, 22, 0.85); border: 1px solid var(--electric-cyan); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: bold; color: white;">👑 Best Gift</span>
+              <span style="font-size: 11px; color: var(--gold); font-weight: bold;">1000 💎</span>
             </div>
-            <span class="click-hint" style="color: #c084fc;">Ouvrir le panneau →</span>
+
+            <!-- Simulated Elimination Mini Grid -->
+            <div style="background: rgba(10, 10, 15, 0.8); border: 1px solid var(--deep-purple); border-radius: 12px; padding: 10px; height: 180px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-content: start;">
+              <div style="background: #231237; border-radius: 6px; height: 45px;"></div>
+              <div style="background: #231237; border-radius: 6px; height: 45px;"></div>
+              <div style="background: #231237; border-radius: 6px; height: 45px;"></div>
+              <div style="background: #231237; border-radius: 6px; height: 45px;"></div>
+              <div style="background: #231237; border-radius: 6px; height: 45px;"></div>
+            </div>
+
+            <!-- Simulated Live Chat Box -->
+            <div style="margin-top: auto; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border-radius: 10px; padding: 8px; font-size: 10px; color: #d4d4d8; display: flex; flex-direction: column; gap: 4px;">
+              <div><strong style="color: var(--electric-cyan);">@Alex:</strong> Trop fort le jeu ! 🔥</div>
+              <div><strong style="color: var(--cyber-pink);">@Sarah:</strong> A envoyé 1000 💎 !</div>
+            </div>
           </div>
-
         </div>
-      </div>
 
+        <button class="btn btn-secondary" style="width: 100%;" onclick="ouvrirSimulateur()">🧪 Ouvrir le simulateur live</button>
+      </aside>
     </main>
   </div>
 
-  <!-- Modal Configuration & Lien OBS -->
+  <!-- Modal Configuration & Link -->
   <div id="modal-overlay">
-    <div class="modal-box">
-      <div class="modal-header">
+    <div class="modal-box glass-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
         <h2 id="modal-title">⚙️ Personnaliser l'overlay</h2>
         <button class="close-btn" onclick="fermerPersonnalisation()">✕</button>
       </div>
-      <div class="modal-link-section" style="display:flex; flex-direction:column; gap:8px;">
-        <span style="font-size:11px; font-weight:700; color:var(--text-lo); text-transform:uppercase;">Lien OBS à copier :</span>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <label>Lien navigateur OBS :</label>
         <div class="obs-link-box">
           <span class="obs-url" id="modal-obs-url">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="copierLienModal()">Copier</button>
+          <button class="btn btn-primary" style="padding: 6px 14px; font-size: 11px;" onclick="copierLienModal()">Copier</button>
         </div>
-        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline;">👁️ Aperçu (démo)</a>
+        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline;">👁️ Voir la démo</a>
       </div>
+
       <div id="modal-extra-action"></div>
     </div>
   </div>
 
   <!-- Modal Profil -->
   <div id="modal-profil">
-    <div class="modal-content">
-      <div class="modal-header"><h2>Modifier vos accès</h2><button class="close-btn" onclick="fermerModalProfil()">✕</button></div>
+    <div class="modal-content glass-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Modifier vos accès</h2>
+        <button class="close-btn" onclick="fermerModalProfil()">✕</button>
+      </div>
       <form id="form-profil" onsubmit="sauvegarderProfil(event)" style="display:flex; flex-direction:column; gap:12px;">
-        <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required></div>
-        <div class="form-group"><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle"></div>
+        <div><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required></div>
+        <div><label>Clé API EulerStream</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
           <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
@@ -237,13 +355,22 @@
     </div>
   </div>
 
-  <!-- Modal Contact / Suggestions -->
+  <!-- Modal Suggestion -->
   <div id="modal-contact">
-    <div class="modal-content">
-      <div class="modal-header"><h2>💡 Suggestion ou Bug</h2><button class="close-btn" onclick="fermerContact()">✕</button></div>
+    <div class="modal-content glass-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>💡 Suggestion ou Bug</h2>
+        <button class="close-btn" onclick="fermerContact()">✕</button>
+      </div>
       <form id="form-contact" onsubmit="envoyerSuggestion(event)" style="display:flex; flex-direction:column; gap:12px;">
-        <div class="form-group"><label>Type</label><select id="contact-type" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"><option value="Suggestion">💡 Suggestion</option><option value="Bug">🐛 Signalement de bug</option></select></div>
-        <div class="form-group"><label>Votre message</label><textarea id="contact-message" required rows="4" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; font-family:inherit;"></textarea></div>
+        <div>
+          <label>Sujet</label>
+          <select id="contact-type">
+            <option value="Suggestion">💡 Suggestion d'overlay / jeu</option>
+            <option value="Bug">🐛 Signalement de bug</option>
+          </select>
+        </div>
+        <div><label>Message</label><textarea id="contact-message" required rows="4"></textarea></div>
         <div style="display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn btn-secondary" onclick="fermerContact()">Annuler</button>
           <button type="submit" class="btn btn-primary">Envoyer</button>
@@ -259,10 +386,6 @@
     let baseUrl = window.location.origin;
     let typeActuel = '';
     let socket = null;
-
-    let selectedGiftImage = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
-    let selectedGiftPrice = 1;
-    let selectedGiftName = '';
 
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
@@ -298,117 +421,50 @@
 
       if (type === 'elimination' || type === 'elimination-boucle') {
         const wrap1 = document.createElement('div');
-        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
+        wrap1.style.cssText = 'border-top: 1px solid var(--glass-border); padding-top: 15px; margin-top: 10px;';
+        wrap1.innerHTML = '<h3>Configuration du jeu</h3><div style="margin-top:8px;"><label>Prix en pièces (Diamants)</label><input type="number" id="elim-cout" value="10" min="1"></div><button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim(\'' + type + '\')">🟢 Lancer la partie</button>';
         extraDiv.appendChild(wrap1);
-
-        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
-          window.allGiftsCache = finalGifts;
-          if (type === 'elimination') initElimPanel(finalGifts, type);
-          else initElimBouclePanel(finalGifts);
-        });
-
-        const wrap2 = document.createElement('div');
-        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
-        if (type === 'elimination') {
-          wrap2.innerHTML = `
-            <h3>2. Contrôles en direct</h3>
-            <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer le massacre</button>
-            <button class="btn btn-secondary" onclick="resetElim('actionElimination')">🔄 Réinitialiser la grille</button>
-          `;
-        } else {
-          wrap2.innerHTML = `
-            <h3>2. Contrôles en direct</h3>
-            <div style="display: flex; gap: 10px;">
-              <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'pause' })">⏸️ Pause</button>
-              <button class="btn btn-primary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'resume' })">▶️ Reprendre</button>
-            </div>
-            <button class="btn btn-danger" style="margin-top:5px;" onclick="resetElim('actionEliminationBoucle')">🔄 Réinitialiser la grille</button>
-          `;
-        }
-        extraDiv.appendChild(wrap2);
-
       } else if (type === 'encheres') {
         const link = document.createElement('a');
         link.href = `/encheres/${encodeURIComponent(pseudoGlobal)}`;
         link.className = 'btn btn-primary';
-        link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block; margin-top: 10px;';
-        link.textContent = "Ouvrir le panneau d'enchères →";
+        link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block; margin-top: 15px;';
+        link.textContent = "Ouvrir la régie d'enchères →";
         extraDiv.appendChild(link);
-      } else if (type === 'roue') {
-        const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrapper.innerHTML = `
-          <h3>Configuration de la Roue</h3>
-          <select id="roue-mode-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:10px;">
-            <option value="gifts">🎁 Un Cadeau Spécifique</option>
-            <option value="subs">⭐ Les Abonnements (Subs)</option>
-          </select>
-          <label>Cout minimal (Pièces)</label>
-          <input type="number" id="roue-cout-input" value="10" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:12px;">
-          <button class="btn btn-primary" style="width:100%;" onclick="sauvegarderRoue()">Enregistrer la Roue</button>
-        `;
-        extraDiv.appendChild(wrapper);
+      } else if (type === 'coffre') {
+        const wrap1 = document.createElement('div');
+        wrap1.style.cssText = 'border-top: 1px solid var(--glass-border); padding-top: 15px; margin-top: 10px; display:flex; flex-direction:column; gap:10px;';
+        wrap1.innerHTML = '<div><label>Mot secret</label><input type="text" id="coffre-secret" value="777"></div><div><label>Récompense</label><input type="text" id="coffre-recompense" value="1 Abo Offert"></div><button class="btn btn-primary" onclick="lancerCoffre()">🟢 Lancer le coffre</button>';
+        extraDiv.appendChild(wrap1);
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
       mettreAJourLienModal();
     }
 
-    function sauvegarderRoue() {
-      const mode = document.getElementById('roue-mode-input').value;
-      const cout = document.getElementById('roue-cout-input').value;
-      socket.emit('configurerRoue', { pseudo: pseudoGlobal, mode, cout: Number(cout) });
-      alert("Roue enregistrée !");
+    function lancerElim(type) {
+      const cout = document.getElementById('elim-cout').value;
+      const evt = type === 'elimination' ? 'configurerElimination' : 'configurerEliminationBoucle';
+      socket.emit(evt, { pseudo: pseudoGlobal, cout: Number(cout), tempsOuverture: 30 });
+      alert("Jeu lancé !");
     }
 
-    function initElimPanel(giftsToDisplay, modeType) {
-      const wrap1 = document.querySelector('#modal-extra-action div');
-      if (!wrap1) return;
-      wrap1.innerHTML = `
-        <div class="form-group">
-          <label>Cadeau requis</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-        </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Démarrer le jeu</button>
-      `;
-    }
-
-    function initElimBouclePanel(giftsToDisplay) {
-      const wrap1 = document.querySelector('#modal-extra-action div');
-      if (!wrap1) return;
-      wrap1.innerHTML = `
-        <div class="form-group">
-          <label>Cadeau requis</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-        </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu</button>
-      `;
-    }
-
-    function lancerElim() {
-      socket.emit('configurerElimination', { pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, tempsOuverture: 30, intervalle: 5 });
-      alert("Mode Élimination Classique démarré !");
-    }
-
-    function lancerElimBoucle() {
-      socket.emit('configurerEliminationBoucle', { pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, tempsOuverture: 30 });
-      alert("Mode Élimination en Boucle démarré !");
-    }
-
-    function resetElim(actionEvt) {
-      if(confirm('Vider la grille ?')) socket.emit(actionEvt, { pseudo: pseudoGlobal, action: 'reset' });
+    function lancerCoffre() {
+      const secret = document.getElementById('coffre-secret').value;
+      const recompense = document.getElementById('coffre-recompense').value;
+      socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret, recompense });
+      alert("Coffre-Fort configuré !");
     }
 
     function fermerPersonnalisation() { document.getElementById('modal-overlay').style.display = 'none'; }
     function mettreAJourLienModal() {
-      let lien = '';
+      let lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       if (typeActuel === 'elimination') lien = `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
-      else if (typeActuel === 'elimination-boucle') lien = `${baseUrl}/elimination-boucle/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
-      else lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
+      if (typeActuel === 'elimination-boucle') lien = `${baseUrl}/elimination-boucle/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
+
     function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien OBS copié !"); }
     function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
     function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
