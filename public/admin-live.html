@@ -23,6 +23,24 @@
       gap: 24px;
     }
 
+    .header-card {
+      background: #11141d;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -32,8 +50,8 @@
     @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
 
     .stat-card {
-      background: var(--surface, #11141d);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      background: #11141d;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
       padding: 24px !important;
       display: flex !important;
@@ -65,6 +83,30 @@
       display: block;
     }
 
+    .live-feed-card {
+      background: #11141d;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .alert-box {
+      background: #07090e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13px;
+      color: #22e5e0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .historique-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -74,21 +116,23 @@
     @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
 
     .historique-card {
-      background: var(--surface, #11141d);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      background: #11141d;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .historique-card h2 { font-size: 15px; font-weight: 700; }
     .historique-liste { display: flex; flex-direction: column; gap: 10px; }
 
+    /* Fix strict de la mise en page de chaque élément de l'historique */
     .historique-item {
-      background: #161a26 !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      background: #181c28 !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
       border-radius: 10px !important;
       padding: 12px 16px !important;
       display: flex !important;
@@ -106,27 +150,27 @@
     }
 
     .historique-item .stat-stats {
-      font-weight: 700;
-      color: #ffffff;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-weight: 700 !important;
+      color: #ffffff !important;
+      font-size: 13px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
     }
 
     .historique-item .stat-date {
       margin-left: auto !important;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: #9ca3af;
-      font-weight: 600;
-      white-space: nowrap;
-      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 11px !important;
+      color: #9ca3af !important;
+      font-weight: 600 !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
 
     .historique-item .ligne-bas {
-      color: #9ca3af;
-      font-size: 11px;
+      color: #9ca3af !important;
+      font-size: 11px !important;
     }
 
     .historique-vide {
@@ -141,7 +185,7 @@
   <div class="container">
     
     <!-- En-tête -->
-    <div class="header-card card">
+    <div class="header-card">
       <div class="header-left">
         <span class="live-dot"></span>
         <div>
@@ -156,18 +200,18 @@
     <div class="stats-grid">
       <div class="stat-card">
         <span class="stat-title">Total Pièces (Gifts)</span>
-        <span class="stat-value" id="stat-diamonds" style="color: var(--gold, #ffbe3d);">0</span>
+        <span class="stat-value" id="stat-diamonds" style="color: #ffbe3d;">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
       <div class="stat-card">
         <span class="stat-title">Total Likes</span>
-        <span class="stat-value" id="stat-likes" style="color: var(--cyan, #22e5e0);">0</span>
+        <span class="stat-value" id="stat-likes" style="color: #22e5e0;">0</span>
         <span class="stat-subtext">Activité en direct du flux</span>
       </div>
     </div>
 
     <!-- Activité live en direct -->
-    <div class="live-feed-card card">
+    <div class="live-feed-card">
       <h2 style="font-size: 16px;">⚡ Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
@@ -201,7 +245,6 @@
     socket.on('connect', () => {
       if (utilisateurGlobal && utilisateurGlobal.pseudo) {
         socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, token: utilisateurGlobal.overlayToken });
-        chargerHistorique(utilisateurGlobal.pseudo);
       }
     });
 
