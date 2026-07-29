@@ -321,7 +321,7 @@
 
   <div id="roue-container">
     <div class="text-cyan-400 font-bold text-lg uppercase tracking-wider mb-2" style="color: var(--cyan);">🎡 Roue de la Fortune</div>
-    <div id="roue-gagnant" class="text-sm text-gray-300 mb-4">Un don a déclenché la roue !</div>
+    <div id="roue-gagnant" class="text-sm text-gray-300 mb-4">Un déclenchement a activé la roue !</div>
     <div id="roue-resultat" class="text-3xl font-extrabold text-pink-400 bg-gray-900 border border-gray-800 py-4 px-8 rounded-xl shadow-inner" style="color: var(--fuchsia); background: #18181f; border: 1px solid #29283a;">
       Tourne... 🎲
     </div>
@@ -457,27 +457,32 @@
 
       if (isDemo) {
         setTimeout(() => {
-          animerRoue("Utilisateur Test", "Gage exceptionnel !");
+          animerRoue("Utilisateur Test", "Gage exceptionnel !", ["Gage 1", "VIP", "100 Diamants", "Gage exceptionnel !"]);
         }, 1000);
       }
 
       socket.on('tournerRoue', (data) => {
-        animerRoue(data.gagnant, data.resultat);
+        animerRoue(data.gagnant, data.resultat, data.allOptions);
       });
     }
 
-    function animerRoue(gagnant, resultatFinal) {
+    function animerRoue(gagnant, resultatFinal, optionsDisponibles = []) {
       const container = document.getElementById('roue-container');
       const boxGagnant = document.getElementById('roue-gagnant');
       const boxResultat = document.getElementById('roue-resultat');
       
+      // Fallback au cas où aucune option ne serait transmise
+      if (!optionsDisponibles || optionsDisponibles.length === 0) {
+          optionsDisponibles = [resultatFinal, "Rien", "Autre chose"];
+      }
+
       container.style.display = 'block';
-      boxGagnant.textContent = `Cadeau reçu de ${gagnant} !`;
+      boxGagnant.textContent = `La roue tourne pour ${gagnant} !`;
       
       let counter = 0;
-      const optionsSimulees = ["Gage 1", "100 Diamants", "Rien", "Boost x2", "Chanson", "VIP"];
       const interval = setInterval(() => {
-        boxResultat.textContent = optionsSimulees[Math.floor(Math.random() * optionsSimulees.length)];
+        // Animation parmi les vraies récompenses configurées
+        boxResultat.textContent = optionsDisponibles[Math.floor(Math.random() * optionsDisponibles.length)];
         counter++;
         if (counter > 15) {
           clearInterval(interval);

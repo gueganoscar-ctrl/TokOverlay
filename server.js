@@ -670,6 +670,19 @@ const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
 
+// Fonction utilitaire pour le tirage pondéré de la Roue de la Fortune
+function tirerRecompenseRoue(options) {
+  if (!options || options.length === 0) return "Rien";
+  const totalProb = options.reduce((sum, opt) => sum + (Number(opt.prob) || 0), 0);
+  let random = Math.random() * totalProb;
+  let current = 0;
+  for (const opt of options) {
+    current += (Number(opt.prob) || 0);
+    if (random <= current) return opt.name;
+  }
+  return options[options.length - 1].name;
+}
+
 function arreterEcouteLive(pseudo, data, reason) {
   if (!data || data.closed) return;
   data.closed = true;
@@ -729,7 +742,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     derniereGagnantId: null, 
     vouchFait: false, 
     objectif: null,
-    roue: { active: false, options: ["Gage 1", "Gage 2", "100 Diamants", "Rien", "Boost x2"], montantMin: 10 },
+    roue: { active: true, mode: 'gifts', cout: 10, giftName: '', options: [{name: "Gage 1", prob: 50}, {name: "100 Diamants", prob: 50}] },
     coffre: { actif: false, secret: '', devoiles: [], recompense: '', gagnant: null, dernierMessageGagnant: '' },
     pendingUpdates: { likers: false, gifters: false, stats: false, objectif: false }
   };
@@ -787,6 +800,18 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
   });
 
+  connection.on('subscribe', (d = {}) => {
+    if (data.closed) return;
+    const user = d.user && typeof d.user === 'object' ? d.user : {};
+    const nickname = safeText(user.nickname || d.nickname, 'Anonyme');
+
+    if (data.roue && data.roue.mode === 'subs') {
+      const optionGagnee = tirerRecompenseRoue(data.roue.options);
+      const optionsPourOverlay = data.roue.options.map(o => o.name);
+      io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee, allOptions: optionsPourOverlay });
+    }
+  });
+
   connection.on('gift', (d = {}) => {
     if (data.closed) return;
     if (d.gift?.type === 1 && !d.repeatEnd) return;
@@ -824,10 +849,12 @@ function demarrerEcouteLive(pseudo, apiKey) {
     
     traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces);
 
-    const seuilRoue = data.roue?.montantMin ?? 10;
-    if (totalPieces >= seuilRoue && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
-      const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-      io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee });
+    if (data.roue && data.roue.mode === 'gifts' && totalPieces >= (data.roue.cout || 1)) {
+      if (!data.roue.giftName || giftName === data.roue.giftName.toLowerCase()) {
+        const optionGagnee = tirerRecompenseRoue(data.roue.options);
+        const optionsPourOverlay = data.roue.options.map(o => o.name);
+        io.to(`streamer:${pseudo}`).emit('tournerRoue', { gagnant: nickname, resultat: optionGagnee, allOptions: optionsPourOverlay });
+      }
     }
     
     // Mode Élimination Classique
@@ -1600,20 +1627,23 @@ io.on('connection', socket => {
 
   socket.on('configurerRoue', (payload = {}) => {
     try {
-      const { pseudo, options, montantMin } = payload;
+      const { pseudo, mode, cout, giftImage, giftName, options } = payload;
       const user = socket.request.session?.user;
       const pseudoNettoye = normalizePseudo(pseudo);
       if (!canManage(user, pseudoNettoye)) return;
+      
       const data = connexionsActives[pseudoNettoye];
       if (data) {
+        data.roue.mode = mode || 'gifts';
+        data.roue.cout = positiveInteger(cout, 1);
+        data.roue.giftImage = safeText(giftImage, '');
+        data.roue.giftName = safeText(giftName, '');
+        
         if (Array.isArray(options)) {
-          data.roue.options = options
-            .slice(0, 20)
-            .map(opt => safeText(opt).slice(0, 80))
-            .filter(Boolean);
-        }
-        if (montantMin !== undefined) {
-          data.roue.montantMin = positiveInteger(montantMin, 1);
+          data.roue.options = options.map(opt => ({
+            name: safeText(opt.name).slice(0, 80),
+            prob: positiveInteger(opt.prob, 10)
+          })).filter(o => o.name !== '');
         }
       }
     } catch {}
@@ -1627,8 +1657,9 @@ io.on('connection', socket => {
       if (!canManage(user, pseudoNettoye)) return;
       const data = connexionsActives[pseudoNettoye];
       if (data && data.roue && Array.isArray(data.roue.options) && data.roue.options.length > 0) {
-        const optionGagnee = data.roue.options[Math.floor(Math.random() * data.roue.options.length)];
-        io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee });
+        const optionGagnee = tirerRecompenseRoue(data.roue.options);
+        const optionsPourOverlay = data.roue.options.map(o => o.name);
+        io.to(`streamer:${pseudoNettoye}`).emit('tournerRoue', { gagnant: "Test Admin", resultat: optionGagnee, allOptions: optionsPourOverlay });
       }
     } catch {}
   });

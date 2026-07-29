@@ -314,8 +314,41 @@
       } else if (type === 'roue') {
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrapper.innerHTML = '<h3>Configuration de la Roue</h3><div class="form-group"><label>Options</label><input type="text" id="roue-options-input" value="Gage 1, Gage 2" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"></div><button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="sauvegarderRoue()">Enregistrer</button>';
+        
+        wrapper.innerHTML = `
+          <h3>1. Déclencheur</h3>
+          <select id="roue-mode-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:10px;" onchange="toggleRoueMode()">
+            <option value="gifts">🎁 Un Cadeau Spécifique</option>
+            <option value="subs">⭐ Les Abonnements (Subs)</option>
+          </select>
+          
+          <div id="roue-gift-section" class="form-group">
+            <label>Choisis le cadeau déclencheur</label>
+            <input type="text" id="roue-gift-search" placeholder="🔍 Rechercher un cadeau..." oninput="filterRoueGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%; margin-bottom:8px;">
+            <div class="gift-grid" id="roue-gift-grid"></div>
+            <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
+            <input type="number" id="roue-cout-input" value="10" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          </div>
+
+          <h3 style="margin-top:20px;">2. Récompenses & Probabilités (%)</h3>
+          <div id="roue-rewards-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="addRoueReward('', 10)">➕ Ajouter une récompense</button>
+
+          <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="sauvegarderRoue()">Enregistrer la Roue</button>
+        `;
         extraDiv.appendChild(wrapper);
+
+        window.roueRewardsList = [{name: 'Gage 1', prob: 50}, {name: '100 Diamants', prob: 50}];
+        window.selectedRoueGiftImage = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
+        window.selectedRoueGiftName = '';
+        window.selectedRoueGiftPrice = 10;
+
+        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
+          window.allGiftsCache = finalGifts;
+          renderRoueGiftGrid(finalGifts);
+        });
+
+        renderRoueRewards();
       } else if (type === 'objectif') {
         const fg1 = document.createElement('div');
         fg1.className = 'form-group';
@@ -349,6 +382,74 @@
 
       document.getElementById('modal-overlay').style.display = 'flex';
       mettreAJourLienModal();
+    }
+
+    function toggleRoueMode() {
+      const mode = document.getElementById('roue-mode-input').value;
+      document.getElementById('roue-gift-section').style.display = (mode === 'gifts') ? 'flex' : 'none';
+    }
+
+    function renderRoueGiftGrid(gifts) {
+      const grid = document.getElementById('roue-gift-grid');
+      if (!grid) return;
+      grid.innerHTML = gifts.map((g, i) => `
+        <div class="gift-item ${i===0?'selected':''}" id="roue-gift-${i}" onclick="selectRoueGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}')">
+          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+          <div class="gift-price">${g.diamond_count} 💎</div>
+          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
+        </div>
+      `).join('');
+      if(gifts.length > 0 && !window.selectedRoueGiftName) selectRoueGift(gifts[0].image, gifts[0].diamond_count, 0, gifts[0].name);
+    }
+
+    function filterRoueGifts(query) {
+      if(!window.allGiftsCache) return;
+      renderRoueGiftGrid(window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase())));
+    }
+
+    function selectRoueGift(img, price, idx, name) {
+      document.querySelectorAll('#roue-gift-grid .gift-item').forEach(el => el.classList.remove('selected'));
+      const item = document.getElementById(`roue-gift-${idx}`);
+      if(item) item.classList.add('selected');
+      document.getElementById('roue-cout-input').value = price;
+      window.selectedRoueGiftImage = img;
+      window.selectedRoueGiftPrice = price;
+      window.selectedRoueGiftName = name;
+    }
+
+    function renderRoueRewards() {
+      const container = document.getElementById('roue-rewards-container');
+      container.innerHTML = window.roueRewardsList.map((r, i) => `
+        <div style="display:flex; gap:8px;">
+          <input type="text" value="${r.name}" onchange="window.roueRewardsList[${i}].name=this.value" placeholder="Nom du lot" style="flex:2; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
+          <input type="number" value="${r.prob}" onchange="window.roueRewardsList[${i}].prob=Number(this.value)" placeholder="%" style="flex:1; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
+          <button class="btn btn-danger" onclick="removeRoueReward(${i})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function addRoueReward(name, prob) {
+      window.roueRewardsList.push({name, prob});
+      renderRoueRewards();
+    }
+
+    function removeRoueReward(index) {
+      window.roueRewardsList.splice(index, 1);
+      renderRoueRewards();
+    }
+
+    function sauvegarderRoue() {
+      const mode = document.getElementById('roue-mode-input').value;
+      const cout = document.getElementById('roue-cout-input') ? document.getElementById('roue-cout-input').value : 10;
+      socket.emit('configurerRoue', { 
+        pseudo: pseudoGlobal, 
+        mode,
+        cout: Number(cout),
+        giftImage: window.selectedRoueGiftImage,
+        giftName: window.selectedRoueGiftName,
+        options: window.roueRewardsList
+      }); 
+      alert("Roue enregistrée avec succès !"); 
     }
 
     window.initElimPanel = function(giftsToDisplay, modeType) {
@@ -506,7 +607,6 @@
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
     function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien copié !"); }
-    function sauvegarderRoue() { socket.emit('configurerRoue', { pseudo: pseudoGlobal, options: document.getElementById('roue-options-input').value.split(','), montantMin: 10 }); alert("Roue enregistrée !"); }
     function demarrerObjectif() { socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible: document.getElementById('objectif-cible-input').value, metrique: document.getElementById('objectif-metrique-input').value, label: 'Objectif' }); alert("Objectif lancé !"); }
     function lancerCoffreFort() { socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret: document.getElementById('coffre-secret-input').value, recompense: document.getElementById('coffre-recompense-input').value }); alert("Coffre lancé !"); }
     function devoilerCoffreHasard() { socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal }); }
