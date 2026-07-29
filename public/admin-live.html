@@ -15,11 +15,11 @@
 <body class="app-bg">
   <div class="container">
     
-    <div class="header-card glass-panel">
+    <div class="header-card card">
       <div class="header-left">
         <span class="live-dot"></span>
         <div>
-          <h1 style="font-size: 24px;">Panneau Admin Live</h1>
+          <h1 style="font-size: 22px;">Panneau Admin Live</h1>
           <p class="subtitle" id="user-info">Chargement de vos statistiques...</p>
         </div>
       </div>
@@ -28,19 +28,19 @@
 
     <!-- Blocs de statistiques -->
     <div class="stats-grid">
-      <div class="stat-card glass-panel">
+      <div class="stat-card card">
         <span class="stat-title">Total Pièces (Gifts)</span>
         <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
-      <div class="stat-card glass-panel">
+      <div class="stat-card card">
         <span class="stat-title">Total Likes</span>
-        <span class="stat-value" id="stat-likes" style="color: var(--fuchsia);">0</span>
+        <span class="stat-value" id="stat-likes" style="color: var(--cyan);">0</span>
       </div>
     </div>
 
     <!-- Activité live en direct -->
-    <div class="live-feed-card glass-panel">
+    <div class="live-feed-card card">
       <h2 style="font-size: 16px;">⚡ Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
@@ -49,13 +49,13 @@
 
     <!-- Historique -->
     <div class="historique-grid">
-      <div class="historique-card glass-panel">
+      <div class="historique-card card">
         <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card glass-panel">
+      <div class="historique-card card">
         <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
@@ -145,15 +145,22 @@
 
               const ligneHaut = document.createElement('div');
               ligneHaut.className = 'ligne-haut';
+
               const spanStats = document.createElement('span');
+              spanStats.className = 'stat-label';
               spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
+
               const spanDate = document.createElement('span');
+              spanDate.className = 'date-label';
               spanDate.textContent = formaterDate(live.fin);
+
               ligneHaut.append(spanStats, spanDate);
 
               const ligneBas = document.createElement('div');
               ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = live.topDonateur ? `Top donateur : ${live.topDonateur.nickname} (${live.topDonateur.coins.toLocaleString()} 💎)` : 'Aucun don reçu';
+              ligneBas.textContent = live.topDonateur 
+                ? `Top donateur : ${live.topDonateur.nickname} (${(live.topDonateur.coins || 0).toLocaleString()} 💎)` 
+                : 'Aucun don reçu';
 
               item.append(ligneHaut, ligneBas);
               conteneurLives.appendChild(item);
@@ -174,15 +181,20 @@
 
               const ligneHaut = document.createElement('div');
               ligneHaut.className = 'ligne-haut';
+
               const spanGagnant = document.createElement('span');
+              spanGagnant.className = 'stat-label';
               spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
+
               const spanDate = document.createElement('span');
+              spanDate.className = 'date-label';
               spanDate.textContent = formaterDate(e.date);
+
               ligneHaut.append(spanGagnant, spanDate);
 
               const ligneBas = document.createElement('div');
               ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = `${e.gagnant ? e.gagnant.coins.toLocaleString() + ' 💎' : ''} · Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
+              ligneBas.textContent = `${e.gagnant ? (e.gagnant.coins || 0).toLocaleString() + ' 💎 · ' : ''}Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
 
               item.append(ligneHaut, ligneBas);
               conteneurEncheres.appendChild(item);

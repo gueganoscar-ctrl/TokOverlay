@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TokOverlay — Style Teal & Dark Mode (Strictement basé sur la référence)
+   TokOverlay — Style Teal & Dark Mode (Correctif Historique & Layout)
    ========================================================================== */
 
 :root {
@@ -46,7 +46,6 @@ body {
 
 .hidden { display: none !important; }
 
-/* Fond avec halo radial Cyan en haut au centre */
 .app-bg {
   min-height: 100vh;
   background-color: var(--bg-dark);
@@ -82,36 +81,110 @@ h1, h2, h3 {
   border-radius: 50%;
   background: var(--live-red);
   box-shadow: 0 0 8px var(--live-red);
+  flex-shrink: 0;
 }
 
-/* Titre Hero */
-.hero-title {
-  font-size: 52px;
-  line-height: 1.15;
-  font-weight: 800;
-  color: #ffffff;
-  max-width: 800px;
-  text-align: center;
+/* Header & Stat Cards */
+.header-card {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.hero-title .highlight-cyan {
+.header-left { display: flex; align-items: center; gap: 12px; }
+p.subtitle { color: var(--text-lo); font-size: 13px; margin-top: 4px; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.stat-card { padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.stat-title { font-size: 12px; font-weight: 600; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 32px; font-weight: 700; color: var(--text-hi); font-family: 'JetBrains Mono', monospace; }
+.stat-subtext { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+.live-feed-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.alert-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 14px;
   color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.hero-desc {
-  font-size: 16px;
+/* HISTORIQUE GRID FIX & ALIGNEMENT */
+.historique-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+@media (max-width: 800px) { .historique-grid { grid-template-columns: 1fr; } }
+
+.historique-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.historique-card h2 { font-size: 15px; font-weight: 700; }
+
+.historique-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historique-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.historique-item .ligne-haut {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.historique-item .ligne-haut .stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--text-hi);
+}
+
+.historique-item .ligne-haut .date-label {
+  flex-shrink: 0;
+  margin-left: auto;
   color: var(--text-lo);
-  max-width: 680px;
-  line-height: 1.6;
-  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* Boutons */
+.historique-item .ligne-bas {
+  color: var(--text-lo);
+  font-size: 11px;
+}
+
+.historique-vide { color: var(--text-faint); font-size: 12px; text-align: center; padding: 16px 0; }
+
+/* Boutons & Cartes Générales */
 .btn {
   padding: 12px 24px;
   border-radius: var(--r-sm);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s ease;
@@ -154,40 +227,12 @@ h1, h2, h3 {
   border: 1px solid rgba(255, 84, 112, 0.3);
 }
 
-/* Cartes & Panels */
 .card, .glass-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-card);
 }
-
-/* Navigation & Layout */
-.landing-nav {
-  position: fixed; top: 0; left: 0; right: 0; height: 70px;
-  background: rgba(7, 9, 14, 0.85); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 40px; z-index: 1000;
-}
-
-.brand-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-/* Forms */
-input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 12px 14px; color: #ffffff;
-  font-size: 13px; font-family: inherit; outline: none; width: 100%;
-}
-input:focus, select:focus, textarea:focus {
-  border-color: var(--cyan); box-shadow: 0 0 12px rgba(34, 229, 224, 0.2);
-}
-label { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; margin-bottom: 4px; display: block; }
 
 /* Bento Grid */
 .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
