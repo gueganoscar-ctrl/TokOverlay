@@ -105,13 +105,48 @@
     /* Enchères Panel Styles */
     #enchere-panel {
       width: 300px; padding: 20px; border-radius: 18px; background: var(--bg-dark);
-      border: 1px solid #29283a; text-align: center; color: white; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: none;
+      border: 1px solid rgba(34, 229, 224, 0.4); text-align: center; color: white; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: none;
     }
-    #enchere-chrono { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 800; color: #ffffff; }
+    body.style-2 #enchere-panel { border-color: var(--gold); }
+    body.style-3 #enchere-panel { border-color: var(--fuchsia); }
+    body.style-4 #enchere-panel { border-color: rgba(255,255,255,0.2); }
+
+    .badges-top-container { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 12px; }
+    .pill-badge {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      background: #18181f; border: 1px solid #29283a; padding: 4px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase; width: 100%;
+    }
+    .pill-badge .highlight { font-family: 'JetBrains Mono', monospace; color: var(--cyan); font-weight: 800; }
+
+    .ench-infos {
+      display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;
+      background: #18181f; padding: 10px; border-radius: 10px; border: 1px solid #29283a;
+    }
+    .ench-info-ligne { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    .ench-info-cle { color: #a1a1aa; font-weight: 700; text-transform: uppercase; }
+    .ench-info-valeur { font-family: 'JetBrains Mono', monospace; color: var(--gold); font-weight: 800; }
+
+    #enchere-chrono { font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 800; color: #ffffff; line-height: 1; margin: 6px 0; }
+    #enchere-chrono.phase-snipe { color: var(--fuchsia); }
+
     .carte-podium { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #18181f; border: 1px solid #29283a; width: 100%; margin-top: 6px; }
     .carte-podium .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
     .carte-podium .nickname { font-size: 12px; font-weight: 700; color: #f4f4f5; }
-    .carte-podium .valeur { font-size: 11px; font-weight: 700; color: var(--cyan); }
+    .carte-podium .valeur { font-size: 11px; font-weight: 700; color: var(--cyan); margin-left: auto; font-family: 'JetBrains Mono', monospace; }
+
+    .vouch-status {
+      display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 20px; margin: 8px 0;
+      background: rgba(255, 190, 61, 0.12); border: 1px solid rgba(255, 190, 61, 0.35); color: var(--gold);
+    }
+    .vouch-status.confirme {
+      background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.35); color: var(--success);
+    }
+
+    .winner-chat-box { background: #18181f; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: left; margin-top: 6px; }
+    .winner-chat-title { font-size: 9px; font-weight: 800; color: var(--cyan); text-transform: uppercase; }
+    .winner-chat-msg { font-size: 11px; color: #f4f4f5; font-style: italic; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -148,9 +183,36 @@
 
   <!-- Panel Enchères -->
   <div id="enchere-panel">
-    <div style="font-size:11px; font-weight:800; color:#a1a1aa; text-transform:uppercase; margin-bottom:4px;">Enchère en cours</div>
-    <div id="enchere-chrono">--</div>
+    <div class="badges-top-container">
+      <div class="pill-badge"><span>TokOverlay</span></div>
+      <div class="pill-badge"><span>Vouchs :</span> <span class="highlight" id="global-vouch-count">0</span></div>
+    </div>
+
+    <div class="ench-infos">
+      <div class="ench-info-ligne"><span class="ench-info-cle">Mise min</span><span class="ench-info-valeur" id="info-mise-min">--</span></div>
+      <div class="ench-info-ligne"><span class="ench-info-cle">Snipe delay</span><span class="ench-info-valeur" id="info-snipe-delay" style="color:var(--fuchsia);">--</span></div>
+    </div>
+
+    <div id="groupe-chrono">
+      <div id="enchere-label" style="font-size:10px; font-weight:800; text-transform:uppercase; color:#a1a1aa;">Temps restant</div>
+      <div id="enchere-chrono">--</div>
+    </div>
+
     <div id="enchere-classement" style="display:flex; flex-direction:column; gap:6px; margin-top:10px;"></div>
+
+    <div id="enchere-gagnant-ecran" style="display:none; text-align:center;">
+      <div class="titre-gagnant" style="font-size:10px; color:#a1a1aa; text-transform:uppercase;">🏆 Gagnant</div>
+      <img id="gagnant-avatar" src="" alt="" style="width:54px; height:54px; border-radius:50%; border:2px solid var(--gold); margin:6px 0;">
+      <div class="nom-gagnant" id="gagnant-nom" style="font-family:'Space Grotesk'; font-size:16px; font-weight:800;"></div>
+      <div class="total-gagnant" id="gagnant-total" style="font-family:'JetBrains Mono'; font-size:12px; color:var(--gold); font-weight:700;"></div>
+
+      <div class="vouch-status" id="vouch-status">⏳ En attente du vouch dans le chat</div>
+
+      <div class="winner-chat-box">
+        <div class="winner-chat-title">💬 Message du gagnant :</div>
+        <div class="winner-chat-msg" id="gagnant-chat-message">En attente...</div>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -242,20 +304,73 @@
 
     if (type === 'encheres') {
       const encherePanel = document.getElementById('enchere-panel');
+      const chronoEl = document.getElementById('enchere-chrono');
+      const labelEl = document.getElementById('enchere-label');
+      const infoMiseMinEl = document.getElementById('info-mise-min');
+      const infoSnipeDelayEl = document.getElementById('info-snipe-delay');
+      const classementEl = document.getElementById('enchere-classement');
+      const gagnantEcran = document.getElementById('enchere-gagnant-ecran');
+      const groupeChrono = document.getElementById('groupe-chrono');
+      const vouchStatusEl = document.getElementById('vouch-status');
+
       encherePanel.style.display = 'block';
 
-      socket.on('updateEnchere', etat => {
+      function afficherEtat(etat) {
         if (!etat) return;
-        document.getElementById('enchere-chrono').textContent = Math.ceil(etat.tempsRestant / 1000) + 's';
-        const classEl = document.getElementById('enchere-classement');
-        classEl.innerHTML = '';
-        etat.classement.forEach((user, i) => {
+        gagnantEcran.style.display = 'none';
+        groupeChrono.style.display = 'block';
+        classementEl.style.display = 'flex';
+
+        chronoEl.textContent = Math.ceil(etat.tempsRestant / 1000) + 's';
+        infoMiseMinEl.textContent = etat.miseMinimale > 0 ? etat.miseMinimale.toLocaleString() + ' 💎' : '0 💎';
+        infoSnipeDelayEl.textContent = Math.round(etat.snipeMs / 1000) + 's';
+
+        classementEl.innerHTML = '';
+        (etat.classement || []).forEach((user) => {
           const div = document.createElement('div');
           div.className = 'carte-podium';
-          div.innerHTML = `<img class="avatar" src="${user.profilePictureUrl}"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span class="nickname">${user.nickname}</span><span class="valeur">${user.coins.toLocaleString()} 💎</span></div>`;
-          classEl.appendChild(div);
+          div.innerHTML = `<img class="avatar" src="${user.profilePictureUrl}"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span class="nickname">${user.nickname}</span></div><span class="valeur">${user.coins.toLocaleString()} 💎</span>`;
+          classementEl.appendChild(div);
         });
+      }
+
+      socket.on('enchereDemarree', afficherEtat);
+      socket.on('updateEnchere', afficherEtat);
+
+      socket.on('enchereTerminee', ({ gagnant }) => {
+        groupeChrono.style.display = 'none';
+        classementEl.style.display = 'none';
+        gagnantEcran.style.display = 'block';
+
+        if (gagnant) {
+          document.getElementById('gagnant-avatar').style.display = 'inline-block';
+          document.getElementById('gagnant-avatar').src = gagnant.profilePictureUrl;
+          document.getElementById('gagnant-nom').textContent = gagnant.nickname;
+          document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
+          document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente...';
+          vouchStatusEl.textContent = '⏳ En attente du vouch dans le chat';
+          vouchStatusEl.classList.remove('confirme');
+        } else {
+          document.getElementById('gagnant-avatar').style.display = 'none';
+          document.getElementById('gagnant-nom').textContent = 'Aucun gagnant';
+          document.getElementById('gagnant-total').textContent = '';
+          document.getElementById('gagnant-chat-message').textContent = '--';
+        }
       });
+
+      socket.on('updateMessageGagnant', ({ message }) => {
+        if (gagnantEcran.style.display === 'block') {
+          document.getElementById('gagnant-chat-message').textContent = `"${message}"`;
+        }
+      });
+
+      socket.on('vouchConfirme', () => {
+        vouchStatusEl.textContent = '✅ Vouch confirmé';
+        vouchStatusEl.classList.add('confirme');
+      });
+
+      socket.on('initVouch', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
+      socket.on('updateVouchGlobal', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
     }
 
     if (type === 'objectif') {

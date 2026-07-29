@@ -2,51 +2,51 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TokOverlay — Contrôle de l'enchère</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body.app-bg { padding-top: 100px; display: flex; justify-content: center; align-items: flex-start; }
+    body.app-bg { padding-top: 90px; display: flex; justify-content: center; align-items: flex-start; }
 
     .navbar {
-      width: 100%; height: 70px; position: fixed; top: 0; left: 0; z-index: 100;
-      background: rgba(19, 19, 24, 0.75); backdrop-filter: blur(12px);
+      width: 100%; height: 68px; position: fixed; top: 0; left: 0; z-index: 100;
+      background: rgba(17, 20, 29, 0.85); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center; padding: 0 40px;
+      display: flex; justify-content: space-between; align-items: center; padding: 0 32px;
     }
     .nav-brand { display: flex; align-items: center; gap: 12px; }
-    .nav-logo { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
 
-    .card.main-card { padding: 36px; width: 100%; max-width: 850px; margin-bottom: 40px; }
+    .card.main-card { padding: 32px; width: 100%; max-width: 850px; margin-bottom: 40px; }
 
-    .header-enchere { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+    .header-enchere { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
     .header-enchere h1 { font-size: 22px; margin-bottom: 4px; }
-    .header-enchere p { color: var(--text-faint); font-size: 13px; margin: 0; }
+    .header-enchere p { color: var(--text-lo); font-size: 13px; margin: 0; }
 
-    .badge-pseudo { color: var(--cyan); }
+    .badge-pseudo { color: var(--cyan); font-weight: bold; }
 
-    .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
     @media (max-width: 768px) { .panel-grid { grid-template-columns: 1fr; gap: 24px; } }
 
     .trois-colonnes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .champ-groupe { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px; transition: border-color 0.2s; }
+    .champ-groupe { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; transition: border-color 0.2s; }
     .champ-groupe:focus-within { border-color: var(--cyan); }
-    .champ-groupe label { display: block; font-size: 10px; color: var(--text-faint); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .champ-groupe input { width: 100%; background: transparent; border: none; color: white; font-size: 16px; font-weight: 700; outline: none; padding: 0; font-family: 'JetBrains Mono', monospace; }
+    .champ-groupe label { display: block; font-size: 10px; color: var(--text-lo); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .champ-groupe input { width: 100%; background: transparent !important; border: none !important; color: white !important; font-size: 16px; font-weight: 700; outline: none; padding: 0 !important; font-family: 'JetBrains Mono', monospace; }
 
-    #demarrer-btn { width: 100%; padding: 14px; font-size: 14px; }
+    #demarrer-btn { width: 100%; padding: 14px; font-size: 14px; margin-top: 4px; }
 
     #url-overlay { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; }
     #url-overlay p { margin: 0 0 8px; color: var(--text-lo); font-weight: 600; }
     .url-flex { display: flex; gap: 8px; }
-    #url-champ { flex: 1; background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text-lo); font-size: 11px; outline: none; font-family: 'JetBrains Mono', monospace; }
+    #url-champ { flex: 1; background: var(--ink) !important; border: 1px solid var(--border) !important; border-radius: 10px; padding: 10px 12px !important; color: var(--text-lo) !important; font-size: 11px; outline: none; font-family: 'JetBrains Mono', monospace; }
 
-    .statut { padding: 20px; background: var(--ink); border: 1px solid var(--border); border-radius: 16px; height: 100%; display: flex; flex-direction: column; }
+    .statut { padding: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; height: 100%; display: flex; flex-direction: column; }
     .statut-empty { color: var(--text-faint); font-size: 13px; font-weight: 500; text-align: center; margin: auto; }
 
-    .label-phase { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
-    .chrono { font-size: 42px; font-weight: 800; line-height: 1; margin-bottom: 8px; color: var(--text-hi); }
+    .label-phase { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
+    .chrono { font-size: 44px; font-weight: 800; line-height: 1; margin-bottom: 8px; color: var(--text-hi); font-family: 'JetBrains Mono', monospace; }
     .chrono.phase-snipe { color: var(--fuchsia); }
     .chrono.phase-timer { color: var(--text-hi); }
     .mise-min { font-size: 13px; color: var(--text-lo); margin: 0 0 12px; font-weight: 600; }
@@ -62,19 +62,19 @@
 
   <nav class="navbar">
     <div class="nav-brand">
-      <img src="/img/logo-encheres.png" alt="Logo" class="nav-logo">
-      <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 18px;">TokOverlay</h1>
+      <span class="live-dot"></span>
+      <span class="brand-text">TokOverlay</span>
     </div>
-    <div class="nav-links">
-      <a href="/choix.html" class="btn btn-secondary">⬅ Tableau de bord</a>
+    <div>
+      <a href="/choix.html" class="btn btn-secondary">← Tableau de bord</a>
     </div>
   </nav>
 
   <div class="card main-card">
     <div class="header-enchere">
       <div>
-        <h1>Panneau Admin</h1>
-        <p>Gestion de la session d'enchères</p>
+        <h1>Panneau Admin Enchères</h1>
+        <p>Gestion de la session d'enchères en direct</p>
       </div>
       <span class="badge" id="pseudo-badge"><span class="badge-pseudo"></span></span>
     </div>
@@ -96,10 +96,10 @@
           </div>
         </div>
 
-        <button id="demarrer-btn" class="btn btn-primary">Lancer l'enchère TokOverlay</button>
+        <button id="demarrer-btn" class="btn btn-primary">🟢 Lancer l'enchère TokOverlay</button>
 
         <div id="url-overlay">
-          <p>Lien de l'Enchère à coller dans TikTok Live Studio :</p>
+          <p>Lien d'overlay à coller dans OBS / TikTok Live Studio :</p>
           <div class="url-flex">
             <input type="text" id="url-champ" readonly>
             <button id="copier-btn" class="btn btn-secondary">Copier</button>
@@ -110,7 +110,7 @@
       <div class="col-statut">
         <div class="statut" id="statut">
           <div id="statut-attente" class="statut-empty">
-            Configurez et lancez une enchère pour voir le suivi en direct.
+            Configurez et lancez une enchère pour suivre le direct.
           </div>
 
           <div id="statut-actif" style="display:none;">
@@ -123,7 +123,7 @@
               <span id="gain-euros">€0.00 EUR</span>
             </div>
 
-            <p id="statut-texte" style="font-size: 13px; color: var(--text-faint); margin: 0; font-weight: 500;">En attente de dons...</p>
+            <p id="statut-texte" style="font-size: 13px; color: var(--text-lo); margin: 0; font-weight: 500;">En attente de dons...</p>
             <ol id="classement-live"></ol>
           </div>
         </div>
@@ -133,7 +133,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const pseudo = window.location.pathname.split('/')[2];
+    const pathParts = window.location.pathname.split('/');
+    const pseudo = pathParts[2] || pathParts[pathParts.length - 1];
     document.querySelector('#pseudo-badge .badge-pseudo').textContent = '@' + pseudo;
 
     const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
@@ -180,18 +181,17 @@
       const finTimestampLocal = Date.now() + etat.tempsRestant;
       demarrerAffichageChrono(finTimestampLocal);
 
-      document.getElementById('mise-min-affichee').textContent = `Mise minimale : ${etat.miseMinimale.toLocaleString()} 💎`;
+      document.getElementById('mise-min-affichee').textContent = `Mise minimale : ${(etat.miseMinimale || 0).toLocaleString()} 💎`;
 
       const diamantsEnchere = etat.totalDiamantsEnchere || 0;
       const eurosEnchere = diamantsEnchere * TAUX_CONVERSION_EUR;
 
-      // Utilisation de textContent sécurisé pour éviter toute injection XSS
       document.getElementById('gain-diamants').textContent = `${diamantsEnchere.toLocaleString()} 💎`;
       document.getElementById('gain-euros').textContent = `€${eurosEnchere.toFixed(2)} EUR`;
 
       const liste = document.getElementById('classement-live');
       liste.innerHTML = '';
-      etat.classement.forEach((u, index) => {
+      (etat.classement || []).forEach((u, index) => {
         const li = document.createElement('li');
         const rangEtNom = document.createElement('span');
         rangEtNom.textContent = `#${index + 1} ${u.nickname}`;
@@ -210,11 +210,10 @@
       .then(user => {
         if (!user || !user.pseudo) {
           alert("Utilisateur non connecté.");
-          window.location.href = '/';
+          window.location.href = '/login.html';
           return;
         }
 
-        // Utilisation du jeton sécurisé (overlayToken) au lieu de l'ancienne clé en clair
         const overlayToken = user.overlayToken || '';
         document.getElementById('url-champ').value = `${window.location.origin}/overlay/${pseudo}?type=encheres&token=${encodeURIComponent(overlayToken)}`;
 
@@ -262,7 +261,7 @@
       })
       .catch(() => {
         alert("Session expirée ou non connecté.");
-        window.location.href = '/';
+        window.location.href = '/login.html';
       });
   </script>
 </body>
