@@ -148,4 +148,62 @@
               ligneHaut.className = 'ligne-haut';
 
               const spanStats = document.createElement('span');
-              spanSta
+              spanStats.className = 'stat-stats';
+              spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
+
+              const spanDate = document.createElement('span');
+              spanDate.className = 'stat-date';
+              spanDate.textContent = formaterDate(live.fin);
+
+              ligneHaut.append(spanStats, spanDate);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+              ligneBas.textContent = live.topDonateur 
+                ? `Top donateur : ${live.topDonateur.nickname} (${(live.topDonateur.coins || 0).toLocaleString()} 💎)` 
+                : 'Aucun don reçu';
+
+              item.append(ligneHaut, ligneBas);
+              conteneurLives.appendChild(item);
+            });
+          }
+
+          const conteneurEncheres = document.getElementById('historique-encheres');
+          conteneurEncheres.innerHTML = '';
+          if (!encheres || encheres.length === 0) {
+            const divVide = document.createElement('div');
+            divVide.className = 'historique-vide';
+            divVide.textContent = 'Aucune enchère enregistrée pour le moment.';
+            conteneurEncheres.appendChild(divVide);
+          } else {
+            encheres.forEach(e => {
+              const item = document.createElement('div');
+              item.className = 'historique-item';
+
+              const ligneHaut = document.createElement('div');
+              ligneHaut.className = 'ligne-haut';
+
+              const spanGagnant = document.createElement('span');
+              spanGagnant.className = 'stat-stats';
+              spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
+
+              const spanDate = document.createElement('span');
+              spanDate.className = 'date-label';
+              spanDate.textContent = formaterDate(e.date);
+
+              ligneHaut.append(spanGagnant, spanDate);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+              ligneBas.textContent = `${e.gagnant ? (e.gagnant.coins || 0).toLocaleString() + ' 💎 · ' : ''}Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
+
+              item.append(ligneHaut, ligneBas);
+              conteneurEncheres.appendChild(item);
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  </script>
+</body>
+</html>
