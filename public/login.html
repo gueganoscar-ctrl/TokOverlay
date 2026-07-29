@@ -13,28 +13,28 @@
       min-height: 100vh; padding: 20px;
     }
     .auth-card {
-      width: 100%; max-width: 420px; padding: 32px;
-      display: flex; flex-direction: column; gap: 20px;
+      width: 100%; max-width: 420px; padding: 36px;
+      display: flex; flex-direction: column; gap: 24px;
     }
-    .tabs { display: flex; background: var(--ink); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
+    .tabs { display: flex; background: rgba(10, 10, 15, 0.7); padding: 4px; border-radius: 12px; border: 1px solid var(--glass-border); }
     .tab { flex: 1; text-align: center; padding: 10px; font-size: 13px; font-weight: 700; color: var(--text-lo); cursor: pointer; border-radius: 8px; transition: 0.2s; }
-    .tab.active { background: var(--surface-2); color: #FFFFFF; }
+    .tab.active { background: rgba(255, 255, 255, 0.08); color: #FFFFFF; }
     .auth-form { display: flex; flex-direction: column; gap: 14px; }
   </style>
 </head>
 <body class="app-bg">
 
-  <div style="margin-bottom: 20px;">
+  <div style="margin-bottom: 24px;">
     <a href="/" class="btn btn-secondary">← Retour au site</a>
   </div>
 
-  <div class="auth-card card">
+  <div class="auth-card glass-panel">
     <div style="text-align: center;">
       <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:6px;">
         <span class="live-dot"></span>
         <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 26px;">TokOverlay</h1>
       </div>
-      <p style="color: var(--text-lo); font-size: 13px;">Accédez à votre espace streamer</p>
+      <p style="color: var(--text-lo); font-size: 13px;">Accédez à votre studio streamer</p>
     </div>
 
     <div id="error-alert" class="hidden" style="background: rgba(255,84,112,0.12); color: var(--danger); border: 1px solid var(--danger); padding: 12px; border-radius: 8px; font-size: 12px; text-align: center;"></div>
@@ -44,7 +44,7 @@
       <div id="tab-register" class="tab" onclick="switchTab('register')">Créer un compte</div>
     </div>
 
-    <!-- Formulaire Connexion -->
+    <!-- Connexion -->
     <form id="form-login" class="auth-form" action="/login" method="POST">
       <div>
         <label>Pseudo TikTok (sans @)</label>
@@ -57,10 +57,10 @@
       <div>
         <a href="#" onclick="motDePasseOublie(event)" style="font-size: 11px; color: var(--cyan); text-decoration: none;">Mot de passe oublié ?</a>
       </div>
-      <button type="submit" class="btn btn-primary" style="margin-top: 6px;">Se connecter</button>
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px; padding: 12px;">Se connecter</button>
     </form>
 
-    <!-- Formulaire Inscription -->
+    <!-- Inscription -->
     <form id="form-register" class="auth-form hidden" action="/register" method="POST">
       <div>
         <label>Pseudo TikTok</label>
@@ -78,7 +78,7 @@
         <label>Mot de passe</label>
         <input type="password" name="password" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="margin-top: 6px;">Créer mon compte</button>
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px; padding: 12px;">Créer mon compte</button>
     </form>
   </div>
 

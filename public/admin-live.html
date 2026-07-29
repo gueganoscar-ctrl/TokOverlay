@@ -15,11 +15,11 @@
 <body class="app-bg">
   <div class="container">
     
-    <div class="header-card">
+    <div class="header-card glass-panel">
       <div class="header-left">
         <span class="live-dot"></span>
         <div>
-          <h1>Panneau Admin Live</h1>
+          <h1 style="font-size: 24px;">Panneau Admin Live</h1>
           <p class="subtitle" id="user-info">Chargement de vos statistiques...</p>
         </div>
       </div>
@@ -28,20 +28,20 @@
 
     <!-- Blocs de statistiques -->
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card glass-panel">
         <span class="stat-title">Total Pièces (Gifts)</span>
         <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
-      <div class="stat-card">
+      <div class="stat-card glass-panel">
         <span class="stat-title">Total Likes</span>
         <span class="stat-value" id="stat-likes" style="color: var(--fuchsia);">0</span>
       </div>
     </div>
 
     <!-- Activité live en direct -->
-    <div class="live-feed-card">
-      <h2>Dernière Activité du Live</h2>
+    <div class="live-feed-card glass-panel">
+      <h2 style="font-size: 16px;">⚡ Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
       </div>
@@ -49,13 +49,13 @@
 
     <!-- Historique -->
     <div class="historique-grid">
-      <div class="historique-card">
+      <div class="historique-card glass-panel">
         <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card">
+      <div class="historique-card glass-panel">
         <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>

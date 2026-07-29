@@ -9,16 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--ink); margin: 0; }
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg-dark); margin: 0; }
     
     .top-navbar {
-      height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+      height: 64px; background: rgba(16, 16, 22, 0.75); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
       display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
       flex-shrink: 0; z-index: 20;
     }
     .user-badge {
-      display: inline-flex; align-items: center; gap: 8px; background: var(--ink);
-      border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 8px; background: rgba(10, 10, 15, 0.6);
+      border: 1px solid var(--glass-border); padding: 5px 12px; border-radius: 20px;
       font-size: 12px; font-weight: 600; color: var(--text-lo);
     }
     .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -28,7 +29,8 @@
     .app-layout { display: flex; flex: 1; overflow: hidden; }
 
     .sidebar {
-      width: 250px; background: var(--surface); border-right: 1px solid var(--border);
+      width: 250px; background: rgba(16, 16, 22, 0.6); backdrop-filter: blur(16px);
+      border-right: 1px solid var(--glass-border);
       padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
       overflow-y: auto;
     }
@@ -42,22 +44,22 @@
       font-size: 13px; font-weight: 600; text-decoration: none; display: flex;
       align-items: center; gap: 10px; transition: all 0.15s ease; cursor: pointer;
     }
-    .sidebar-link:hover, .sidebar-link.active { background: var(--surface-2); color: var(--text-hi); }
-    .sidebar-link.active { border-left: 3px solid var(--cyan); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .sidebar-link:hover, .sidebar-link.active { background: rgba(255, 255, 255, 0.06); color: var(--text-hi); }
+    .sidebar-link.active { border-left: 3px solid var(--cyan); background: linear-gradient(90deg, rgba(34, 229, 224, 0.1), transparent); }
 
     .main-viewport { flex: 1; padding: 28px 36px; overflow-y: auto; display: flex; flex-direction: column; gap: 28px; }
 
     #modal-overlay, #modal-profil, #modal-contact {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px;
+      display: none; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.85);
+      backdrop-filter: blur(12px); align-items: center; justify-content: center; z-index: 100; padding: 20px;
     }
-    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: var(--shadow-card); }
-    .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 450px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-card); }
-    .obs-link-box { background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .modal-box { background: rgba(16, 16, 22, 0.95); border: 1px solid var(--glass-border-light); border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: var(--shadow-card); }
+    .modal-content { background: rgba(16, 16, 22, 0.95); border: 1px solid var(--glass-border-light); border-radius: 20px; width: 100%; max-width: 450px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-card); }
+    .obs-link-box { background: var(--bg-dark); border: 1px solid var(--glass-border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .obs-url { font-size: 11px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
-<body>
+<body class="app-bg">
 
   <!-- Top Navbar -->
   <header class="top-navbar">
@@ -103,47 +105,48 @@
         <div style="font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">Jeux Interactifs TikTok Live</div>
         <div class="bento-grid">
           
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')">
+          <!-- Mode Élimination Fermée (Anciennement Classique) -->
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination Fermée', '💀')" style="border-color: rgba(125, 60, 255, 0.3); background: linear-gradient(135deg, rgba(22, 22, 30, 0.7) 0%, rgba(35, 18, 55, 0.5) 100%);">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper">💀</div>
-                <h3>Mode Élimination (Classique)</h3>
+                <div class="overlay-icon-wrapper" style="background: rgba(125, 60, 255, 0.15); border-color: rgba(125, 60, 255, 0.3);">💀</div>
+                <h3>Mode Élimination Fermée</h3>
               </div>
-              <p>Grille interactive : 1 don = X places. Éliminations animées en direct jusqu'au duel final !</p>
+              <p>1 don = X places pendant le timer. Une fois le timer écoulé, les entrées se verrouillent et les éliminations s'enchaînent jusqu'au gagnant final !</p>
             </div>
-            <span class="click-hint">Télécommande &amp; Lien OBS →</span>
+            <span class="click-hint" style="color: var(--deep-purple);">Télécommande &amp; Lien OBS →</span>
           </div>
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Battle Royale', '⚡')">
+          <!-- Mode Élimination Classique (Anciennement Boucle / Battle Royale) -->
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination Classique', '⚡')" style="border-color: rgba(37, 244, 238, 0.3); background: linear-gradient(135deg, rgba(22, 22, 30, 0.7) 0%, rgba(12, 40, 48, 0.5) 100%);">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <div class="overlay-icon-wrapper">⚡</div>
-                <h3>Mode Battle Royale (En Boucle)</h3>
+                <h3>Mode Élimination Classique (En Boucle)</h3>
               </div>
-              <p>Inscriptions continues : 1 élimination par tour avec option de rachat de place !</p>
+              <p>Inscriptions continues en boucle : 1 éliminé par tour, les joueurs peuvent renvoyer des dons pour racheter leur place pendant la partie !</p>
             </div>
             <span class="click-hint">Télécommande &amp; Lien OBS →</span>
           </div>
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper">🔐</div>
+                <div class="overlay-icon-wrapper" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">🔐</div>
                 <h3>Jeu du Coffre-Fort</h3>
               </div>
-              <p>Le chat devine un mot ou code secret masqué case par case avec validation automatique.</p>
+              <p>Le chat devine un mot ou code secret masqué case par case avec validation automatique du winner.</p>
             </div>
             <span class="click-hint" style="color: var(--gold);">Configurer &amp; Indices →</span>
           </div>
 
-          <!-- Enchères à la place de la Roue de la Fortune -->
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <div class="overlay-icon-wrapper">⚖️</div>
                 <h3>Panneau d'Enchères &amp; Overlay</h3>
               </div>
-              <p>Gérez vos enchères en direct avec règles anti-snipe, chronomètre et détection des vouchs.</p>
+              <p>Gérez vos enchères en direct avec règles anti-snipe, chronomètre et détection des vouchs dans le chat.</p>
             </div>
             <span class="click-hint" style="color: var(--cyan);">Ouvrir la régie →</span>
           </div>
@@ -156,22 +159,22 @@
         <div style="font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">Overlays de Suivi &amp; Live</div>
         <div class="bento-grid">
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
             <div><div class="overlay-icon-wrapper" style="margin-bottom:10px;">💎</div><h3>Top Donateurs</h3><p>Classement dynamique en temps réel des donateurs de votre live.</p></div>
             <span class="click-hint">Lien OBS →</span>
           </div>
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
-            <div><div class="overlay-icon-wrapper" style="margin-bottom:10px;">❤️</div><h3>Top Likers</h3><p>Classement des spectateurs tapoteurs d'écran.</p></div>
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
+            <div><div class="overlay-icon-wrapper" style="margin-bottom:10px; background: rgba(254, 44, 85, 0.1); border-color: rgba(254, 44, 85, 0.3);">❤️</div><h3>Top Likers</h3><p>Classement des spectateurs tapoteurs d'écran.</p></div>
             <span class="click-hint" style="color: var(--fuchsia);">Lien OBS →</span>
           </div>
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
-            <div><div class="overlay-icon-wrapper" style="margin-bottom:10px;">👑</div><h3>Widget Best Gift</h3><p>Affiche et met en valeur le plus gros cadeau reçu pendant la session.</p></div>
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
+            <div><div class="overlay-icon-wrapper" style="margin-bottom:10px; background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">👑</div><h3>Widget Best Gift</h3><p>Affiche et met en valeur le plus gros cadeau reçu pendant la session.</p></div>
             <span class="click-hint" style="color: var(--gold);">Lien OBS →</span>
           </div>
 
-          <div class="bento-col-6 overlay-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
+          <div class="bento-col-6 overlay-card glass-panel" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
             <div><div class="overlay-icon-wrapper" style="margin-bottom:10px;">🎯</div><h3>Objectif de Live</h3><p>Barre de progression pour vos objectifs de pièces ou likes.</p></div>
             <span class="click-hint">Lien OBS →</span>
           </div>

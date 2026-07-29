@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
-  <title>TokOverlay - Mode Élimination en Boucle</title>
+  <title>TokOverlay - Mode Élimination Classique</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;900&family=Inter:wght@700;900&display=swap" rel="stylesheet">
   <style>
@@ -57,15 +57,15 @@
 
   <div class="elim-layout" id="game-container" style="display: none;">
     <div class="elim-timer" id="elim-timer-display" style="display:none;">0:00</div>
-    <div class="elim-title">⚡ BATTLE ROYALE BOUCLE ⚡</div>
+    <div class="elim-title">⚡ ÉLIMINATION CLASSIQUE ⚡</div>
     
     <div class="elim-stats">
       <div class="stat-block gift-block">
         <img id="target-gift-img" src="" referrerpolicy="no-referrer">
         <span id="target-gift-price">0</span>
       </div>
-      <div class="stat-block"><div class="stat-title">PLAYERS</div><div class="stat-val" id="stat-players">0</div></div>
-      <div class="stat-block"><div class="stat-title">COINS</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
+      <div class="stat-block"><div class="stat-title">JOUEURS</div><div class="stat-val" id="stat-players">0</div></div>
+      <div class="stat-block"><div class="stat-title">PIÈCES</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
     </div>
 
     <div class="grid-container" id="grid">
@@ -153,11 +153,6 @@
       }
     }
 
-    // Calcule la taille de case optimale (en px) pour que `count` cases carrées
-    // remplissent au mieux l'espace disponible du conteneur, quel que soit le
-    // nombre de joueurs (ex: 2 joueurs -> grandes cases ~50% de la largeur,
-    // 4 joueurs -> cases plus petites ~25%, etc.), en testant toutes les
-    // dispositions en colonnes possibles.
     function computeCellSize(count, container) {
       if (count <= 0) return 15;
       const styles = getComputedStyle(container);
@@ -223,10 +218,6 @@
         }
       });
 
-      // Le timer de la prochaine élimination ne doit démarrer / se mettre à
-      // jour que si aucune animation d'élimination n'est en cours ni en
-      // attente — on vérifie donc APRÈS avoir mis en file les nouvelles
-      // éliminations reçues dans ce paquet de données.
       if (!isAnimating && animationQueue.length === 0) {
         updateStatsAndStatus(data);
       }

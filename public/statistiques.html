@@ -3,38 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TokOverlay - Statistiques & Historique</title>
+  <title>TokOverlay - Statistiques &amp; Historique</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
     body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
     .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
-
-    .header-card { padding: 24px; display: flex; justify-content: space-between; align-items: center; }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    p.subtitle { color: var(--text-lo); font-size: 13px; margin: 4px 0 0; }
-
-    .historique-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
-    .historique-card { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .historique-card h2 { font-size: 14px; }
-    .historique-liste { display: flex; flex-direction: column; gap: 8px; }
-    .historique-item {
-      background: var(--ink); border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px;
-    }
-    .historique-item .ligne-haut { display: flex; justify-content: space-between; font-weight: 700; color: var(--text-hi); }
-    .historique-item .ligne-bas { color: var(--text-faint); font-size: 11px; }
-    .historique-vide { color: var(--text-faint); font-size: 12px; text-align: center; padding: 10px 0; }
   </style>
 </head>
 <body class="app-bg">
   <div class="container">
-    <div class="header-card card">
+    <div class="header-card glass-panel">
       <div class="header-left">
         <div>
-          <h1>Statistiques & Historique</h1>
+          <h1 style="font-size: 24px;">Statistiques &amp; Historique</h1>
           <p class="subtitle" id="user-info">Chargement des données...</p>
         </div>
       </div>
@@ -42,13 +25,13 @@
     </div>
 
     <div class="historique-grid">
-      <div class="historique-card card">
+      <div class="historique-card glass-panel">
         <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card card">
+      <div class="historique-card glass-panel">
         <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
@@ -64,7 +47,7 @@
       .then(res => res.json())
       .then(user => {
         if (!user || !user.pseudo) {
-          window.location.href = '/';
+          window.location.href = '/login.html';
           return;
         }
         pseudoGlobal = user.pseudo;
@@ -72,14 +55,13 @@
         chargerHistorique(pseudoGlobal);
       })
       .catch(() => {
-        window.location.href = '/';
+        window.location.href = '/login.html';
       });
 
     function formaterDate(dateStr) {
       return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
-    // Fonction sécurisée anti-XSS sans innerHTML
     function chargerHistorique(pseudo) {
       fetch('/api/historique/' + encodeURIComponent(pseudo))
         .then(res => res.json())

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
-  <title>TokOverlay - Mode Élimination</title>
+  <title>TokOverlay - Mode Élimination Fermée</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;900&family=Inter:wght@700;900&display=swap" rel="stylesheet">
   <style>
@@ -62,16 +62,16 @@
 
   <div class="elim-layout" id="game-container" style="display: none;">
     <div class="elim-timer" id="elim-timer-display" style="display:none;">0:00</div>
-    <div class="elim-title">💀 ELIMINATION MODE 💀</div>
-    <div class="elim-status" id="elim-status">🔒 LOCKED ENTRIES - DO NOT SEND 🔒</div>
+    <div class="elim-title">💀 ÉLIMINATION FERMÉE 💀</div>
+    <div class="elim-status" id="elim-status">🔒 INSCRIPTIONS FERMÉES 🔒</div>
     
     <div class="elim-stats">
       <div class="stat-block gift-block">
         <img id="target-gift-img" src="" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
         <span id="target-gift-price">0</span>
       </div>
-      <div class="stat-block"><div class="stat-title">PLAYERS</div><div class="stat-val" id="stat-players">0</div></div>
-      <div class="stat-block"><div class="stat-title">COINS</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
+      <div class="stat-block"><div class="stat-title">JOUEURS</div><div class="stat-val" id="stat-players">0</div></div>
+      <div class="stat-block"><div class="stat-title">PIÈCES</div><div class="stat-val" id="stat-coins" style="color:#ffbe3d">0</div></div>
     </div>
 
     <div class="grid-container" id="grid">
@@ -148,7 +148,7 @@
           clearInterval(countdownInterval);
           if (!isKillTimer && pseudo && !isDemo) {
             statusBadge.className = 'elim-status';
-            statusBadge.innerHTML = '🔒 LOCKED ENTRIES - WAITING KILL 🔒';
+            statusBadge.innerHTML = '🔒 INSCRIPTIONS FERMÉES - ÉLIMINATION EN COURS 🔒';
           }
         }
       }, 100);
@@ -172,18 +172,13 @@
 
       if (data.locked) {
         statusBadge.className = 'elim-status';
-        statusBadge.innerHTML = '🔒 LOCKED ENTRIES - DO NOT SEND 🔒';
+        statusBadge.innerHTML = '🔒 INSCRIPTIONS FERMÉES 🔒';
       } else {
         statusBadge.className = 'elim-status open';
-        statusBadge.innerHTML = '🟢 OPEN ENTRIES - SEND GIFTS 🟢';
+        statusBadge.innerHTML = '🟢 ENVOYEZ DES CADEAUX POUR REJOINDRIE 🟢';
       }
     }
 
-    // Calcule la taille de case optimale (en px) pour que `count` cases carrées
-    // remplissent au mieux l'espace disponible du conteneur, quel que soit le
-    // nombre de joueurs (ex: 2 joueurs -> grandes cases ~50% de la largeur,
-    // 4 joueurs -> cases plus petites ~25%, etc.), en testant toutes les
-    // dispositions en colonnes possibles.
     function computeCellSize(count, container) {
       if (count <= 0) return 15;
       const styles = getComputedStyle(container);
@@ -211,9 +206,7 @@
         .map((p, idx) => ({ ...p, idx }))
         .filter(p => !displayedEliminatedIndexes.has(p.idx));
 
-      let count = displayed.length;
-      if (count === 0) count = 1;
-
+      let count = displayed.length || 1;
       const cellSize = computeCellSize(count, grid);
 
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
@@ -252,10 +245,6 @@
         }
       });
 
-      // Le timer de la prochaine élimination ne doit démarrer / se mettre à
-      // jour que si aucune animation d'élimination n'est en cours ni en
-      // attente — on vérifie donc APRÈS avoir mis en file les nouvelles
-      // éliminations reçues dans ce paquet de données.
       if (!isAnimating && animationQueue.length === 0) {
         updateStatsAndStatus(data);
       }
@@ -375,29 +364,6 @@
     }
 
     socket.on('updateElimination', renderGrid);
-
-    if (isDemo) {
-      let demoData = {
-        actif: true,
-        cout: 10,
-        giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png',
-        locked: true,
-        eliminationEnCours: true,
-        totalCoins: 1250,
-        openEndsAt: 0,
-        nextElimination: Date.now() + 5000,
-        gagnant: null,
-        messageGagnant: 'Merci pour ce super mode !',
-        places: [
-          { id: 'u1', nickname: 'Alex_Stream', avatar: 'https://ui-avatars.com/api/?name=Alex&background=random', eliminated: false },
-          { id: 'u2', nickname: 'Sarah_92', avatar: 'https://ui-avatars.com/api/?name=Sarah&background=random', eliminated: false },
-          { id: 'u3', nickname: 'LucasGamer', avatar: 'https://ui-avatars.com/api/?name=Lucas&background=random', eliminated: false },
-          { id: 'u4', nickname: 'Emma_Tiktok', avatar: 'https://ui-avatars.com/api/?name=Emma&background=random', eliminated: false },
-          { id: 'u5', nickname: 'Thomas_Off', avatar: 'https://ui-avatars.com/api/?name=Thomas&background=random', eliminated: false }
-        ]
-      };
-      renderGrid(demoData);
-    }
   </script>
 </body>
 </html>
