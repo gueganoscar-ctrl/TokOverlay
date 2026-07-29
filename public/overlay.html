@@ -227,6 +227,17 @@
 
     document.body.className = `style-${style}`;
 
+    function safeTextNode(text) {
+      return document.createTextNode(String(text || ''));
+    }
+
+    function safeImageUrl(url, fallback) {
+      if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/'))) {
+        return url;
+      }
+      return fallback;
+    }
+
     function creerCarteJoueur(user, rank, cle, emoji) {
       const carte = document.createElement('div');
       carte.className = `carte-joueur rank-${rank}`;
@@ -236,13 +247,16 @@
       const crown = document.createElement('span');
       crown.className = 'crown'; crown.textContent = '👑';
       const img = document.createElement('img');
-      img.className = 'avatar'; img.src = user.profilePictureUrl;
+      img.className = 'avatar'; 
+      img.src = safeImageUrl(user.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
       avatarContainer.append(crown, img);
 
       const info = document.createElement('div');
       info.className = 'info';
       const nickname = document.createElement('span');
-      nickname.className = 'nickname'; nickname.textContent = user.nickname;
+      nickname.className = 'nickname'; 
+      nickname.textContent = user.nickname; // Anti-XSS
+
       const valeur = document.createElement('span');
       valeur.className = 'valeur';
       valeur.textContent = `${emoji}${user[cle].toLocaleString()}`;
@@ -264,8 +278,8 @@
 
     socket.on('updateBestGift', data => {
       if (type === 'bestgift') {
-        document.getElementById('bg-icon').src = data.icon || 'https://via.placeholder.com/60';
-        document.getElementById('bg-pseudo').textContent = data.pseudo;
+        document.getElementById('bg-icon').src = safeImageUrl(data.icon, 'https://via.placeholder.com/60');
+        document.getElementById('bg-pseudo').textContent = data.pseudo; // Anti-XSS
       }
     });
 
@@ -305,7 +319,6 @@
     if (type === 'encheres') {
       const encherePanel = document.getElementById('enchere-panel');
       const chronoEl = document.getElementById('enchere-chrono');
-      const labelEl = document.getElementById('enchere-label');
       const infoMiseMinEl = document.getElementById('info-mise-min');
       const infoSnipeDelayEl = document.getElementById('info-snipe-delay');
       const classementEl = document.getElementById('enchere-classement');
@@ -329,7 +342,25 @@
         (etat.classement || []).forEach((user) => {
           const div = document.createElement('div');
           div.className = 'carte-podium';
-          div.innerHTML = `<img class="avatar" src="${user.profilePictureUrl}"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span class="nickname">${user.nickname}</span></div><span class="valeur">${user.coins.toLocaleString()} 💎</span>`;
+
+          const img = document.createElement('img');
+          img.className = 'avatar';
+          img.src = safeImageUrl(user.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
+
+          const infoDiv = document.createElement('div');
+          infoDiv.style.cssText = 'display:flex; flex-direction:column; align-items:flex-start;';
+
+          const nickSpan = document.createElement('span');
+          nickSpan.className = 'nickname';
+          nickSpan.textContent = user.nickname; // Anti-XSS
+
+          infoDiv.appendChild(nickSpan);
+
+          const valSpan = document.createElement('span');
+          valSpan.className = 'valeur';
+          valSpan.textContent = `${user.coins.toLocaleString()} 💎`;
+
+          div.append(img, infoDiv, valSpan);
           classementEl.appendChild(div);
         });
       }
@@ -344,8 +375,8 @@
 
         if (gagnant) {
           document.getElementById('gagnant-avatar').style.display = 'inline-block';
-          document.getElementById('gagnant-avatar').src = gagnant.profilePictureUrl;
-          document.getElementById('gagnant-nom').textContent = gagnant.nickname;
+          document.getElementById('gagnant-avatar').src = safeImageUrl(gagnant.profilePictureUrl, 'https://ui-avatars.com/api/?name=Winner');
+          document.getElementById('gagnant-nom').textContent = gagnant.nickname; // Anti-XSS
           document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
           document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente...';
           vouchStatusEl.textContent = '⏳ En attente du vouch dans le chat';

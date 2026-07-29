@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
 const { Resend } = require('resend');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,23 +18,11 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 const TikTokLiveConnection = TikTokModule.TikTokLiveConnection || TikTokModule.WebcastPushConnection;
 const isProduction = process.env.NODE_ENV === 'production';
 
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
   throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
-}
-
-if (
-  typeof process.env.OVERLAY_TOKEN_SECRET !== 'string' ||
-  process.env.OVERLAY_TOKEN_SECRET.length < 32
-) {
-  if (isProduction) {
-    throw new Error('FATAL ERROR: OVERLAY_TOKEN_SECRET doit contenir au moins 32 caractères en production.');
-  } else {
-    console.warn("⚠️ ATTENTION : OVERLAY_TOKEN_SECRET est absent ou trop court. Un secret aléatoire fort est généré pour le développement.");
-  }
 }
 
 const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
@@ -45,6 +34,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
+// Session Store
 const sessionMiddleware = session({
   name: '__Host-tokoverlay',
   secret: process.env.SESSION_SECRET,
@@ -69,6 +59,20 @@ io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, next);
 });
 
+// Rate Limiter pour la sécurité de l'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: "Trop de tentatives de connexion/inscription. Réessayez dans 15 minutes.",
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/login', authLimiter);
+app.use('/register', authLimiter);
+app.use('/api/forgot-password', authLimiter);
+
+// MongoDB Atlas
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 let vouchesGlobalCount = 0;
@@ -91,6 +95,7 @@ async function connectMongo() {
 }
 connectMongo();
 
+// Helpers de sécurité et normalisation
 function normalizePseudo(value) {
   if (typeof value !== 'string') throw new Error('Pseudo invalide.');
   const pseudo = value.replace(/^@/, '').trim().toLowerCase();
@@ -189,11 +194,26 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
+// Cache Mémoire du catalogue de cadeaux
+const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
+let giftsCatalogCache = null;
+
+function reloadGiftsCatalog() {
+  try {
+    if (fs.existsSync(GIFTS_CATALOG_PATH)) {
+      giftsCatalogCache = JSON.parse(fs.readFileSync(GIFTS_CATALOG_PATH, 'utf8'));
+      console.log("✅ Catalogue cadeaux chargé en mémoire cache.");
+    }
+  } catch (err) {
+    console.error(" Erreur chargement gifts-catalog.json :", err);
+  }
+}
+reloadGiftsCatalog();
+
 // ----------------------------------------------------
-// ROUTES NAVIGATION, AUTHENTIFICATION & PROFIL
+// ROUTES FRONT-END & AUTH
 // ----------------------------------------------------
 
-// Landing Page Accueil
 app.get('/', (req, res) => {
   if (req.session.user) {
     return res.redirect('/choix.html');
@@ -201,7 +221,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Page de Connexion / Inscription
 app.get('/login.html', (req, res) => {
   if (req.session.user) {
     return res.redirect('/choix.html');
@@ -474,13 +493,6 @@ app.post('/api/update-profile', async (req, res) => {
   }
 });
 
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('__Host-tokoverlay');
-    res.json({ success: true });
-  });
-});
-
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('__Host-tokoverlay');
@@ -488,8 +500,15 @@ app.get('/logout', (req, res) => {
   });
 });
 
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('__Host-tokoverlay');
+    res.json({ success: true });
+  });
+});
+
 // ----------------------------------------------------
-// ROUTES FRONT-END ET OVERLAYS
+// ROUTES OVERLAYS ET API
 // ----------------------------------------------------
 
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
@@ -502,8 +521,6 @@ app.get('/simulation/:username', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'simulation.html'));
 });
 
-const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
-
 app.get('/api/gifts/:username', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.username);
@@ -511,15 +528,8 @@ app.get('/api/gifts/:username', async (req, res) => {
       return res.status(401).json({ error: "Non autorisé" });
     }
 
-    if (fs.existsSync(GIFTS_CATALOG_PATH)) {
-      try {
-        const catalogueLocal = JSON.parse(fs.readFileSync(GIFTS_CATALOG_PATH, 'utf8'));
-        if (Array.isArray(catalogueLocal) && catalogueLocal.length > 0) {
-          return res.json(catalogueLocal);
-        }
-      } catch (err) {
-        console.error('Erreur lecture gifts-catalog.json :', err);
-      }
+    if (giftsCatalogCache && Array.isArray(giftsCatalogCache) && giftsCatalogCache.length > 0) {
+      return res.json(giftsCatalogCache);
     }
 
     const data = connexionsActives[pseudo];
@@ -650,7 +660,6 @@ app.get('/api/historique/:pseudo', async (req, res) => {
 app.get('/api/live-status/:pseudo', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.pseudo);
-    
     if (!req.session.user || !canManage(req.session.user, pseudo)) {
       return res.status(403).json({ error: "Accès refusé." });
     }
@@ -680,12 +689,22 @@ app.get('/api/live-stats/:pseudo', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// GESTION FLUX TIKTOK LIVE & LOGIQUE ÉVÉNEMENTIELLE
+// GESTION FLUX TIKTOK LIVE
 // ----------------------------------------------------
 
 const connexionsActives = {};
 const ELIGIBLE_GIFTS = ["whale diving", "corgi", "swan", "galaxy", "donut"];
 const waitingUsers = new Map();
+
+// Nettoyage automatique de la Map waitingUsers toutes les 5 minutes (Anti Fuite Mémoire)
+setInterval(() => {
+  const maintenant = Date.now();
+  for (const [cle, expiration] of waitingUsers.entries()) {
+    if (maintenant > expiration) {
+      waitingUsers.delete(cle);
+    }
+  }
+}, 5 * 60 * 1000);
 
 function tirerRecompenseRoue(options) {
   if (!options || options.length === 0) return "Rien";
@@ -1249,7 +1268,7 @@ function terminerEnchere(pseudo) {
 }
 
 // ----------------------------------------------------
-// SOCKET.IO ÉVÉNEMENTS & CONTRÔLES EN DIRECT
+// SOCKET.IO EVENT HANDLERS
 // ----------------------------------------------------
 
 io.on('connection', socket => {

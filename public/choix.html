@@ -311,6 +311,10 @@
     let selectedGiftPrice = 1;
     let selectedGiftName = '';
 
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
@@ -503,13 +507,27 @@
     function renderGiftGrid(giftsToDisplay, modeType) {
       const grid = document.getElementById('elim-gift-grid');
       if (!grid) return;
-      grid.innerHTML = giftsToDisplay.map((g, i) => `
-        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}', '${modeType}')">
+
+      grid.innerHTML = '';
+      giftsToDisplay.forEach((g, i) => {
+        const item = document.createElement('div');
+        item.className = `gift-item ${i === 0 ? 'selected' : ''}`;
+        item.id = `gift-item-${i}`;
+        item.dataset.image = g.image;
+        item.dataset.price = g.diamond_count;
+        item.dataset.name = g.name;
+
+        item.onclick = () => {
+          selectElimGift(g.image, g.diamond_count, i, g.name, modeType);
+        };
+
+        item.innerHTML = `
           <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
           <div class="gift-price">${g.diamond_count} 💎</div>
-          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
-        </div>
-      `).join('');
+          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${escapeHtml(g.name)}</div>
+        `;
+        grid.appendChild(item);
+      });
     }
 
     function filterGifts(query) {
