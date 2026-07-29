@@ -39,6 +39,28 @@
       <button class="btn-simul" onclick="envoyerSimulation()">🚀 Envoyer le faux cadeau</button>
       <div id="simul-status" style="margin-top: 15px; font-size: 12px; text-align: center; color: var(--success);"></div>
     </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+        💬 Simulateur de Message
+      </h2>
+      <p style="font-size: 13px; color: var(--text-lo); margin-bottom: 20px;">
+        Utilise cet outil pour injecter un faux message de chat sur ton compte et vérifier si tes overlays réagissent bien (Chat en direct, Coffre au trésor, mot "vouch", etc.).
+      </p>
+
+      <div class="form-group">
+        <label>Pseudo de l'expéditeur (ex: JeanDu93)</label>
+        <input type="text" id="simul-msg-pseudo" value="TesteurTikTok" placeholder="Nom du spectateur">
+      </div>
+
+      <div class="form-group">
+        <label>Message</label>
+        <input type="text" id="simul-msg-texte" placeholder="Ex: vouch, ou le mot secret du coffre">
+      </div>
+
+      <button class="btn-simul" onclick="envoyerSimulationMessage()">🚀 Envoyer le faux message</button>
+      <div id="simul-msg-status" style="margin-top: 15px; font-size: 12px; text-align: center; color: var(--success);"></div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -69,6 +91,27 @@
       });
 
       statusEl.textContent = `✅ Cadeau de ${pieces} pièces envoyé par @${pseudoEnvoyeur} ! Regarde ton overlay.`;
+      setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    }
+
+    function envoyerSimulationMessage() {
+      const pseudoEnvoyeur = document.getElementById('simul-msg-pseudo').value.trim();
+      const texte = document.getElementById('simul-msg-texte').value.trim();
+      const statusEl = document.getElementById('simul-msg-status');
+
+      if (!pseudoEnvoyeur || !texte) {
+        alert("Veuillez remplir correctement les champs.");
+        return;
+      }
+
+      socket.emit('simulerMessageTest', {
+        pseudo: pseudoGlobal,
+        senderPseudo: pseudoEnvoyeur,
+        message: texte
+      });
+
+      statusEl.textContent = `✅ Message envoyé par @${pseudoEnvoyeur} : "${texte}" ! Regarde ton overlay.`;
+      document.getElementById('simul-msg-texte').value = '';
       setTimeout(() => { statusEl.textContent = ''; }, 4000);
     }
   </script>

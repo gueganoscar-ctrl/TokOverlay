@@ -1269,6 +1269,64 @@ io.on('connection', socket => {
     }
   });
 
+  socket.on('simulerMessageTest', (payload = {}) => {
+    try {
+      const { pseudo, senderPseudo, message } = payload;
+      const pseudoNettoye = normalizePseudo(pseudo);
+
+      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      const data = connexionsActives[pseudoNettoye];
+      if (!data) return;
+
+      const id = `simul_${senderPseudo}`;
+      const nickname = safeText(senderPseudo, 'Anonyme');
+      const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
+      const texte = safeText(message, '');
+      if (!texte) return;
+
+      io.to(`streamer:${pseudoNettoye}`).emit('chatEnDirect', { nickname, avatar, message: texte });
+
+      if (data.enchere && data.enchere.dons[id]) {
+        data.enchere.dons[id].dernierMessageChat = texte;
+      }
+
+      if (data.coffre && data.coffre.actif && !data.coffre.gagnant) {
+        const msgNettoye = texte.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const secretNettoye = data.coffre.secret.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        if (msgNettoye !== "" && msgNettoye === secretNettoye) {
+          data.coffre.gagnant = { id, nickname, avatar };
+          data.coffre.actif = false;
+
+          io.to(`streamer:${pseudoNettoye}`).emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+          io.to(`streamer:${pseudoNettoye}`).emit('coffreOuvert', etatCoffrePublic(pseudoNettoye));
+        }
+      } else if (data.coffre && data.coffre.gagnant && id === data.coffre.gagnant.id) {
+        data.coffre.dernierMessageGagnant = texte;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateMessageGagnantCoffre', { message: texte });
+      }
+
+      if (data.elimination && data.elimination.gagnantId && id === data.elimination.gagnantId && !data.elimination.messageGagnant) {
+        data.elimination.messageGagnant = texte;
+        io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
+      }
+
+      if (data.derniereGagnantId && id === data.derniereGagnantId) {
+        io.to(`streamer:${pseudoNettoye}`).emit('updateMessageGagnant', { message: texte });
+
+        if (!data.vouchFait && texte.toLowerCase() === 'vouch') {
+          data.vouchFait = true;
+          incrementerVouchGlobal();
+          io.to(`streamer:${pseudoNettoye}`).emit('vouchConfirme', {});
+        }
+      }
+
+    } catch (err) {
+      console.error("Erreur simulation message :", err);
+    }
+  });
+
   socket.on('rejoindre', async (payload = {}, ack = () => {}) => {
     try {
       const { pseudo, token, type } = payload;
