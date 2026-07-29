@@ -9,208 +9,245 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body.app-bg { padding: 40px 20px; display: flex; justify-content: center; }
-    .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 32px; }
-    .dashboard-header { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
-    .header-left { display: flex; flex-direction: column; gap: 8px; }
-    .brand-row { display: flex; align-items: center; gap: 10px; }
-    .user-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--ink); border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text-lo); width: fit-content; }
-    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; }
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--ink); margin: 0; }
+    
+    /* Top Navbar */
+    .top-navbar {
+      height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+      flex-shrink: 0; z-index: 10;
+    }
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--ink);
+      border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: var(--text-lo);
+    }
+    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
     .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
     .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.5); }
-    .header-actions { display: flex; gap: 12px; align-items: center; }
-    .section-header { font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: -12px; display: flex; align-items: center; gap: 8px; }
-    .section-header::before { content: ''; width: 3px; height: 14px; background: var(--fuchsia); border-radius: 2px; }
-    .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
-    .widget-card { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; transition: transform 0.2s ease, border-color 0.2s ease; cursor: pointer; }
+
+    /* Layout principal */
+    .app-layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar Latérale */
+    .sidebar {
+      width: 250px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .sidebar-section-label {
+      font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase;
+      letter-spacing: 1.2px; margin: 16px 0 6px 8px;
+    }
+    .sidebar-section-label:first-child { margin-top: 0; }
+    .sidebar-link {
+      padding: 10px 14px; border-radius: var(--r-sm); color: var(--text-lo);
+      font-size: 13px; font-weight: 600; text-decoration: none; display: flex;
+      align-items: center; gap: 10px; transition: all 0.15s ease; cursor: pointer;
+    }
+    .sidebar-link:hover, .sidebar-link.active { background: var(--surface-2); color: var(--text-hi); }
+    .sidebar-link.active { border-left: 3px solid var(--cyan); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+
+    /* Zone de contenu principal */
+    .main-viewport { flex: 1; padding: 28px 36px; overflow-y: auto; display: flex; flex-direction: column; gap: 28px; }
+
+    .grid-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .widget-card { padding: 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; transition: transform 0.2s ease, border-color 0.2s ease; cursor: pointer; }
     .widget-card:hover { border-color: var(--cyan); transform: translateY(-3px); }
-    .widget-top { display: flex; flex-direction: column; gap: 12px; }
+    .widget-top { display: flex; flex-direction: column; gap: 10px; }
     .widget-icon-title { display: flex; align-items: center; gap: 12px; }
-    .widget-icon { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
-    .widget-card h3 { font-size: 17px; }
-    .widget-card p { font-size: 13px; color: var(--text-lo); line-height: 1.5; margin: 0; }
-    .widget-card.accent-encheres { border-color: rgba(34, 229, 224, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #10202a 100%); }
-    .widget-card.accent-encheres .widget-icon { background: rgba(34, 229, 224, 0.1); border-color: rgba(34, 229, 224, 0.3); }
+    .widget-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .widget-card h3 { font-size: 16px; margin: 0; }
+    .widget-card p { font-size: 13px; color: var(--text-lo); line-height: 1.4; margin: 0; }
     .click-hint { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; }
-    
-    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+
+    /* Modals */
+    #modal-overlay, #modal-profil, #modal-contact { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
     .modal-box { background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 650px; padding: 30px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); position: relative; max-height: 90vh; overflow-y: auto; }
-    #modal-profil, #modal-contact { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
     .modal-content { background: #14131b; border: 1px solid #29283a; border-radius: 20px; width: 100%; max-width: 450px; padding: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; }
-    .modal-header h2 { font-size: 20px; font-family: 'Space Grotesk', sans-serif; display: flex; align-items: center; gap: 10px; margin: 0; }
-    .close-btn { background: none; border: none; color: #a1a1aa; font-size: 20px; cursor: pointer; }
+    .modal-header h2 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .close-btn { background: none; border: none; color: var(--text-lo); font-size: 20px; cursor: pointer; }
     .close-btn:hover { color: white; }
-    .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .style-option { background: #1c1b26; border: 2px solid #29283a; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; cursor: pointer; transition: all 0.2s; }
-    .style-option.selected { border-color: var(--cyan); background: rgba(34, 229, 224, 0.08); box-shadow: 0 0 15px rgba(34, 229, 224, 0.2); }
-    .style-preview-img { width: 100%; height: 90px; border-radius: 8px; background: #0b0a0f; border: 1px solid #2f2d3d; display: flex; align-items: center; justify-content: center; font-size: 11px; text-align: center; padding: 5px; font-weight: 700; letter-spacing: 0.5px; }
-    .style-title { font-size: 12px; font-weight: 700; color: white; }
-    .modal-link-section { display: flex; flex-direction: column; gap: 10px; }
-    .modal-link-label { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.5px; }
-    .obs-link-box { background: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .obs-url { font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
-    #modal-extra-action { margin-top: 5px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-lo); }
-    
-    .gift-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 220px; overflow-y: auto; padding-right: 5px; background: var(--ink); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+    .obs-link-box { background: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .obs-url { font-size: 11px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', monospace; }
+    .gift-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; background: var(--ink); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
     .gift-item { background: #1c1b26; border: 1px solid #29283a; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
-    .gift-item:hover { border-color: var(--cyan); background: rgba(34,229,224,0.1); }
-    .gift-item.selected { border-color: var(--cyan); background: rgba(34,229,224,0.2); box-shadow: 0 0 10px rgba(34,229,224,0.3); }
-    .gift-icon { width: 35px; height: 35px; object-fit: contain; margin-bottom: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; }
-    .gift-price { font-size: 11px; color: var(--gold); font-weight: bold; }
+    .gift-item:hover, .gift-item.selected { border-color: var(--cyan); background: rgba(34,229,224,0.15); }
+    .gift-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px; }
+    .gift-price { font-size: 10px; color: var(--gold); font-weight: bold; }
   </style>
 </head>
-<body class="app-bg">
+<body>
 
-  <div class="app-container">
-    <header class="dashboard-header card">
-      <div class="header-left">
-        <div class="brand-row"><span class="live-dot"></span><h1 class="chroma-title" data-text="TokOverlay" style="font-size: 22px;">TokOverlay</h1></div>
-        <div class="user-badge"><span class="dot offline" id="status-dot"></span><span id="user-pseudo-display">Connexion...</span></div>
-      </div>
-      <div class="header-actions">
-        <button class="btn btn-secondary" onclick="ouvrirContact()" style="font-size: 13px;">💡 Suggestion</button>
-        <button class="btn btn-secondary" onclick="ouvrirModalProfil()">⚙️ Profil</button>
-        <a href="/logout" class="btn btn-danger">Déconnexion</a>
-      </div>
-    </header>
-
-    <div class="section-header">Widgets OBS</div>
-
-    <div class="grid-widgets">
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">💎</div><h3>Top Pièces (Donateurs)</h3></div><p>Classement dynamique des spectateurs donateurs.</p></div>
-        <span class="click-hint">Personnaliser & Lien →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">❤️</div><h3>Top Likers</h3></div><p>Classement des spectateurs qui tapent l'écran.</p></div>
-        <span class="click-hint">Personnaliser & Lien →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div><h3>Mode Élimination (Classique)</h3></div>
-          <p>Grille interactive : 1 place = X pièces. Élimination en série jusqu'au 1vs1 final !</p>
-        </div>
-        <span class="click-hint" style="color: #c084fc;">Ouvrir la télécommande →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination en Boucle (Battle Royale)', '⚡')" style="border-color: rgba(99, 102, 241, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #11112b 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">⚡</div><h3>Mode Élimination (En Boucle)</h3></div>
-          <p>Inscriptions continues : 1 élimination par tour, les joueurs peuvent racheter leur place en boucle jusqu'au vainqueur !</p>
-        </div>
-        <span class="click-hint" style="color: #818cf8;">Ouvrir la télécommande →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div><p>Le chat devine un mot ou chiffre secret en cases.</p></div>
-        <span class="click-hint">Configurer & Indices →</span>
-      </div>
-
-      <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères & Overlay', '⚖️')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères & Overlay</h3></div><p>Gère tes enchères en direct.</p></div>
-        <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div><p>Affiche le meilleur cadeau.</p></div>
-        <span class="click-hint">Personnaliser & Lien →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎯</div><h3>Objectif de Live</h3></div><p>Barre de progression vers un objectif.</p></div>
-        <span class="click-hint">Personnaliser & Lien →</span>
-      </div>
-
-      <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div><p>S'active automatiquement aux dons pour distribuer des gages ou lots.</p></div>
-        <span class="click-hint" style="color: var(--cyan);">Configurer les options & Lien →</span>
-      </div>
-
-      <!-- WIDGET SIMULATEUR DE CADEAUX -->
-      <div class="widget-card card" onclick="window.open('/simulation/' + encodeURIComponent(pseudoGlobal), '_blank')" style="border-color: rgba(236, 72, 153, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #291122 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title">
-            <div class="widget-icon" style="background: rgba(236, 72, 153, 0.1); border-color: rgba(236, 72, 153, 0.3);">🧪</div>
-            <h3>Simulateur de Cadeaux</h3>
-          </div>
-          <p>Envoie de faux cadeaux pour tester tes overlays et animations en direct.</p>
-        </div>
-        <span class="click-hint" style="color: #ec4899;">Ouvrir le simulateur →</span>
-      </div>
-
-      <div class="widget-card card" onclick="allerAuxStatistiques()" style="border-color: rgba(34, 211, 238, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #082f49 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(34, 211, 238, 0.1); border-color: rgba(34, 211, 238, 0.3);">📊</div><h3>Statistiques & Historique</h3></div>
-          <p>Analyse l'évolution de tes diamants et tes performances passées.</p>
-        </div>
-        <span class="click-hint" style="color: #22d3ee;">Voir les graphiques →</span>
-      </div>
-
-      <div class="widget-card card" onclick="allerAuPanneauAdmin()" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">⚙️</div><h3>Panneau d'Administration</h3></div>
-          <p>Gère tes alertes, événements et vois ton chat en direct.</p>
-        </div>
-        <span class="click-hint" style="color: #c084fc;">Ouvrir le panneau →</span>
-      </div>
-
-      <div id="widget-vip" class="widget-card card" onclick="ouvrirPersonnalisation('vip', 'Overlay VIP (Corgi, Galaxy...)', '🌟')" style="display: none; border-color: rgba(0, 242, 254, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #08222c 100%);">
-        <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon" style="background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.3);">🌟</div><h3>Overlay VIP & Chat</h3></div><p>Affiche les messages et cadeaux spéciaux (Corgi, Galaxy, Baleine, Donut...) en direct.</p></div>
-        <span class="click-hint" style="color: #00f2fe;">Personnaliser & Obtenir le lien →</span>
-      </div>
-
-      <div id="widget-vip-room" class="widget-card card" onclick="window.open('/vip-room', '_blank')" style="display: none; border-color: rgba(255, 190, 61, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #2a1f0c 100%);">
-        <div class="widget-top">
-          <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">👑</div><h3>VIP Room (Super Admin)</h3></div>
-          <p>Suivi en direct de l'utilisation de TokOverlay et des diamants générés.</p>
-        </div>
-        <span class="click-hint" style="color: #ffbe3d;">Ouvrir la Room VIP →</span>
-      </div>
+  <!-- Top Navbar -->
+  <header class="top-navbar">
+    <div class="brand-row">
+      <span class="live-dot"></span>
+      <h1 class="chroma-title" data-text="TokOverlay" style="font-size: 20px;">TokOverlay</h1>
     </div>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div class="user-badge"><span class="dot offline" id="status-dot"></span><span id="user-pseudo-display">Connexion...</span></div>
+      <button class="btn btn-secondary" onclick="ouvrirContact()" style="font-size: 12px;">💡 Suggestion / Bug</button>
+      <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="font-size: 12px;">⚙️ Profil</button>
+      <a href="/logout" class="btn btn-danger" style="font-size: 12px;">Déconnexion</a>
+    </div>
+  </header>
+
+  <!-- Main App Layout -->
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section-label">Overlays &amp; Jeux</div>
+      <a href="#section-jeux" class="sidebar-link active">🎮 Jeux Interactifs</a>
+      <a href="#section-widgets" class="sidebar-link">📊 Widgets &amp; Live</a>
+
+      <div class="sidebar-section-label">Outils Streamer</div>
+      <a onclick="allerAuPanneauAdmin()" class="sidebar-link">⚙️ Admin Live Control</a>
+      <a onclick="allerAuxStatistiques()" class="sidebar-link">📈 Stats &amp; Historique</a>
+      <a onclick="ouvrirSimulateur()" class="sidebar-link" style="color: #ec4899;">🧪 Simulateur de Cadeaux</a>
+
+      <div id="vip-menu-section" style="display:none; margin-top: 10px;">
+        <div class="sidebar-section-label">Super Admin</div>
+        <a onclick="ouvrirVIPOverlay()" class="sidebar-link" style="color: #00f2fe;">🌟 Overlay VIP</a>
+        <a onclick="ouvrirVIPRoom()" class="sidebar-link" style="color: #ffbe3d;">👑 VIP Room</a>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <main class="main-viewport">
+
+      <!-- Section 1 : Jeux Interactifs -->
+      <div id="section-jeux">
+        <div class="section-header">Jeux Interactifs TikTok Live</div>
+        <div class="grid-widgets">
+          
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination (Classique)', '💀')" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #170f23 100%);">
+            <div class="widget-top">
+              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">💀</div><h3>Mode Élimination (Classique)</h3></div>
+              <p>Grille interactive : 1 don = X places. Élimination en série avec effets visuels jusqu'au duel final !</p>
+            </div>
+            <span class="click-hint" style="color: #c084fc;">Télécommande &amp; Lien OBS →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Élimination en Boucle (Battle Royale)', '⚡')" style="border-color: rgba(99, 102, 241, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #11112b 100%);">
+            <div class="widget-top">
+              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">⚡</div><h3>Mode Élimination (En Boucle)</h3></div>
+              <p>Inscriptions continues : 1 élimination par tour. Les joueurs éliminés peuvent racheter leur place !</p>
+            </div>
+            <span class="click-hint" style="color: #818cf8;">Télécommande &amp; Lien OBS →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
+            <div class="widget-top">
+              <div class="widget-icon-title"><div class="widget-icon">🔐</div><h3>Jeu du Coffre-Fort</h3></div>
+              <p>Le chat devine un mot ou chiffre secret masque case par case avec validation automatique dans le chat.</p>
+            </div>
+            <span class="click-hint">Configurer &amp; Indices →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('roue', 'Roue de la Fortune', '🎡')">
+            <div class="widget-top">
+              <div class="widget-icon-title"><div class="widget-icon">🎡</div><h3>Roue de la Fortune</h3></div>
+              <p>S'active automatiquement aux cadeaux définis ou abonnements pour offrir des lots ou gages.</p>
+            </div>
+            <span class="click-hint">Configurer Récompenses →</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Section 2 : Widgets & Live -->
+      <div id="section-widgets">
+        <div class="section-header">Overlays de Suivi &amp; Live</div>
+        <div class="grid-widgets">
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎')">
+            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">💎</div><h3>Top Pièces (Donateurs)</h3></div><p>Classement dynamique en temps réel des donateurs de votre live.</p></div>
+            <span class="click-hint">Personnaliser &amp; Lien →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
+            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">❤️</div><h3>Top Likers</h3></div><p>Classement des spectateurs qui tapotent l'écran pendant le live.</p></div>
+            <span class="click-hint">Personnaliser &amp; Lien →</span>
+          </div>
+
+          <div class="widget-card card accent-encheres" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
+            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">⚖️</div><h3>Panneau d'Enchères &amp; Overlay</h3></div><p>Gérez vos enchères en direct avec système anti-snipe et vouchs.</p></div>
+            <span class="click-hint" style="color: var(--cyan);">Ouvrir le panneau →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
+            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">👑</div><h3>Widget Best Gift</h3></div><p>Affiche et met en valeur le plus gros cadeau reçu pendant la session.</p></div>
+            <span class="click-hint">Personnaliser &amp; Lien →</span>
+          </div>
+
+          <div class="widget-card card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
+            <div class="widget-top"><div class="widget-icon-title"><div class="widget-icon">🎯</div><h3>Objectif de Live</h3></div><p>Barre de progression en temps réel pour vos objectifs de pièces ou likes.</p></div>
+            <span class="click-hint">Personnaliser &amp; Lien →</span>
+          </div>
+
+          <div class="widget-card card" onclick="allerAuPanneauAdmin()" style="border-color: rgba(168, 85, 247, 0.28); background: linear-gradient(135deg, var(--surface) 0%, #1a1025 100%);">
+            <div class="widget-top">
+              <div class="widget-icon-title"><div class="widget-icon" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">⚙️</div><h3>Panneau Admin Live</h3></div>
+              <p>Visualisez votre chat en direct, vos alertes et vos événements en direct.</p>
+            </div>
+            <span class="click-hint" style="color: #c084fc;">Ouvrir le panneau →</span>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
   </div>
 
+  <!-- Modal Configuration & Lien OBS -->
   <div id="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
         <h2 id="modal-title">⚙️ Personnaliser l'overlay</h2>
         <button class="close-btn" onclick="fermerPersonnalisation()">✕</button>
       </div>
-      <div class="modal-link-section">
-        <span class="modal-link-label">Lien OBS généré :</span>
+      <div class="modal-link-section" style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-size:11px; font-weight:700; color:var(--text-lo); text-transform:uppercase;">Lien OBS à copier :</span>
         <div class="obs-link-box">
           <span class="obs-url" id="modal-obs-url">Chargement...</span>
-          <button class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;" onclick="copierLienModal()">Copier</button>
+          <button class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="copierLienModal()">Copier</button>
         </div>
-        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline;">👁️ Voir un aperçu (démo)</a>
+        <a id="modal-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--text-lo); text-decoration: underline;">👁️ Aperçu (démo)</a>
       </div>
       <div id="modal-extra-action"></div>
     </div>
   </div>
 
+  <!-- Modal Profil -->
   <div id="modal-profil">
     <div class="modal-content">
-      <div class="modal-header"><h2>Modifier vos identifiants</h2><button class="close-btn" onclick="fermerModalProfil()">✕</button></div>
-      <form id="form-profil" onsubmit="sauvegarderProfil(event)">
-        <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-        <div class="form-group" style="margin-top: 12px;"><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;"></div>
-        <div class="modal-actions"><button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button><button type="submit" class="btn btn-primary">Enregistrer</button></div>
+      <div class="modal-header"><h2>Modifier vos accès</h2><button class="close-btn" onclick="fermerModalProfil()">✕</button></div>
+      <form id="form-profil" onsubmit="sauvegarderProfil(event)" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required></div>
+        <div class="form-group"><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+          <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
       </form>
     </div>
   </div>
 
+  <!-- Modal Contact / Suggestions -->
   <div id="modal-contact">
-    <div class="modal-content" style="max-width: 450px;">
-      <div class="modal-header"><h2 style="font-size: 18px;">💡 Un mot, une idée ?</h2><button class="close-btn" onclick="fermerContact()">✕</button></div>
-      <form id="form-contact" onsubmit="envoyerSuggestion(event)" style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
-        <div class="form-group"><label>Sujet</label><select id="contact-type" style="padding: 10px; background: var(--ink); border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 13px;"><option value="Suggestion">💡 Suggestion</option><option value="Bug">🐛 Bug</option></select></div>
-        <div class="form-group"><label>Ton message</label><textarea id="contact-message" required rows="4" style="padding: 12px; background: var(--ink); border: 1px solid var(--border); color: white; border-radius: 8px;"></textarea></div>
-        <div id="contact-status" style="font-size: 12px; text-align: center;"></div>
-        <div class="modal-actions"><button type="button" class="btn btn-secondary" onclick="fermerContact()">Annuler</button><button type="submit" class="btn btn-primary">Envoyer</button></div>
+    <div class="modal-content">
+      <div class="modal-header"><h2>💡 Suggestion ou Bug</h2><button class="close-btn" onclick="fermerContact()">✕</button></div>
+      <form id="form-contact" onsubmit="envoyerSuggestion(event)" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="form-group"><label>Type</label><select id="contact-type" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"><option value="Suggestion">💡 Suggestion</option><option value="Bug">🐛 Signalement de bug</option></select></div>
+        <div class="form-group"><label>Votre message</label><textarea id="contact-message" required rows="4" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; font-family:inherit;"></textarea></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="fermerContact()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Envoyer</button>
+        </div>
       </form>
     </div>
   </div>
@@ -228,12 +265,12 @@
     let selectedGiftName = '';
 
     fetch('/api/me').then(res => res.json()).then(user => {
-      if (!user || !user.pseudo) { window.location.href = '/'; return; }
+      if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
       document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
       if (user.role === 'admin') {
-        if (document.getElementById('widget-vip')) document.getElementById('widget-vip').style.display = 'flex';
-        if (document.getElementById('widget-vip-room')) document.getElementById('widget-vip-room').style.display = 'flex';
+        const vipSec = document.getElementById('vip-menu-section');
+        if (vipSec) vipSec.style.display = 'block';
       }
       socket = io();
       socket.on('connect', () => { socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' }); });
@@ -243,12 +280,15 @@
     function verifierStatutLive(pseudo) {
       fetch('/api/live-status/' + encodeURIComponent(pseudo)).then(r => r.json()).then(s => {
           document.getElementById('status-dot').className = s.online ? 'dot online' : 'dot offline';
-          document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'Online' : 'Offline'}`;
+          document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'En Live' : 'Hors Ligne'}`;
       }).catch(() => {});
     }
 
     function allerAuxStatistiques() { if (pseudoGlobal) window.location.href = `/statistiques/${pseudoGlobal}`; }
     function allerAuPanneauAdmin() { if (pseudoGlobal) window.open('/admin-live/' + encodeURIComponent(pseudoGlobal), '_blank'); }
+    function ouvrirSimulateur() { if (pseudoGlobal) window.open('/simulation/' + encodeURIComponent(pseudoGlobal), '_blank'); }
+    function ouvrirVIPOverlay() { window.open('/overlay-vip/' + encodeURIComponent(pseudoGlobal), '_blank'); }
+    function ouvrirVIPRoom() { window.open('/vip-room', '_blank'); }
 
     function ouvrirPersonnalisation(type, titre, icone) {
       typeActuel = type;
@@ -256,7 +296,7 @@
       const extraDiv = document.getElementById('modal-extra-action');
       extraDiv.replaceChildren();
 
-      if (type === 'elimination') {
+      if (type === 'elimination' || type === 'elimination-boucle') {
         const wrap1 = document.createElement('div');
         wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
         wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
@@ -264,364 +304,118 @@
 
         fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
           window.allGiftsCache = finalGifts;
-          initElimPanel(finalGifts, type);
+          if (type === 'elimination') initElimPanel(finalGifts, type);
+          else initElimBouclePanel(finalGifts);
         });
 
         const wrap2 = document.createElement('div');
         wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
-        wrap2.innerHTML = `
-          <h3>2. Contrôles en direct</h3>
-          <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer la partie / Le massacre</button>
-          <button class="btn btn-secondary" style="margin-top:10px;" onclick="resetElim('actionElimination')">🔄 Réinitialiser la grille</button>
-        `;
+        if (type === 'elimination') {
+          wrap2.innerHTML = `
+            <h3>2. Contrôles en direct</h3>
+            <button class="btn btn-danger" style="font-weight:bold;" onclick="socket.emit('actionElimination', { pseudo: pseudoGlobal, action: 'start_kill' })">💀 Lancer le massacre</button>
+            <button class="btn btn-secondary" onclick="resetElim('actionElimination')">🔄 Réinitialiser la grille</button>
+          `;
+        } else {
+          wrap2.innerHTML = `
+            <h3>2. Contrôles en direct</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'pause' })">⏸️ Pause</button>
+              <button class="btn btn-primary" style="flex:1;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'resume' })">▶️ Reprendre</button>
+            </div>
+            <button class="btn btn-danger" style="margin-top:5px;" onclick="resetElim('actionEliminationBoucle')">🔄 Réinitialiser la grille</button>
+          `;
+        }
         extraDiv.appendChild(wrap2);
 
-      } else if (type === 'elimination-boucle') {
-        const wrap1 = document.createElement('div');
-        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrap1.innerHTML = '<h3>1. Configuration du jeu</h3><p style="font-size:11px; color:#a1a1aa;">Chargement des cadeaux...</p>';
-        extraDiv.appendChild(wrap1);
-
-        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
-          window.allGiftsCache = finalGifts;
-          initElimBouclePanel(finalGifts);
-        });
-
-        const wrap2 = document.createElement('div');
-        wrap2.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;';
-        wrap2.innerHTML = `
-          <h3>2. Contrôles en direct</h3>
-          <div style="display: flex; gap: 10px;">
-            <button class="btn btn-secondary" style="flex:1; font-weight:bold;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'pause' })">⏸️ Pause</button>
-            <button class="btn btn-primary" style="flex:1; font-weight:bold;" onclick="socket.emit('actionEliminationBoucle', { pseudo: pseudoGlobal, action: 'resume' })">▶️ Reprendre</button>
-          </div>
-          <button class="btn btn-danger" style="margin-top:5px;" onclick="resetElim('actionEliminationBoucle')">🔄 Réinitialiser la grille</button>
-        `;
-        extraDiv.appendChild(wrap2);
-
-      } else if (type === 'vip') {
-        const infoP = document.createElement('p');
-        infoP.style.cssText = 'font-size: 13px; color: var(--text-lo); line-height: 1.4; margin-top: 5px;';
-        infoP.textContent = "Cet overlay se connecte au flux pour afficher en direct les messages des joueurs.";
-        extraDiv.appendChild(infoP);
       } else if (type === 'encheres') {
         const link = document.createElement('a');
         link.href = `/encheres/${encodeURIComponent(pseudoGlobal)}`;
         link.className = 'btn btn-primary';
-        link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block;';
+        link.style.cssText = 'width: 100%; padding: 12px; text-align: center; display: block; margin-top: 10px;';
         link.textContent = "Ouvrir le panneau d'enchères →";
         extraDiv.appendChild(link);
       } else if (type === 'roue') {
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        
         wrapper.innerHTML = `
-          <h3>1. Déclencheur</h3>
-          <select id="roue-mode-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:10px;" onchange="toggleRoueMode()">
+          <h3>Configuration de la Roue</h3>
+          <select id="roue-mode-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:10px;">
             <option value="gifts">🎁 Un Cadeau Spécifique</option>
             <option value="subs">⭐ Les Abonnements (Subs)</option>
           </select>
-          
-          <div id="roue-gift-section" class="form-group">
-            <label>Choisis le cadeau déclencheur</label>
-            <input type="text" id="roue-gift-search" placeholder="🔍 Rechercher un cadeau..." oninput="filterRoueGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%; margin-bottom:8px;">
-            <div class="gift-grid" id="roue-gift-grid"></div>
-            <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-            <input type="number" id="roue-cout-input" value="10" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-          </div>
-
-          <h3 style="margin-top:20px;">2. Récompenses & Probabilités (%)</h3>
-          <div id="roue-rewards-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-          <button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="addRoueReward('', 10)">➕ Ajouter une récompense</button>
-
-          <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="sauvegarderRoue()">Enregistrer la Roue</button>
+          <label>Cout minimal (Pièces)</label>
+          <input type="number" id="roue-cout-input" value="10" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; width:100%; margin-bottom:12px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="sauvegarderRoue()">Enregistrer la Roue</button>
         `;
         extraDiv.appendChild(wrapper);
-
-        window.roueRewardsList = [{name: 'Gage 1', prob: 50}, {name: '100 Diamants', prob: 50}];
-        window.selectedRoueGiftImage = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
-        window.selectedRoueGiftName = '';
-        window.selectedRoueGiftPrice = 10;
-
-        fetch('/api/gifts/' + encodeURIComponent(pseudoGlobal)).then(r => r.json()).then(finalGifts => {
-          window.allGiftsCache = finalGifts;
-          renderRoueGiftGrid(finalGifts);
-        });
-
-        renderRoueRewards();
-      } else if (type === 'objectif') {
-        const fg1 = document.createElement('div');
-        fg1.className = 'form-group';
-        fg1.innerHTML = `<label>Métrique</label><select id="objectif-metrique-input" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"><option value="diamants">Pièces</option><option value="likes">Likes</option></select><label style="margin-top:8px;">Cible</label><input type="number" id="objectif-cible-input" value="1000" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;"><button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="demarrerObjectif()">Lancer</button>`;
-        extraDiv.appendChild(fg1);
-      } else if (type === 'coffre') {
-        const wrap1 = document.createElement('div');
-        wrap1.style.cssText = 'border-top: 1px solid var(--border); padding-top: 15px; margin-top: 5px;';
-        wrap1.innerHTML = `
-          <h3>1. Configuration du jeu</h3>
-          <div class="form-group">
-            <label>Mot / code secret</label>
-            <input type="text" id="coffre-secret-input" value="777" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-          </div>
-          <div class="form-group" style="margin-top:8px;">
-            <label>Récompense</label>
-            <input type="text" id="coffre-recompense-input" value="Abo" placeholder="ex: 1 Abo Offert" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-          </div>
-          <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="lancerCoffreFort()">🟢 Lancer le coffre</button>
-          <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
-            <h3>2. Contrôles en direct</h3>
-            <button class="btn btn-secondary" style="width:100%; font-weight:bold;" onclick="devoilerCoffreHasard()">🎲 Révéler une case au hasard</button>
-            <div style="display:flex; gap:8px; margin-top:4px;">
-              <input type="number" id="coffre-index-input" min="1" placeholder="N° de case (ex: 1)" style="flex:1; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-              <button class="btn btn-secondary" style="font-weight:bold;" onclick="devoilerCoffreIndex()">🎯 Révéler cette case</button>
-            </div>
-          </div>
-        `;
-        extraDiv.appendChild(wrap1);
       }
 
       document.getElementById('modal-overlay').style.display = 'flex';
       mettreAJourLienModal();
     }
 
-    function toggleRoueMode() {
-      const mode = document.getElementById('roue-mode-input').value;
-      document.getElementById('roue-gift-section').style.display = (mode === 'gifts') ? 'flex' : 'none';
-    }
-
-    function renderRoueGiftGrid(gifts) {
-      const grid = document.getElementById('roue-gift-grid');
-      if (!grid) return;
-      grid.innerHTML = gifts.map((g, i) => `
-        <div class="gift-item ${i===0?'selected':''}" id="roue-gift-${i}" onclick="selectRoueGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}')">
-          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
-          <div class="gift-price">${g.diamond_count} 💎</div>
-          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
-        </div>
-      `).join('');
-      if(gifts.length > 0 && !window.selectedRoueGiftName) selectRoueGift(gifts[0].image, gifts[0].diamond_count, 0, gifts[0].name);
-    }
-
-    function filterRoueGifts(query) {
-      if(!window.allGiftsCache) return;
-      renderRoueGiftGrid(window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase())));
-    }
-
-    function selectRoueGift(img, price, idx, name) {
-      document.querySelectorAll('#roue-gift-grid .gift-item').forEach(el => el.classList.remove('selected'));
-      const item = document.getElementById(`roue-gift-${idx}`);
-      if(item) item.classList.add('selected');
-      document.getElementById('roue-cout-input').value = price;
-      window.selectedRoueGiftImage = img;
-      window.selectedRoueGiftPrice = price;
-      window.selectedRoueGiftName = name;
-    }
-
-    function renderRoueRewards() {
-      const container = document.getElementById('roue-rewards-container');
-      container.innerHTML = window.roueRewardsList.map((r, i) => `
-        <div style="display:flex; gap:8px;">
-          <input type="text" value="${r.name}" onchange="window.roueRewardsList[${i}].name=this.value" placeholder="Nom du lot" style="flex:2; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-          <input type="number" value="${r.prob}" onchange="window.roueRewardsList[${i}].prob=Number(this.value)" placeholder="%" style="flex:1; padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
-          <button class="btn btn-danger" onclick="removeRoueReward(${i})">✕</button>
-        </div>
-      `).join('');
-    }
-
-    function addRoueReward(name, prob) {
-      window.roueRewardsList.push({name, prob});
-      renderRoueRewards();
-    }
-
-    function removeRoueReward(index) {
-      window.roueRewardsList.splice(index, 1);
-      renderRoueRewards();
-    }
-
     function sauvegarderRoue() {
       const mode = document.getElementById('roue-mode-input').value;
-      const cout = document.getElementById('roue-cout-input') ? document.getElementById('roue-cout-input').value : 10;
-      socket.emit('configurerRoue', { 
-        pseudo: pseudoGlobal, 
-        mode,
-        cout: Number(cout),
-        giftImage: window.selectedRoueGiftImage,
-        giftName: window.selectedRoueGiftName,
-        options: window.roueRewardsList
-      }); 
-      alert("Roue enregistrée avec succès !"); 
+      const cout = document.getElementById('roue-cout-input').value;
+      socket.emit('configurerRoue', { pseudo: pseudoGlobal, mode, cout: Number(cout) });
+      alert("Roue enregistrée !");
     }
 
-    window.initElimPanel = function(giftsToDisplay, modeType) {
+    function initElimPanel(giftsToDisplay, modeType) {
       const wrap1 = document.querySelector('#modal-extra-action div');
       if (!wrap1) return;
-
       wrap1.innerHTML = `
-        <h3>1. Configuration du jeu</h3>
         <div class="form-group">
-          <label>Choisis ton cadeau officiel TikTok</label>
-          <div class="form-group" style="margin-bottom:8px;">
-            <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau (ex: Rose, Galaxy, Lion...)" oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
-          </div>
-          <div class="gift-grid" id="elim-gift-grid"></div>
-          <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('${modeType}')" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <label>Cadeau requis</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
         </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label>Temps d'ouverture initial (Secondes)</label>
-          <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label>Temps entre chaque élimination (Secondes)</label>
-          <input type="number" id="elim-interval" value="5" min="1" oninput="updateElimSettings()" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-        </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Ouvrir la grille et démarrer</button>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElim()">🟢 Démarrer le jeu</button>
       `;
+    }
 
-      if (giftsToDisplay[0]) {
-        selectedGiftImage = giftsToDisplay[0].image;
-        selectedGiftPrice = giftsToDisplay[0].diamond_count;
-        selectedGiftName = giftsToDisplay[0].name;
-      }
-
-      renderGiftGrid(giftsToDisplay, modeType);
-    };
-
-    window.initElimBouclePanel = function(giftsToDisplay) {
+    function initElimBouclePanel(giftsToDisplay) {
       const wrap1 = document.querySelector('#modal-extra-action div');
       if (!wrap1) return;
-
       wrap1.innerHTML = `
-        <h3>1. Configuration du jeu</h3>
         <div class="form-group">
-          <label>Choisis ton cadeau officiel TikTok</label>
-          <div class="form-group" style="margin-bottom:8px;">
-            <input type="text" id="gift-search" placeholder="🔍 Rechercher un cadeau..." oninput="filterGifts(this.value)" style="padding:8px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:6px; font-size:12px; width:100%;">
-          </div>
-          <div class="gift-grid" id="elim-gift-grid"></div>
-          <label style="margin-top:10px;">Ou prix manuel (Pièces)</label>
-          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" oninput="setManualGift('elimination-boucle')" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label>Temps d'envoi (Secondes)</label>
-          <input type="number" id="elim-open-time" value="30" min="5" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px; margin-top:4px;">
+          <label>Cadeau requis</label>
+          <input type="number" id="elim-cout" value="${giftsToDisplay[0] ? giftsToDisplay[0].diamond_count : 1}" min="1" style="padding:10px; background:var(--ink); border:1px solid var(--border); color:white; border-radius:8px;">
         </div>
         <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="lancerElimBoucle()">🟢 Démarrer le jeu</button>
       `;
+    }
 
-      if (giftsToDisplay[0]) {
-        selectedGiftImage = giftsToDisplay[0].image;
-        selectedGiftPrice = giftsToDisplay[0].diamond_count;
-        selectedGiftName = giftsToDisplay[0].name;
-      }
+    function lancerElim() {
+      socket.emit('configurerElimination', { pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, tempsOuverture: 30, intervalle: 5 });
+      alert("Mode Élimination Classique démarré !");
+    }
 
-      renderGiftGrid(giftsToDisplay, 'elimination-boucle');
-    };
+    function lancerElimBoucle() {
+      socket.emit('configurerEliminationBoucle', { pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, tempsOuverture: 30 });
+      alert("Mode Élimination en Boucle démarré !");
+    }
 
-    window.renderGiftGrid = function(giftsToDisplay, modeType) {
-      const grid = document.getElementById('elim-gift-grid');
-      if (!grid) return;
-
-      grid.innerHTML = giftsToDisplay.map((g, i) => `
-        <div class="gift-item ${i===0?'selected':''}" id="gift-item-${i}" onclick="selectElimGift('${g.image}', ${g.diamond_count}, ${i}, '${g.name.replace(/'/g, "\\'")}', '${modeType}')">
-          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
-          <div class="gift-price">${g.diamond_count} 💎</div>
-          <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${g.name}</div>
-        </div>
-      `).join('');
-    };
-
-    window.filterGifts = function(query) {
-      if(!window.allGiftsCache) return;
-      const filtered = window.allGiftsCache.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
-      renderGiftGrid(filtered, typeActuel);
-    };
-
-    window.selectElimGift = function(imgUrl, price, idx, name, modeType) {
-      document.querySelectorAll('.gift-item').forEach(el => el.classList.remove('selected'));
-      const item = document.getElementById(`gift-item-${idx}`);
-      if(item) item.classList.add('selected');
-      document.getElementById('elim-cout').value = price;
-      selectedGiftImage = imgUrl;
-      selectedGiftPrice = price;
-      selectedGiftName = name || '';
-      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
-      else updateElimSettings();
-    };
-
-    window.setManualGift = function(modeType) {
-      selectedGiftName = '';
-      if(modeType === 'elimination-boucle') updateElimBoucleSettings();
-      else updateElimSettings();
-    };
-
-    window.updateElimSettings = function() {
-      socket.emit('updateEliminationSettings', { 
-        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        intervalle: document.getElementById('elim-interval').value, 
-        giftImage: selectedGiftImage, giftName: selectedGiftName
-      });
-    };
-
-    window.updateElimBoucleSettings = function() {
-      socket.emit('updateEliminationBoucleSettings', { 
-        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        giftImage: selectedGiftImage, giftName: selectedGiftName
-      });
-    };
-
-    window.lancerElim = function() {
-      socket.emit('configurerElimination', { 
-        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        intervalle: document.getElementById('elim-interval').value,
-        tempsOuverture: document.getElementById('elim-open-time').value,
-        giftImage: selectedGiftImage, giftName: selectedGiftName
-      });
-      alert("Mode Élimination Classique ouvert !");
-    };
-
-    window.lancerElimBoucle = function() {
-      socket.emit('configurerEliminationBoucle', { 
-        pseudo: pseudoGlobal, cout: document.getElementById('elim-cout').value, 
-        tempsOuverture: document.getElementById('elim-open-time').value,
-        giftImage: selectedGiftImage, giftName: selectedGiftName
-      });
-      alert("Mode Élimination en Boucle (Battle Royale) ouvert !");
-    };
-
-    window.resetElim = function(actionEvt) {
+    function resetElim(actionEvt) {
       if(confirm('Vider la grille ?')) socket.emit(actionEvt, { pseudo: pseudoGlobal, action: 'reset' });
-    };
+    }
 
     function fermerPersonnalisation() { document.getElementById('modal-overlay').style.display = 'none'; }
     function mettreAJourLienModal() {
       let lien = '';
-      if (typeActuel === 'elimination') {
-        lien = `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
-      } else if (typeActuel === 'elimination-boucle') {
-        lien = `${baseUrl}/elimination-boucle/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
-      } else {
-        lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
-      }
+      if (typeActuel === 'elimination') lien = `${baseUrl}/elimination/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+      else if (typeActuel === 'elimination-boucle') lien = `${baseUrl}/elimination-boucle/${encodeURIComponent(pseudoGlobal)}?token=${encodeURIComponent(overlayTokenGlobal)}`;
+      else lien = `${baseUrl}/overlay/${encodeURIComponent(pseudoGlobal)}?type=${encodeURIComponent(typeActuel)}&token=${encodeURIComponent(overlayTokenGlobal)}`;
       document.getElementById('modal-obs-url').textContent = lien;
       document.getElementById('modal-demo-link').href = lien + '&demo=1';
     }
-    function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien copié !"); }
-    function demarrerObjectif() { socket.emit('definirObjectif', { pseudo: pseudoGlobal, cible: document.getElementById('objectif-cible-input').value, metrique: document.getElementById('objectif-metrique-input').value, label: 'Objectif' }); alert("Objectif lancé !"); }
-    function lancerCoffreFort() { socket.emit('configurerCoffre', { pseudo: pseudoGlobal, secret: document.getElementById('coffre-secret-input').value, recompense: document.getElementById('coffre-recompense-input').value }); alert("Coffre lancé !"); }
-    function devoilerCoffreHasard() { socket.emit('devoilerCharHasard', { pseudo: pseudoGlobal }); }
-    function devoilerCoffreIndex() {
-      const index = document.getElementById('coffre-index-input').value;
-      if (!index) { alert("Indique le numéro de la case à révéler."); return; }
-      socket.emit('devoilerCharIndex', { pseudo: pseudoGlobal, index });
-      document.getElementById('coffre-index-input').value = '';
-    }
+    function copierLienModal() { navigator.clipboard.writeText(document.getElementById('modal-obs-url').textContent); alert("Lien OBS copié !"); }
     function ouvrirModalProfil() { document.getElementById('modal-profil').style.display = 'flex'; }
     function fermerModalProfil() { document.getElementById('modal-profil').style.display = 'none'; }
     function sauvegarderProfil(e) { e.preventDefault(); fetch('/api/update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pseudo: document.getElementById('input-pseudo').value, apiKey: document.getElementById('input-apikey').value }) }).then(r => r.json()).then(d => { if (d.success) location.reload(); }); }
     function ouvrirContact() { document.getElementById('modal-contact').style.display = 'flex'; }
     function fermerContact() { document.getElementById('modal-contact').style.display = 'none'; }
-    async function envoyerSuggestion(e) { e.preventDefault(); await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'Bug', message: document.getElementById('contact-message').value }) }); alert("Envoyé !"); fermerContact(); }
+    async function envoyerSuggestion(e) { e.preventDefault(); await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: document.getElementById('contact-type').value, message: document.getElementById('contact-message').value }) }); alert("Merci pour votre retour !"); fermerContact(); }
   </script>
 </body>
 </html>
