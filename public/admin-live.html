@@ -8,8 +8,134 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
-    .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
+    body.app-bg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Fix strict des cartes de statistiques */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    .stat-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .stat-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: block;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      display: block;
+      margin: 4px 0;
+    }
+
+    .stat-subtext {
+      font-size: 11px;
+      color: #6b7280;
+      display: block;
+    }
+
+    /* Fix strict de l'alignement de l’historique */
+    .historique-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      width: 100%;
+    }
+    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
+
+    .historique-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .historique-card h2 { font-size: 15px; font-weight: 700; }
+    .historique-liste { display: flex; flex-direction: column; gap: 10px; }
+
+    .historique-item {
+      background: var(--surface-2, #181c28);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .historique-item .ligne-haut {
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      width: 100% !important;
+      gap: 12px !important;
+    }
+
+    .historique-item .stat-stats {
+      font-weight: 700;
+      color: #ffffff;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .historique-item .stat-date {
+      margin-left: auto !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #9ca3af;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .historique-item .ligne-bas {
+      color: #9ca3af;
+      font-size: 11px;
+    }
+
+    .historique-vide {
+      color: #6b7280;
+      font-size: 12px;
+      text-align: center;
+      padding: 16px 0;
+    }
   </style>
 </head>
 <body class="app-bg">
@@ -28,12 +154,12 @@
 
     <!-- Blocs de statistiques -->
     <div class="stats-grid">
-      <div class="stat-card card">
+      <div class="stat-card">
         <span class="stat-title">Total Pièces (Gifts)</span>
         <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
-      <div class="stat-card card">
+      <div class="stat-card">
         <span class="stat-title">Total Likes</span>
         <span class="stat-value" id="stat-likes" style="color: var(--cyan);">0</span>
       </div>
@@ -49,13 +175,13 @@
 
     <!-- Historique -->
     <div class="historique-grid">
-      <div class="historique-card card">
+      <div class="historique-card">
         <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card card">
+      <div class="historique-card">
         <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
@@ -147,11 +273,11 @@
               ligneHaut.className = 'ligne-haut';
 
               const spanStats = document.createElement('span');
-              spanStats.className = 'stat-label';
+              spanStats.className = 'stat-stats';
               spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
 
               const spanDate = document.createElement('span');
-              spanDate.className = 'date-label';
+              spanDate.className = 'stat-date';
               spanDate.textContent = formaterDate(live.fin);
 
               ligneHaut.append(spanStats, spanDate);
@@ -183,11 +309,11 @@
               ligneHaut.className = 'ligne-haut';
 
               const spanGagnant = document.createElement('span');
-              spanGagnant.className = 'stat-label';
+              spanGagnant.className = 'stat-stats';
               spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
 
               const spanDate = document.createElement('span');
-              spanDate.className = 'date-label';
+              spanDate.className = 'stat-date';
               spanDate.textContent = formaterDate(e.date);
 
               ligneHaut.append(spanGagnant, spanDate);

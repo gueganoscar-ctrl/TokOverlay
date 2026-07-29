@@ -10,6 +10,72 @@
   <style>
     body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
     .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
+
+    .historique-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; }
+    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
+
+    .historique-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .historique-card h2 { font-size: 15px; font-weight: 700; }
+    .historique-liste { display: flex; flex-direction: column; gap: 10px; }
+
+    .historique-item {
+      background: var(--surface-2, #181c28);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .historique-item .ligne-haut {
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      width: 100% !important;
+      gap: 12px !important;
+    }
+
+    .historique-item .stat-stats {
+      font-weight: 700;
+      color: #ffffff;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .historique-item .stat-date {
+      margin-left: auto !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #9ca3af;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .historique-item .ligne-bas {
+      color: #9ca3af;
+      font-size: 11px;
+    }
+
+    .historique-vide {
+      color: #6b7280;
+      font-size: 12px;
+      text-align: center;
+      padding: 16px 0;
+    }
   </style>
 </head>
 <body class="app-bg">
@@ -25,13 +91,13 @@
     </div>
 
     <div class="historique-grid">
-      <div class="historique-card card">
+      <div class="historique-card">
         <h2>📅 Historique des lives passés</h2>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
-      <div class="historique-card card">
+      <div class="historique-card">
         <h2>⚖️ Historique des enchères passées</h2>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
@@ -82,62 +148,4 @@
               ligneHaut.className = 'ligne-haut';
 
               const spanStats = document.createElement('span');
-              spanStats.className = 'stat-label';
-              spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'date-label';
-              spanDate.textContent = formaterDate(live.fin);
-
-              ligneHaut.append(spanStats, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = live.topDonateur 
-                ? `Top donateur : ${live.topDonateur.nickname} (${(live.topDonateur.coins || 0).toLocaleString()} 💎)` 
-                : 'Aucun don reçu';
-
-              item.append(ligneHaut, ligneBas);
-              conteneurLives.appendChild(item);
-            });
-          }
-
-          const conteneurEncheres = document.getElementById('historique-encheres');
-          conteneurEncheres.innerHTML = '';
-          if (!encheres || encheres.length === 0) {
-            const divVide = document.createElement('div');
-            divVide.className = 'historique-vide';
-            divVide.textContent = 'Aucune enchère enregistrée pour le moment.';
-            conteneurEncheres.appendChild(divVide);
-          } else {
-            encheres.forEach(e => {
-              const item = document.createElement('div');
-              item.className = 'historique-item';
-
-              const ligneHaut = document.createElement('div');
-              ligneHaut.className = 'ligne-haut';
-
-              const spanGagnant = document.createElement('span');
-              spanGagnant.className = 'stat-label';
-              spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'date-label';
-              spanDate.textContent = formaterDate(e.date);
-
-              ligneHaut.append(spanGagnant, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = `${e.gagnant ? (e.gagnant.coins || 0).toLocaleString() + ' 💎 · ' : ''}Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
-
-              item.append(ligneHaut, ligneBas);
-              conteneurEncheres.appendChild(item);
-            });
-          }
-        })
-        .catch(() => {});
-    }
-  </script>
-</body>
-</html>
+              spanSta
