@@ -15,6 +15,7 @@
       justify-content: flex-start;
       padding: 40px 20px;
     }
+
     .container {
       width: 100%;
       max-width: 1000px;
@@ -23,12 +24,32 @@
       gap: 24px;
     }
 
+    /* En-tête principal */
+    .header-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Grille de statistiques équilibrée */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
       width: 100%;
     }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
 
     .stat-card {
       background: var(--surface, #11141d);
@@ -64,6 +85,31 @@
       display: block;
     }
 
+    /* Boîte d'activité Live */
+    .live-feed-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .alert-box {
+      background: #07090e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--cyan, #22e5e0);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Grille et cartes d'historique */
     .historique-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -82,17 +128,29 @@
       gap: 16px;
     }
 
-    .historique-card h2 { font-size: 15px; font-weight: 700; }
-    .historique-liste { display: flex; flex-direction: column; gap: 10px; }
+    .historique-card h2 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-    .historique-item {
-      background: var(--surface-2, #181c28);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-radius: 10px;
-      padding: 12px 16px;
+    .historique-liste {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
+    }
+
+    /* Boîtes d'éléments dans l'historique */
+    .historique-item {
+      background: #161a26 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 10px !important;
+      padding: 12px 16px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 6px !important;
     }
 
     .historique-item .ligne-haut {
@@ -105,27 +163,28 @@
     }
 
     .historique-item .stat-stats {
-      font-weight: 700;
-      color: #ffffff;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-weight: 700 !important;
+      color: #ffffff !important;
+      font-size: 13px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
     }
 
     .historique-item .stat-date {
       margin-left: auto !important;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: #9ca3af;
-      font-weight: 600;
-      white-space: nowrap;
-      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 11px !important;
+      color: #9ca3af !important;
+      font-weight: 600 !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
 
     .historique-item .ligne-bas {
-      color: #9ca3af;
-      font-size: 11px;
+      color: #9ca3af !important;
+      font-size: 11px !important;
+      margin-top: 2px !important;
     }
 
     .historique-vide {
@@ -139,7 +198,8 @@
 <body class="app-bg">
   <div class="container">
     
-    <div class="header-card card">
+    <!-- En-tête -->
+    <div class="header-card">
       <div class="header-left">
         <span class="live-dot"></span>
         <div>
@@ -154,17 +214,18 @@
     <div class="stats-grid">
       <div class="stat-card">
         <span class="stat-title">Total Pièces (Gifts)</span>
-        <span class="stat-value" id="stat-diamonds" style="color: var(--gold);">0</span>
+        <span class="stat-value" id="stat-diamonds" style="color: var(--gold, #ffbe3d);">0</span>
         <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
       </div>
       <div class="stat-card">
         <span class="stat-title">Total Likes</span>
-        <span class="stat-value" id="stat-likes" style="color: var(--cyan);">0</span>
+        <span class="stat-value" id="stat-likes" style="color: var(--cyan, #22e5e0);">0</span>
+        <span class="stat-subtext">Activité en direct du flux</span>
       </div>
     </div>
 
     <!-- Activité live en direct -->
-    <div class="live-feed-card card">
+    <div class="live-feed-card">
       <h2 style="font-size: 16px;">⚡ Dernière Activité du Live</h2>
       <div class="alert-box" id="latest-alert">
         En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
@@ -318,7 +379,9 @@
 
               const ligneBas = document.createElement('div');
               ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = `${e.gagnant ? (e.gagnant.coins || 0).toLocaleString() + ' 💎 · ' : ''}Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
+              ligneBas.textContent = e.gagnant 
+                ? `Mise gagnante : ${(e.gagnant.coins || 0).toLocaleString()} 💎  ·  Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`
+                : `Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`;
 
               item.append(ligneHaut, ligneBas);
               conteneurEncheres.appendChild(item);

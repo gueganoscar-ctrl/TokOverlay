@@ -8,10 +8,47 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    body.app-bg { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; }
-    .container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 24px; }
+    body.app-bg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+    }
 
-    .historique-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; }
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* En-tête principal */
+    .header-card {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Grille et cartes d'historique */
+    .historique-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      width: 100%;
+    }
     @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
 
     .historique-card {
@@ -24,17 +61,29 @@
       gap: 16px;
     }
 
-    .historique-card h2 { font-size: 15px; font-weight: 700; }
-    .historique-liste { display: flex; flex-direction: column; gap: 10px; }
+    .historique-card h2 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-    .historique-item {
-      background: var(--surface-2, #181c28);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-radius: 10px;
-      padding: 12px 16px;
+    .historique-liste {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
+    }
+
+    /* Boîtes d'éléments dans l'historique */
+    .historique-item {
+      background: #161a26 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 10px !important;
+      padding: 12px 16px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 6px !important;
     }
 
     .historique-item .ligne-haut {
@@ -47,27 +96,28 @@
     }
 
     .historique-item .stat-stats {
-      font-weight: 700;
-      color: #ffffff;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-weight: 700 !important;
+      color: #ffffff !important;
+      font-size: 13px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
     }
 
     .historique-item .stat-date {
       margin-left: auto !important;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: #9ca3af;
-      font-weight: 600;
-      white-space: nowrap;
-      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 11px !important;
+      color: #9ca3af !important;
+      font-weight: 600 !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
 
     .historique-item .ligne-bas {
-      color: #9ca3af;
-      font-size: 11px;
+      color: #9ca3af !important;
+      font-size: 11px !important;
+      margin-top: 2px !important;
     }
 
     .historique-vide {
@@ -80,7 +130,7 @@
 </head>
 <body class="app-bg">
   <div class="container">
-    <div class="header-card card">
+    <div class="header-card">
       <div class="header-left">
         <div>
           <h1 style="font-size: 22px;">Statistiques &amp; Historique</h1>
@@ -188,14 +238,16 @@
               spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
 
               const spanDate = document.createElement('span');
-              spanDate.className = 'date-label';
+              spanDate.className = 'stat-date';
               spanDate.textContent = formaterDate(e.date);
 
               ligneHaut.append(spanGagnant, spanDate);
 
               const ligneBas = document.createElement('div');
               ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = `${e.gagnant ? (e.gagnant.coins || 0).toLocaleString() + ' 💎 · ' : ''}Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`.trim();
+              ligneBas.textContent = e.gagnant 
+                ? `Mise gagnante : ${(e.gagnant.coins || 0).toLocaleString()} 💎  ·  Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`
+                : `Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`;
 
               item.append(ligneHaut, ligneBas);
               conteneurEncheres.appendChild(item);
