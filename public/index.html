@@ -8,127 +8,93 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    .landing-nav {
-      position: fixed; top: 0; left: 0; right: 0; height: 72px;
-      background: rgba(16, 16, 22, 0.7); backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--glass-border);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 48px; z-index: 1000;
-    }
-
     .hero-section {
-      padding: 160px 20px 90px; text-align: center; max-width: 900px;
-      margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 28px;
+      padding: 150px 20px 80px; text-align: center; max-width: 850px;
+      margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 24px;
     }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(37, 244, 238, 0.1); border: 1px solid rgba(37, 244, 238, 0.3);
-      color: var(--electric-cyan); padding: 7px 18px; border-radius: 99px;
-      font-size: 13px; font-weight: 700; box-shadow: var(--glow-cyan);
-    }
-
-    .hero-title {
-      font-size: 56px; line-height: 1.1; font-weight: 800;
-      background: linear-gradient(135deg, #FFFFFF 30%, var(--electric-cyan) 80%, var(--cyber-pink) 100%);
-      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-
-    .hero-desc { font-size: 18px; color: #8D8D99; max-width: 680px; line-height: 1.6; }
-
     .hero-ctas { display: flex; gap: 16px; margin-top: 10px; }
-
-    .features-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px; max-width: 1200px; margin: 60px auto; padding: 0 20px;
-    }
-
-    .cta-card {
-      max-width: 950px; margin: 60px auto 100px; padding: 48px; text-align: center;
-      display: flex; flex-direction: column; align-items: center; gap: 20px;
-      background: linear-gradient(135deg, rgba(22, 22, 30, 0.8) 0%, rgba(35, 18, 55, 0.6) 100%);
-      border-color: rgba(125, 60, 255, 0.3); box-shadow: var(--glow-purple);
-    }
+    .features-grid { max-width: 1100px; margin: 60px auto; padding: 0 20px; }
   </style>
 </head>
 <body class="app-bg">
 
-  <!-- Top Glass Navigation -->
+  <!-- Navigation -->
   <nav class="landing-nav">
-    <div class="brand-row" style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:10px;">
       <span class="live-dot"></span>
-      <span class="chroma-title" data-text="TokOverlay">TokOverlay</span>
+      <span class="brand-text">TokOverlay</span>
     </div>
-    <div style="display: flex; gap: 14px; align-items: center;">
-      <a href="/login.html" class="btn btn-secondary">Connexion</a>
-      <a href="/login.html?tab=register" class="btn btn-primary">Créer un compte</a>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <a href="/login.html" class="btn btn-secondary" style="padding: 9px 18px; font-size: 13px;">Connexion</a>
+      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 9px 18px; font-size: 13px;">Créer un compte</a>
     </div>
   </nav>
 
-  <!-- Hero Section -->
+  <!-- Hero Section EXACTEMENT comme la capture -->
   <section class="hero-section">
     <div class="hero-badge">
       <span class="live-dot"></span> 100% Gratuit &amp; Synchronisé avec TikTok Live
     </div>
-    <h1 class="hero-title">Maximisez les dons et l'engagement de votre Live TikTok</h1>
+
+    <h1 class="hero-title">
+      Maximisez <span class="highlight-cyan">les dons et</span><br>
+      l'engagement <span class="highlight-cyan">de votre Live<br>TikTok</span>
+    </h1>
+
     <p class="hero-desc">
       Une suite complète d'overlays interactifs et de jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Roue de la Fortune, Enchères, Jeu du Coffre-Fort et Top Donateurs.
     </p>
+
     <div class="hero-ctas">
-      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px;">Démarrer maintenant →</a>
-      <a href="#features" class="btn btn-secondary" style="padding: 14px 24px; font-size: 15px;">Découvrir les Overlays</a>
+      <a href="/login.html?tab=register" class="btn btn-primary">Démarrer maintenant →</a>
+      <a href="#features" class="btn btn-secondary">Découvrir les Overlays</a>
     </div>
   </section>
 
-  <!-- Features Bento Grid -->
+  <!-- Features Grid -->
   <section id="features" class="features-grid">
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper" style="background: rgba(125, 60, 255, 0.15); border-color: rgba(125, 60, 255, 0.3);">💀</div>
-      <h3>Mode Élimination Battle Royale</h3>
-      <p>Grille interactive : 1 don = 1 place. Les joueurs s'éliminent automatiquement en direct jusqu'au duel final !</p>
-    </div>
+    <div class="bento-grid">
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">💀</div>
+        <h3>Mode Élimination Fermée</h3>
+        <p>1 don = 1 place. Les joueurs s'éliminent automatiquement jusqu'au vainqueur final !</p>
+      </div>
 
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper">⚖️</div>
-      <h3>Panneau d'Enchères Live</h3>
-      <p>Gérez des enchères en direct avec système Anti-Snipe, décompte visuel et confirmation automatique via le chat.</p>
-    </div>
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">⚡</div>
+        <h3>Mode Élimination Classique</h3>
+        <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place.</p>
+      </div>
 
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper" style="background: rgba(255, 190, 61, 0.1); border-color: rgba(255, 190, 61, 0.3);">🔐</div>
-      <h3>Jeu du Coffre-Fort</h3>
-      <p>Le chat devine un mot secret case par case. Révélation automatique dès que la réponse est envoyée.</p>
-    </div>
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">⚖️</div>
+        <h3>Panneau d'Enchères Live</h3>
+        <p>Gérez des enchères en direct avec règles anti-snipe et validation dans le chat.</p>
+      </div>
 
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper" style="background: rgba(254, 44, 85, 0.1); border-color: rgba(254, 44, 85, 0.3);">🎡</div>
-      <h3>Roue de la Fortune</h3>
-      <p>Déclenchée automatiquement aux abonnements ou cadeaux définis pour attribuer des lots et gages en direct.</p>
-    </div>
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">🔐</div>
+        <h3>Jeu du Coffre-Fort</h3>
+        <p>Le chat devine un mot secret case par case avec détection automatique.</p>
+      </div>
 
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper">💎</div>
-      <h3>Top Donateurs &amp; Likers</h3>
-      <p>Affichage esthétique et dynamique du classement de vos plus gros supporters pendant le live.</p>
-    </div>
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">💎</div>
+        <h3>Top Donateurs &amp; Likers</h3>
+        <p>Classement esthétique en temps réel de vos plus gros supporters pendant le live.</p>
+      </div>
 
-    <div class="overlay-card glass-panel">
-      <div class="overlay-icon-wrapper" style="background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.3);">🎯</div>
-      <h3>Objectifs &amp; Best Gift</h3>
-      <p>Barre de progression vers vos objectifs de pièces/likes et mise en valeur du plus gros cadeau reçu.</p>
+      <div class="bento-col-4 overlay-card card">
+        <div class="overlay-icon-wrapper">🎯</div>
+        <h3>Objectifs &amp; Best Gift</h3>
+        <p>Barre de progression pour vos objectifs et mise en valeur du plus gros cadeau reçu.</p>
+      </div>
     </div>
-  </section>
-
-  <!-- CTA Banner -->
-  <section class="cta-card glass-panel">
-    <h2 style="font-size: 32px;">Prêt à dynamiser votre prochain Live TikTok ?</h2>
-    <p style="color: #8D8D99; max-width: 550px;">Rejoignez les streamers qui utilisent TokOverlay. Configuration en moins de 2 minutes sur OBS.</p>
-    <a href="/login.html?tab=register" class="btn btn-cyber" style="padding: 14px 32px; font-size: 15px;">Créer mon compte streamer →</a>
   </section>
 
   <!-- Footer -->
-  <footer style="text-align: center; padding: 40px; color: #55555F; font-size: 12px; border-top: 1px solid var(--glass-border);">
-    <a href="/mentions-legales.html" style="color: #8D8D99;">Mentions Légales</a> &bull; &copy; 2026 TokOverlay
+  <footer style="text-align: center; padding: 40px; color: var(--text-faint); font-size: 12px; border-top: 1px solid var(--border);">
+    <a href="/mentions-legales.html" style="color: var(--text-lo);">Mentions Légales</a> &bull; &copy; 2026 TokOverlay
   </footer>
 
 </body>
