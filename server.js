@@ -210,7 +210,7 @@ async function checkRememberMe(req, res, next) {
 
 app.use(checkRememberMe);
 
-// 3. REDIRECTIONS AUTOMATIQUES DES PAGES D'ACCUEIL & LOGIN (PLACCÉES AVANT express.static)
+// 3. REDIRECTIONS AUTOMATIQUES DES PAGES D'ACCUEIL & LOGIN
 app.get('/', (req, res) => {
   if (req.session && req.session.user) {
     return res.redirect('/choix.html');
@@ -232,7 +232,7 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// 4. SERVIR LES FICHIERS STATIQUES (APRES LES REDIRECTIONS)
+// 4. SERVIR LES FICHIERS STATIQUES
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
@@ -424,7 +424,6 @@ app.post('/login', authLimiter, async (req, res) => {
       req.session.user = { id: user._id, pseudo: user.pseudo, email: user.email, role: user.role || 'streamer' };
       await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
 
-      // Option : Se souvenir de moi (30 jours)
       if (rememberMe) {
         const selector = crypto.randomBytes(16).toString('hex');
         const validator = crypto.randomBytes(32).toString('hex');
@@ -784,7 +783,7 @@ app.get('/api/admin/stats-globales', async (req, res) => {
     
     const resultat = streamers.map(s => {
       const liveData = connexionsActives[s.pseudo];
-      const isOnline = liveData && liveData.connection && liveData.connection.isConnected;
+      const isOnline = Boolean(liveData && liveData.connection && liveData.connection.isConnected);
       const diamantsSessionActuelle = liveData ? Object.values(liveData.gifters).reduce((sum, g) => sum + g.coins, 0) : 0;
       
       return {
@@ -792,7 +791,7 @@ app.get('/api/admin/stats-globales', async (req, res) => {
         email: s.email,
         totalDiamantsGlobal: s.totalDiamantsGlobal || 0,
         diamantsSessionActuelle,
-        enLigne: !!isOnline
+        enLigne: isOnline
       };
     });
 
@@ -823,6 +822,7 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   }
 });
 
+// ROUTE STATUS DU LIVE (AMÉLIORÉE & DIAGNOSTIQUE)
 app.get('/api/live-status/:pseudo', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.pseudo);
@@ -831,8 +831,12 @@ app.get('/api/live-status/:pseudo', async (req, res) => {
     }
 
     const data = connexionsActives[pseudo];
-    const isOnline = data && data.connection && data.connection.isConnected;
-    res.json({ online: !!isOnline });
+    const isOnline = Boolean(data && data.connection && data.connection.isConnected);
+    
+    res.json({ 
+      online: isOnline,
+      connected: Boolean(data)
+    });
   } catch {
     res.status(400).json({ error: "Requête invalide." });
   }
@@ -975,12 +979,14 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
   }, 2000); 
 
-  connection.connect().catch(() => {
-    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live.");
+  connection.connect().catch((err) => {
+    console.error(`[TikTokLive] Erreur connexion pour @${pseudo}:`, err);
+    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live. Vérifiez votre clé API ou que vous êtes bien en direct.");
     arreterEcouteLive(pseudo, data, 'connect_error');
   });
 
-  connection.once('error', () => {
+  connection.once('error', (err) => {
+    console.error(`[TikTokLive] Erreur runtime pour @${pseudo}:`, err);
     arreterEcouteLive(pseudo, data, 'error');
   });
 
