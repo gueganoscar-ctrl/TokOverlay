@@ -174,7 +174,6 @@ async function checkRememberMe(req, res, next) {
       return next();
     }
 
-    // Restauration de session
     req.session.user = {
       id: user._id,
       pseudo: user.pseudo,
@@ -182,7 +181,6 @@ async function checkRememberMe(req, res, next) {
       role: user.role || 'streamer'
     };
 
-    // Rotation du token
     const newSelector = crypto.randomBytes(16).toString('hex');
     const newValidator = crypto.randomBytes(32).toString('hex');
     const newValidatorHash = crypto.createHash('sha256').update(newValidator).digest('hex');
@@ -210,7 +208,7 @@ async function checkRememberMe(req, res, next) {
 
 app.use(checkRememberMe);
 
-// 3. REDIRECTIONS AUTOMATIQUES DES PAGES D'ACCUEIL & LOGIN
+// 3. REDIRECTIONS AUTOMATIQUES
 app.get('/', (req, res) => {
   if (req.session && req.session.user) {
     return res.redirect('/choix.html');
@@ -283,7 +281,7 @@ function canManage(user, pseudo) { return Boolean(user && (isAdmin(user) || user
 
 function signOverlayToken(pseudo) {
   const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7);
-  const payload = Buffer.from(JSON.stringify({ pseudo, expiresAt })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ pseudo: normalizePseudo(pseudo), expiresAt })).toString('base64url');
   const signature = crypto
     .createHmac('sha256', OVERLAY_TOKEN_SECRET)
     .update(payload)
@@ -292,7 +290,7 @@ function signOverlayToken(pseudo) {
 }
 
 function verifyOverlayToken(token, expectedPseudo) {
-  if (typeof token !== 'string') return false;
+  if (typeof token !== 'string' || !token) return false;
   const [payload, signature] = token.split('.');
   if (!payload || !signature) return false;
 
@@ -308,7 +306,7 @@ function verifyOverlayToken(token, expectedPseudo) {
 
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return data.pseudo === expectedPseudo && data.expiresAt > Date.now();
+    return normalizePseudo(data.pseudo) === normalizePseudo(expectedPseudo) && data.expiresAt > Date.now();
   } catch {
     return false;
   }
@@ -822,7 +820,6 @@ app.get('/api/historique/:pseudo', async (req, res) => {
   }
 });
 
-// ROUTE STATUS DU LIVE (AMÉLIORÉE & DIAGNOSTIQUE)
 app.get('/api/live-status/:pseudo', async (req, res) => {
   try {
     const pseudo = normalizePseudo(req.params.pseudo);
@@ -977,7 +974,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
       p.objectif = false;
     }
-  }, 2000); 
+  }, 1500); 
 
   connection.connect().catch((err) => {
     console.error(`[TikTokLive] Erreur connexion pour @${pseudo}:`, err);
@@ -1004,6 +1001,9 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.likers = true;
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
+
+    // Émission temps réel immédiate
+    io.to(`streamer:${pseudo}`).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
   });
 
   connection.on('subscribe', (d = {}) => {
@@ -1093,6 +1093,10 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.gifters = true;
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
+
+    // Émission temps réel immédiate
+    io.to(`streamer:${pseudo}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
+    if (data.objectif) io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
   });
 
   connection.on('chat', (d = {}) => {
@@ -1589,16 +1593,31 @@ io.on('connection', socket => {
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
       ack({ ok: true });
       
+      // ENVOI IMMÉDIAT DES DONNÉES EN TEMPS RÉEL À LA CONNEXION D'UN OVERLAY
       const data = connexionsActives[pseudoNettoye];
-      if (data && data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
-      if (data && data.bestGift) socket.emit('updateBestGift', data.bestGift);
-      if (data && data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
-      if (data && data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-      
-      if (type === 'elimination-boucle') {
-        if (data && data.eliminationBoucle) socket.emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
-      } else {
-        if (data && data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye));
+      if (data) {
+        // Top Donateurs & Likers actuels
+        const top3Gifters = Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3);
+        const top3Likers = Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3);
+        socket.emit('updateTopGifters', top3Gifters);
+        socket.emit('updateTopLikers', top3Likers);
+
+        // Stats globales actuelles
+        const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
+        const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
+        socket.emit('updateStatsLive', { totalDiamonds, totalLikes });
+
+        // Widgets
+        if (data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
+        if (data.bestGift) socket.emit('updateBestGift', data.bestGift);
+        if (data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
+        if (data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
+        
+        if (type === 'elimination-boucle') {
+          if (data.eliminationBoucle) socket.emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
+        } else {
+          if (data.elimination) socket.emit('updateElimination', etatElimination(pseudoNettoye));
+        }
       }
     } 
     catch {
