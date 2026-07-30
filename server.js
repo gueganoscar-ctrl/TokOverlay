@@ -988,7 +988,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
 
-    // DIFFUSION TEMPS RÉEL IMMÉDIATE
     io.to(`streamer:${pseudo}`).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
   });
 
@@ -1080,7 +1079,6 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
 
-    // DIFFUSION TEMPS RÉEL IMMÉDIATE AUX OVERLAYS
     io.to(`streamer:${pseudo}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
     if (data.objectif) io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
   });
@@ -1378,7 +1376,6 @@ function programmerTransitionOuFin(pseudo, enchere) {
   }, isNaN(delai) || delai < 0 ? 1000 : delai);
 }
 
-// TRAITEMENT DES DONS ENCHÈRE AVEC EXTENSION ANTI-SNIPE EN TEMPS RÉEL
 function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
   const enchere = connexionsActives[pseudo]?.enchere;
   if (!enchere || !enchere.actif) return;
@@ -1387,7 +1384,6 @@ function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
   enchere.dons[id].coins += totalPieces;
   enchere.totalDiamantsEnchere += totalPieces;
 
-  // RÈGLE ANTI-SNIPE : Si un don arrive pendant la phase Snipe ou à moins de SnipeMs de la fin, on repousse le chrono !
   const restant = enchere.finTimestamp - Date.now();
   if (enchere.phase === 'snipe' || restant <= enchere.snipeMs) {
     enchere.phase = 'snipe';
@@ -1590,6 +1586,10 @@ io.on('connection', socket => {
       socket.join(`streamer:${pseudoNettoye}`);
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
       ack({ ok: true });
+
+      // ENVOI IMMÉDIAT DU NOMBRE DE VOUCHS GLOBAL
+      socket.emit('initVouch', { vouches: vouchesGlobalCount });
+      socket.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 
       // ENVOI IMMÉDIAT ET SYNCHRONE DES DONNÉES TEMPS RÉEL AU REJOIGNANT
       const data = connexionsActives[pseudoNettoye];

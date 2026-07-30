@@ -21,16 +21,40 @@
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
     
     .grid-container { 
-      background: rgba(10, 5, 15, 0.95); border: 4px solid #6366f1; border-radius: 16px; padding: 10px; width: 100%; max-width: 700px;
-      height: 420px; max-height: 420px; box-shadow: 0 0 40px rgba(99, 102, 241, 0.2); display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; align-content: flex-start; overflow-y: auto; position: relative; 
+      background: rgba(10, 5, 15, 0.95);
+      border: 4px solid #6366f1;
+      border-radius: 16px;
+      padding: 10px;
+      width: 100%;
+      max-width: 700px;
+      height: 420px;
+      max-height: 420px;
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.2);
+      display: grid;
+      gap: 6px;
+      position: relative;
+      overflow: hidden; 
     }
-    .grid-cell { background: #18181b; border: 1px solid #3f3f46; border-radius: 4px; overflow: hidden; position: relative; transition: all 0.15s ease; flex-shrink: 0; }
+    
+    .grid-cell { 
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.15s ease;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
-    .grid-cell.roulette-highlight { border-color: #6366f1 !important; box-shadow: 0 0 18px rgba(99, 102, 241, 0.85); transform: scale(1.1); z-index: 2; }
+    .grid-cell.empty-cell { background: rgba(24, 24, 27, 0.3); border: 1px dashed rgba(63, 63, 70, 0.5); }
+    .grid-cell.roulette-highlight { border-color: #6366f1 !important; box-shadow: 0 0 18px rgba(99, 102, 241, 0.85); transform: scale(1.05); z-index: 2; }
     #elim-popup { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #6366f1; padding: 25px 40px; text-align: center; z-index: 100; border-radius: 16px; box-shadow: 0 0 50px rgba(99, 102, 241, 0.6); }
     #winner-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: rgba(10, 5, 15, 0.95); border: 4px solid #ffbe3d; border-radius: 16px; padding: 40px; width: 100%; height: 420px; box-shadow: 0 0 60px rgba(255, 190, 61, 0.4); text-align: center; }
     
-    /* Variantes de style */
     body.style-2 .grid-container { border-color: #ffbe3d; }
     body.style-3 .grid-container { border-color: #fe2c55; }
     body.style-4 .grid-container { border-color: #ffffff; }
@@ -101,7 +125,7 @@
       isAnimating = false;
       latestData = null;
       lastKnownPlacesLength = 0;
-      grid.style.display = 'flex';
+      grid.style.display = 'grid';
       winnerScreen.style.display = 'none';
       popup.style.display = 'none';
       clearInterval(countdownInterval);
@@ -139,34 +163,28 @@
       }
     }
 
-    function computeCellSize(count, container) {
-      if (count <= 0) return 15;
-      const styles = getComputedStyle(container);
-      const paddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
-      const paddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
-      const availW = Math.max(0, container.clientWidth - paddingX);
-      const availH = Math.max(0, container.clientHeight - paddingY);
-      const gap = 3;
-
-      let best = 15;
-      for (let cols = 1; cols <= count; cols++) {
-        const rows = Math.ceil(count / cols);
-        const cellW = (availW - gap * (cols - 1)) / cols;
-        const cellH = (availH - gap * (rows - 1)) / rows;
-        const size = Math.min(cellW, cellH);
-        if (size > best) best = size;
-      }
-      return Math.floor(Math.max(15, best));
-    }
-
     function renderCells() {
       if (!latestData || !Array.isArray(latestData.places)) return;
+
       const displayed = latestData.places
         .map((p, idx) => ({ ...p, idx }))
         .filter(p => !displayedEliminatedIndexes.has(p.idx));
 
-      let count = displayed.length || 1;
-      const cellSize = computeCellSize(count, grid);
+      const count = displayed.length;
+      if (count <= 0) {
+        grid.style.gridTemplateColumns = '1fr';
+        grid.style.gridTemplateRows = '1fr';
+        Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
+        return;
+      }
+
+      // CALCUL DU RATIO PLEIN ÉCRAN DYNAMIQUE
+      const cols = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / cols);
+      const totalSlots = cols * rows;
+
+      grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
@@ -174,11 +192,16 @@
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.dataset.placeIndex = place.idx;
-        cell.style.width = cellSize + 'px';
-        cell.style.height = cellSize + 'px';
         cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer">`;
         grid.appendChild(cell);
       });
+
+      const emptyCount = totalSlots - count;
+      for (let i = 0; i < emptyCount; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'grid-cell empty-cell';
+        grid.appendChild(emptyCell);
+      }
     }
 
     function renderGrid(data) {
@@ -219,7 +242,7 @@
         return;
       }
 
-      grid.style.display = 'flex';
+      grid.style.display = 'grid';
       winnerScreen.style.display = 'none';
       processQueue();
     }
@@ -243,7 +266,7 @@
       isAnimating = true;
       const next = animationQueue.shift();
 
-      const candidats = Array.from(grid.querySelectorAll('.grid-cell'));
+      const candidats = Array.from(grid.querySelectorAll('.grid-cell:not(.empty-cell)'));
       if (candidats.length > 0) {
         let step = 0;
         const totalSteps = 10;
