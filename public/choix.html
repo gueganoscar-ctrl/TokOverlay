@@ -215,7 +215,8 @@
       .style-picker-grid { grid-template-columns: 1fr; }
       .gift-grid { grid-template-columns: repeat(2, 1fr); }
     }
-  </style>
+  </style>:
+  <link rel="icon" type="image/png" href="/img/logo.png">
 </head>
 <body>
 
@@ -251,10 +252,11 @@
       <div class="sidebar-section-label">Outils Streamer</div>
       <a onclick="allerAuPanneauAdmin()" class="sidebar-link">⚙️ Admin Live Control</a>
       <a onclick="allerAuxStatistiques()" class="sidebar-link">📈 Stats &amp; Historique</a>
-      <a onclick="ouvrirSimulateur()" class="sidebar-link" style="color: var(--fuchsia);">🧪 Simulateur Cadeaux</a>
 
+      <!-- Menu réservé exclusivement aux Administrateurs -->
       <div id="vip-menu-section" style="display:none; margin-top: 10px;">
         <div class="sidebar-section-label">Super Admin</div>
+        <a onclick="ouvrirSimulateur()" class="sidebar-link" style="color: var(--fuchsia);">🧪 Simulateur Cadeaux</a>
         <a onclick="ouvrirVIPOverlay()" class="sidebar-link" style="color: var(--cyan);">🌟 Overlay VIP</a>
         <a onclick="ouvrirVIPRoom()" class="sidebar-link" style="color: var(--gold);">👑 VIP Room</a>
       </div>

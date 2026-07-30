@@ -666,7 +666,9 @@ app.get('/layout/:username', (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/elimination/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination.html')));
 app.get('/elimination-boucle/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'elimination-boucle.html')));
 app.get('/simulation/:username', (req, res) => {
-  if (!req.session.user) return res.redirect('/login.html');
+  if (!req.session.user || !isAdmin(req.session.user)) {
+    return res.redirect('/choix.html');
+  }
   res.sendFile(path.join(__dirname, 'public', 'simulation.html'));
 });
 
@@ -1441,15 +1443,17 @@ function terminerEnchere(pseudo) {
 
 io.on('connection', socket => {
 
-  socket.on('simulerCadeauTest', (payload = {}) => {
+  socket.on('simulerMessageTest', (payload = {}) => {
     try {
-      const { pseudo, senderPseudo, coins } = payload;
+      const { pseudo, senderPseudo, message } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
-      
-      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+
+      // VÉRIFICATION STRICTE ADMIN
+      if (!isAdmin(socket.request.session?.user)) return;
 
       const data = connexionsActives[pseudoNettoye];
       if (!data) return;
+      // ... suite inchangée ...
 
       const id = `simul_${senderPseudo}`;
       const nickname = senderPseudo;
