@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
   <title>TokOverlay - Mode Élimination Classique</title>
@@ -99,11 +98,9 @@
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const style = params.get('style') || '1';
+    const isDemo = params.get('demo') === '1';
 
     document.body.className = `style-${style}`;
-
-    const socket = io();
-    socket.on('connect', () => { if (pseudo) socket.emit('rejoindre', { pseudo, token, type: 'elimination-boucle' }); });
 
     const container = document.getElementById('game-container');
     const grid = document.getElementById('grid');
@@ -118,6 +115,43 @@
     let queuedIndexes = new Set();
     let animationQueue = [];
     let isAnimating = false;
+
+    if (isDemo) {
+      chargerEliminationBoucleDemo();
+    } else {
+      const socket = io();
+      socket.on('connect', () => { if (pseudo) socket.emit('rejoindre', { pseudo, token, type: 'elimination-boucle' }); });
+      socket.on('updateEliminationBoucle', renderGrid);
+    }
+
+    function chargerEliminationBoucleDemo() {
+      const demoData = {
+        actif: true,
+        cout: 50,
+        giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png',
+        totalCoins: 1800,
+        locked: false,
+        openEndsAt: Date.now() + 20000,
+        places: [
+          { id: '1', nickname: 'Max_Gamer', avatar: 'https://ui-avatars.com/api/?name=Max&background=6366f1&color=fff', eliminated: false },
+          { id: '2', nickname: 'Julie_Live', avatar: 'https://ui-avatars.com/api/?name=Julie&background=ec4899&color=fff', eliminated: false },
+          { id: '3', nickname: 'Leo_TikTok', avatar: 'https://ui-avatars.com/api/?name=Leo&background=14b8a6&color=fff', eliminated: false },
+          { id: '4', nickname: 'Sarah_Win', avatar: 'https://ui-avatars.com/api/?name=Sarah&background=f59e0b&color=fff', eliminated: false },
+          { id: '5', nickname: 'Tom_PRO', avatar: 'https://ui-avatars.com/api/?name=Tom&background=8b5cf6&color=fff', eliminated: false }
+        ]
+      };
+
+      latestData = demoData;
+      renderGrid(demoData);
+
+      // Simulation d'une élimination démo après 4 secondes pour la vidéo
+      setTimeout(() => {
+        if (!isAnimating) {
+          demoData.places[1].eliminated = true;
+          renderGrid(demoData);
+        }
+      }, 4000);
+    }
 
     function resetState() {
       displayedEliminatedIndexes = new Set();
@@ -179,7 +213,6 @@
         return;
       }
 
-      // CALCUL DU RATIO PLEIN ÉCRAN DYNAMIQUE
       const cols = Math.ceil(Math.sqrt(count));
       const rows = Math.ceil(count / cols);
       const totalSlots = cols * rows;
@@ -306,8 +339,6 @@
       isAnimating = false;
       processQueue();
     }
-
-    socket.on('updateEliminationBoucle', renderGrid);
   </script>
 </body>
 </html>

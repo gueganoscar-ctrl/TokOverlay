@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
   <title>TokOverlay - Mode Élimination Fermée</title>
@@ -24,7 +23,6 @@
     .stat-title { font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
     .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #c084fc; }
     
-    /* NOUVELLE GRILLE DU MODE ÉLIMINATION : PLEIN ÉCRAN DYNAMIQUE */
     .grid-container { 
       background: rgba(10, 5, 15, 0.95);
       border: 4px solid #22e5e0;
@@ -117,11 +115,9 @@
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const style = params.get('style') || '1';
+    const isDemo = params.get('demo') === '1';
 
     document.body.className = `style-${style}`;
-
-    const socket = io();
-    socket.on('connect', () => { if (pseudo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' }); });
 
     const container = document.getElementById('game-container');
     const grid = document.getElementById('grid');
@@ -137,6 +133,44 @@
     let queuedIndexes = new Set();
     let animationQueue = [];
     let isAnimating = false;
+
+    if (isDemo) {
+      chargerEliminationDemo();
+    } else {
+      const socket = io();
+      socket.on('connect', () => { if (pseudo) socket.emit('rejoindre', { pseudo, token, type: 'elimination' }); });
+      socket.on('updateElimination', renderGrid);
+    }
+
+    function chargerEliminationDemo() {
+      const demoData = {
+        actif: true,
+        cout: 100,
+        giftImage: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png',
+        totalCoins: 2400,
+        locked: false,
+        openEndsAt: Date.now() + 25000,
+        places: [
+          { id: '1', nickname: 'Pierre_92', avatar: 'https://ui-avatars.com/api/?name=Pierre&background=22e5e0&color=000', eliminated: false },
+          { id: '2', nickname: 'Sophie_Gaming', avatar: 'https://ui-avatars.com/api/?name=Sophie&background=ffbe3d&color=000', eliminated: false },
+          { id: '3', nickname: 'Lucas_PRO', avatar: 'https://ui-avatars.com/api/?name=Lucas&background=fe2c55&color=fff', eliminated: false },
+          { id: '4', nickname: 'Chlo_Live', avatar: 'https://ui-avatars.com/api/?name=Chloe&background=a855f7&color=fff', eliminated: false },
+          { id: '5', nickname: 'Anonyme_77', avatar: 'https://ui-avatars.com/api/?name=Ano&background=3b82f6&color=fff', eliminated: false },
+          { id: '6', nickname: 'Alex_12', avatar: 'https://ui-avatars.com/api/?name=Alex&background=10b981&color=fff', eliminated: false }
+        ]
+      };
+
+      latestData = demoData;
+      renderGrid(demoData);
+
+      // Simulation d'une élimination démo après 4 secondes pour la vidéo
+      setTimeout(() => {
+        if (!isAnimating) {
+          demoData.places[2].eliminated = true;
+          renderGrid(demoData);
+        }
+      }, 4000);
+    }
 
     function resetState() {
       displayedEliminatedIndexes = new Set();
@@ -214,7 +248,6 @@
         return;
       }
 
-      // CALCUL DU RATIO PLEIN ÉCRAN DYNAMIQUE
       const cols = Math.ceil(Math.sqrt(count));
       const rows = Math.ceil(count / cols);
       const totalSlots = cols * rows;
@@ -224,7 +257,6 @@
 
       Array.from(grid.children).forEach(child => { if (child.id !== 'elim-popup') child.remove(); });
 
-      // Rendu des vraies cartes joueurs
       displayed.forEach(place => {
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
@@ -233,7 +265,6 @@
         grid.appendChild(cell);
       });
 
-      // Remplissage dynamique des cases vides supplémentaires pour compléter la grille
       const emptyCount = totalSlots - count;
       for (let i = 0; i < emptyCount; i++) {
         const emptyCell = document.createElement('div');
@@ -281,7 +312,6 @@
 
     function runRouletteAnimation(next) {
       return new Promise(resolve => {
-        // La roulette cible exclusivement les cases avec des joueurs réels
         const candidats = Array.from(grid.querySelectorAll('.grid-cell:not(.empty-cell)'));
 
         if (candidats.length === 0) {
@@ -376,8 +406,6 @@
       isAnimating = false;
       processQueue();
     }
-
-    socket.on('updateElimination', renderGrid);
   </script>
 </body>
 </html>

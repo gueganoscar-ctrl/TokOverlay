@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <title>TokOverlay - Multi-Styles &amp; Multi-Widgets</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -263,187 +262,287 @@
       return carte;
     }
 
-    const socket = io();
+    if (isDemo) {
+      chargerDemoData();
+    } else {
+      const socket = io();
+      socket.on('connect', () => {
+        if (pseudo) socket.emit('rejoindre', { pseudo, token, type });
+      });
 
-    socket.on('connect', () => {
-      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type });
-    });
+      if (type === 'bestgift') document.getElementById('best-gift-container').style.display = 'flex';
 
-    if (type === 'bestgift') {
-      document.getElementById('best-gift-container').style.display = 'flex';
+      socket.on('updateBestGift', data => {
+        if (type === 'bestgift' && data) {
+          document.getElementById('bg-icon').src = safeImageUrl(data.icon, 'https://via.placeholder.com/60');
+          document.getElementById('bg-pseudo').textContent = data.pseudo;
+        }
+      });
+
+      if (type === 'donateurs' || type === 'likers') {
+        const leaderboard = document.getElementById('leaderboard');
+        leaderboard.style.display = 'flex';
+        document.getElementById('titre-classement').textContent = type === 'donateurs' ? 'Top Donateurs' : 'Top Likers';
+
+        function afficherClassementSimple(top3, cle, emoji) {
+          const msg = document.getElementById('message-attente-simple');
+          if(msg) msg.remove();
+          leaderboard.querySelectorAll('.carte-joueur').forEach(el => el.remove());
+          (top3 || []).forEach((user, i) => leaderboard.appendChild(creerCarteJoueur(user, i + 1, cle, emoji)));
+        }
+
+        socket.on(type === 'donateurs' ? 'updateTopGifters' : 'updateTopLikers', top3 => afficherClassementSimple(top3, type === 'donateurs' ? 'coins' : 'likes', type === 'donateurs' ? '💎 ' : '❤️ '));
+      }
+
+      if (type === 'coffre') {
+        const coffrePanel = document.getElementById('coffre-panel');
+        coffrePanel.style.display = 'flex';
+
+        socket.on('updateCoffre', coffre => {
+          if (!coffre) return;
+          const grid = document.getElementById('coffre-cases-grid');
+          grid.innerHTML = '';
+          coffre.caracteres.forEach(char => {
+            const div = document.createElement('div');
+            div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
+            div.textContent = char !== '_' ? char : '?';
+            grid.appendChild(div);
+          });
+          document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
+        });
+      }
+
+      if (type === 'encheres') {
+        const encherePanel = document.getElementById('enchere-panel');
+        const chronoEl = document.getElementById('enchere-chrono');
+        const infoMiseMinEl = document.getElementById('info-mise-min');
+        const infoSnipeDelayEl = document.getElementById('info-snipe-delay');
+        const classementEl = document.getElementById('enchere-classement');
+        const gagnantEcran = document.getElementById('enchere-gagnant-ecran');
+        const groupeChrono = document.getElementById('groupe-chrono');
+        const vouchStatusEl = document.getElementById('vouch-status');
+
+        encherePanel.style.display = 'block';
+
+        let intervalleChronoOverlay = null;
+
+        function demarrerTimerChronoOverlay(finTimestamp) {
+          if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
+
+          function tick() {
+            const restant = Math.max(0, finTimestamp - Date.now());
+            const secondes = Math.ceil(restant / 1000);
+            chronoEl.textContent = secondes + 's';
+
+            if (restant <= 0 && intervalleChronoOverlay) {
+              clearInterval(intervalleChronoOverlay);
+              intervalleChronoOverlay = null;
+            }
+          }
+
+          tick();
+          intervalleChronoOverlay = setInterval(tick, 200);
+        }
+
+        function afficherEtat(etat) {
+          if (!etat) return;
+          gagnantEcran.style.display = 'none';
+          groupeChrono.style.display = 'block';
+          classementEl.style.display = 'flex';
+
+          const finTimestamp = Date.now() + etat.tempsRestant;
+          demarrerTimerChronoOverlay(finTimestamp);
+
+          if (etat.phase === 'snipe') {
+            chronoEl.classList.add('phase-snipe');
+          } else {
+            chronoEl.classList.remove('phase-snipe');
+          }
+
+          infoMiseMinEl.textContent = etat.miseMinimale > 0 ? etat.miseMinimale.toLocaleString() + ' 💎' : '0 💎';
+          infoSnipeDelayEl.textContent = Math.round(etat.snipeMs / 1000) + 's';
+
+          classementEl.innerHTML = '';
+          (etat.classement || []).forEach((user) => {
+            const div = document.createElement('div');
+            div.className = 'carte-podium';
+
+            const img = document.createElement('img');
+            img.className = 'avatar';
+            img.src = safeImageUrl(user.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
+
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'display:flex; flex-direction:column; align-items:flex-start;';
+
+            const nickSpan = document.createElement('span');
+            nickSpan.className = 'nickname';
+            nickSpan.textContent = user.nickname;
+
+            infoDiv.appendChild(nickSpan);
+
+            const valSpan = document.createElement('span');
+            valSpan.className = 'valeur';
+            valSpan.textContent = `${user.coins.toLocaleString()} 💎`;
+
+            div.append(img, infoDiv, valSpan);
+            classementEl.appendChild(div);
+          });
+        }
+
+        socket.on('enchereDemarree', afficherEtat);
+        socket.on('updateEnchere', afficherEtat);
+
+        socket.on('enchereTerminee', ({ gagnant }) => {
+          if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
+          groupeChrono.style.display = 'none';
+          classementEl.style.display = 'none';
+          gagnantEcran.style.display = 'block';
+
+          if (gagnant) {
+            document.getElementById('gagnant-avatar').style.display = 'inline-block';
+            document.getElementById('gagnant-avatar').src = safeImageUrl(gagnant.profilePictureUrl, 'https://ui-avatars.com/api/?name=Winner');
+            document.getElementById('gagnant-nom').textContent = gagnant.nickname;
+            document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
+            document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente...';
+            vouchStatusEl.textContent = '⏳ En attente du vouch dans le chat';
+            vouchStatusEl.classList.remove('confirme');
+          } else {
+            document.getElementById('gagnant-avatar').style.display = 'none';
+            document.getElementById('gagnant-nom').textContent = 'Aucun gagnant';
+            document.getElementById('gagnant-total').textContent = '';
+            document.getElementById('gagnant-chat-message').textContent = '--';
+          }
+        });
+
+        socket.on('updateMessageGagnant', ({ message }) => {
+          if (gagnantEcran.style.display === 'block') {
+            document.getElementById('gagnant-chat-message').textContent = `"${message}"`;
+          }
+        });
+
+        socket.on('vouchConfirme', () => {
+          vouchStatusEl.textContent = '✅ Vouch confirmé';
+          vouchStatusEl.classList.add('confirme');
+        });
+
+        socket.on('initVouch', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
+        socket.on('updateVouchGlobal', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
+      }
+
+      if (type === 'objectif') {
+        const panel = document.getElementById('objectif-panel');
+        panel.style.display = 'block';
+
+        socket.on('updateObjectif', etat => {
+          if (!etat) return;
+          document.getElementById('objectif-label').textContent = etat.label;
+          const pct = Math.min(100, Math.round((etat.valeurActuelle / etat.cible) * 100));
+          document.getElementById('objectif-barre-remplissage').style.width = pct + '%';
+          const emoji = etat.metrique === 'likes' ? '❤️' : '💎';
+          document.getElementById('objectif-valeur-actuelle').textContent = `${emoji} ${etat.valeurActuelle.toLocaleString()}`;
+          document.getElementById('objectif-valeur-cible').textContent = `/ ${etat.cible.toLocaleString()}`;
+        });
+      }
     }
 
-    socket.on('updateBestGift', data => {
-      if (type === 'bestgift' && data) {
-        document.getElementById('bg-icon').src = safeImageUrl(data.icon, 'https://via.placeholder.com/60');
-        document.getElementById('bg-pseudo').textContent = data.pseudo;
+    // FONCTION D'INJECTION DE DONNÉES EN MODE DÉMO
+    function chargerDemoData() {
+      if (type === 'bestgift' || !type) {
+        document.getElementById('best-gift-container').style.display = 'flex';
+        document.getElementById('bg-icon').src = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png';
+        document.getElementById('bg-pseudo').textContent = 'Mia.Star (1 000 💎)';
       }
-    });
 
-    if (type === 'donateurs' || type === 'likers') {
-      const leaderboard = document.getElementById('leaderboard');
-      leaderboard.style.display = 'flex';
-      document.getElementById('titre-classement').textContent = type === 'donateurs' ? 'Top Donateurs' : 'Top Likers';
-
-      function afficherClassementSimple(top3, cle, emoji) {
+      if (type === 'donateurs') {
+        const leaderboard = document.getElementById('leaderboard');
+        leaderboard.style.display = 'flex';
+        document.getElementById('titre-classement').textContent = 'Top Donateurs';
         const msg = document.getElementById('message-attente-simple');
-        if(msg) msg.remove();
-        leaderboard.querySelectorAll('.carte-joueur').forEach(el => el.remove());
-        (top3 || []).forEach((user, i) => leaderboard.appendChild(creerCarteJoueur(user, i + 1, cle, emoji)));
+        if (msg) msg.remove();
+
+        const fakeDonateurs = [
+          { nickname: 'Alex_Live', profilePictureUrl: 'https://ui-avatars.com/api/?name=Alex&background=22e5e0&color=000', coins: 2450 },
+          { nickname: 'Sarah_Stream', profilePictureUrl: 'https://ui-avatars.com/api/?name=Sarah&background=ffbe3d&color=000', coins: 1800 },
+          { nickname: 'Thomas_99', profilePictureUrl: 'https://ui-avatars.com/api/?name=Thomas&background=fe2c55&color=fff', coins: 950 }
+        ];
+        fakeDonateurs.forEach((u, i) => leaderboard.appendChild(creerCarteJoueur(u, i + 1, 'coins', '💎 ')));
       }
 
-      socket.on(type === 'donateurs' ? 'updateTopGifters' : 'updateTopLikers', top3 => afficherClassementSimple(top3, type === 'donateurs' ? 'coins' : 'likes', type === 'donateurs' ? '💎 ' : '❤️ '));
-    }
+      if (type === 'likers') {
+        const leaderboard = document.getElementById('leaderboard');
+        leaderboard.style.display = 'flex';
+        document.getElementById('titre-classement').textContent = 'Top Likers';
+        const msg = document.getElementById('message-attente-simple');
+        if (msg) msg.remove();
 
-    if (type === 'coffre') {
-      const coffrePanel = document.getElementById('coffre-panel');
-      coffrePanel.style.display = 'flex';
+        const fakeLikers = [
+          { nickname: 'Max_Fan', profilePictureUrl: 'https://ui-avatars.com/api/?name=Max&background=fe2c55&color=fff', likes: 4500 },
+          { nickname: 'Emma_TikTok', profilePictureUrl: 'https://ui-avatars.com/api/?name=Emma&background=22e5e0&color=000', likes: 2800 },
+          { nickname: 'Lucas_Tap', profilePictureUrl: 'https://ui-avatars.com/api/?name=Lucas&background=ffbe3d&color=000', likes: 1350 }
+        ];
+        fakeLikers.forEach((u, i) => leaderboard.appendChild(creerCarteJoueur(u, i + 1, 'likes', '❤️ ')));
+      }
 
-      socket.on('updateCoffre', coffre => {
-        if (!coffre) return;
+      if (type === 'coffre') {
+        const coffrePanel = document.getElementById('coffre-panel');
+        coffrePanel.style.display = 'flex';
         const grid = document.getElementById('coffre-cases-grid');
         grid.innerHTML = '';
-        coffre.caracteres.forEach(char => {
+        ['7', '_', '7', '_', '9'].forEach(char => {
           const div = document.createElement('div');
           div.className = `case-char ${char !== '_' ? 'devoile' : ''}`;
           div.textContent = char !== '_' ? char : '?';
           grid.appendChild(div);
         });
-        document.getElementById('coffre-recompense-texte').textContent = `Récompense : ${coffre.recompense}`;
-      });
-    }
-
-    if (type === 'encheres') {
-      const encherePanel = document.getElementById('enchere-panel');
-      const chronoEl = document.getElementById('enchere-chrono');
-      const infoMiseMinEl = document.getElementById('info-mise-min');
-      const infoSnipeDelayEl = document.getElementById('info-snipe-delay');
-      const classementEl = document.getElementById('enchere-classement');
-      const gagnantEcran = document.getElementById('enchere-gagnant-ecran');
-      const groupeChrono = document.getElementById('groupe-chrono');
-      const vouchStatusEl = document.getElementById('vouch-status');
-
-      encherePanel.style.display = 'block';
-
-      // TIMER DÉCOMPTE DYNAMIQUE SUR L'OVERLAY
-      let intervalleChronoOverlay = null;
-
-      function demarrerTimerChronoOverlay(finTimestamp) {
-        if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
-
-        function tick() {
-          const restant = Math.max(0, finTimestamp - Date.now());
-          const secondes = Math.ceil(restant / 1000);
-          chronoEl.textContent = secondes + 's';
-
-          if (restant <= 0 && intervalleChronoOverlay) {
-            clearInterval(intervalleChronoOverlay);
-            intervalleChronoOverlay = null;
-          }
-        }
-
-        tick();
-        intervalleChronoOverlay = setInterval(tick, 200);
+        document.getElementById('coffre-recompense-texte').textContent = 'Récompense : 1 Abo Offert 🎁';
       }
 
-      function afficherEtat(etat) {
-        if (!etat) return;
-        gagnantEcran.style.display = 'none';
-        groupeChrono.style.display = 'block';
+      if (type === 'encheres') {
+        const encherePanel = document.getElementById('enchere-panel');
+        encherePanel.style.display = 'block';
+        document.getElementById('global-vouch-count').textContent = '14';
+        document.getElementById('info-mise-min').textContent = '50 💎';
+        document.getElementById('info-snipe-delay').textContent = '15s';
+
+        const fakePodium = [
+          { nickname: 'VIP_Gamer', profilePictureUrl: 'https://ui-avatars.com/api/?name=VIP&background=ffbe3d&color=000', coins: 1500 },
+          { nickname: 'Sniper_King', profilePictureUrl: 'https://ui-avatars.com/api/?name=Sniper&background=22e5e0&color=000', coins: 1200 },
+          { nickname: 'Donor_99', profilePictureUrl: 'https://ui-avatars.com/api/?name=Donor&background=fe2c55&color=fff', coins: 800 }
+        ];
+
+        const classementEl = document.getElementById('enchere-classement');
         classementEl.style.display = 'flex';
-
-        const finTimestamp = Date.now() + etat.tempsRestant;
-        demarrerTimerChronoOverlay(finTimestamp);
-
-        if (etat.phase === 'snipe') {
-          chronoEl.classList.add('phase-snipe');
-        } else {
-          chronoEl.classList.remove('phase-snipe');
-        }
-
-        infoMiseMinEl.textContent = etat.miseMinimale > 0 ? etat.miseMinimale.toLocaleString() + ' 💎' : '0 💎';
-        infoSnipeDelayEl.textContent = Math.round(etat.snipeMs / 1000) + 's';
-
         classementEl.innerHTML = '';
-        (etat.classement || []).forEach((user) => {
+        fakePodium.forEach(user => {
           const div = document.createElement('div');
           div.className = 'carte-podium';
-
-          const img = document.createElement('img');
-          img.className = 'avatar';
-          img.src = safeImageUrl(user.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
-
-          const infoDiv = document.createElement('div');
-          infoDiv.style.cssText = 'display:flex; flex-direction:column; align-items:flex-start;';
-
-          const nickSpan = document.createElement('span');
-          nickSpan.className = 'nickname';
-          nickSpan.textContent = user.nickname;
-
-          infoDiv.appendChild(nickSpan);
-
-          const valSpan = document.createElement('span');
-          valSpan.className = 'valeur';
-          valSpan.textContent = `${user.coins.toLocaleString()} 💎`;
-
-          div.append(img, infoDiv, valSpan);
+          div.innerHTML = `
+            <img class="avatar" src="${user.profilePictureUrl}">
+            <div style="display:flex; flex-direction:column; align-items:flex-start;">
+              <span class="nickname">${user.nickname}</span>
+            </div>
+            <span class="valeur">${user.coins.toLocaleString()} 💎</span>
+          `;
           classementEl.appendChild(div);
         });
+
+        let demoSec = 45;
+        const chronoEl = document.getElementById('enchere-chrono');
+        chronoEl.textContent = demoSec + 's';
+        setInterval(() => {
+          demoSec = demoSec > 0 ? demoSec - 1 : 45;
+          chronoEl.textContent = demoSec + 's';
+        }, 1000);
       }
 
-      socket.on('enchereDemarree', afficherEtat);
-      socket.on('updateEnchere', afficherEtat);
-
-      socket.on('enchereTerminee', ({ gagnant }) => {
-        if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
-        groupeChrono.style.display = 'none';
-        classementEl.style.display = 'none';
-        gagnantEcran.style.display = 'block';
-
-        if (gagnant) {
-          document.getElementById('gagnant-avatar').style.display = 'inline-block';
-          document.getElementById('gagnant-avatar').src = safeImageUrl(gagnant.profilePictureUrl, 'https://ui-avatars.com/api/?name=Winner');
-          document.getElementById('gagnant-nom').textContent = gagnant.nickname;
-          document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
-          document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente...';
-          vouchStatusEl.textContent = '⏳ En attente du vouch dans le chat';
-          vouchStatusEl.classList.remove('confirme');
-        } else {
-          document.getElementById('gagnant-avatar').style.display = 'none';
-          document.getElementById('gagnant-nom').textContent = 'Aucun gagnant';
-          document.getElementById('gagnant-total').textContent = '';
-          document.getElementById('gagnant-chat-message').textContent = '--';
-        }
-      });
-
-      socket.on('updateMessageGagnant', ({ message }) => {
-        if (gagnantEcran.style.display === 'block') {
-          document.getElementById('gagnant-chat-message').textContent = `"${message}"`;
-        }
-      });
-
-      socket.on('vouchConfirme', () => {
-        vouchStatusEl.textContent = '✅ Vouch confirmé';
-        vouchStatusEl.classList.add('confirme');
-      });
-
-      socket.on('initVouch', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
-      socket.on('updateVouchGlobal', data => { document.getElementById('global-vouch-count').textContent = data.vouches; });
-    }
-
-    if (type === 'objectif') {
-      const panel = document.getElementById('objectif-panel');
-      panel.style.display = 'block';
-
-      socket.on('updateObjectif', etat => {
-        if (!etat) return;
-        document.getElementById('objectif-label').textContent = etat.label;
-        const pct = Math.min(100, Math.round((etat.valeurActuelle / etat.cible) * 100));
-        document.getElementById('objectif-barre-remplissage').style.width = pct + '%';
-        const emoji = etat.metrique === 'likes' ? '❤️' : '💎';
-        document.getElementById('objectif-valeur-actuelle').textContent = `${emoji} ${etat.valeurActuelle.toLocaleString()}`;
-        document.getElementById('objectif-valeur-cible').textContent = `/ ${etat.cible.toLocaleString()}`;
-      });
+      if (type === 'objectif') {
+        const panel = document.getElementById('objectif-panel');
+        panel.style.display = 'block';
+        document.getElementById('objectif-label').textContent = 'Objectif du live';
+        document.getElementById('objectif-barre-remplissage').style.width = '75%';
+        document.getElementById('objectif-valeur-actuelle').textContent = '💎 750';
+        document.getElementById('objectif-valeur-cible').textContent = '/ 1 000';
+      }
     }
   </script>
 </body>
