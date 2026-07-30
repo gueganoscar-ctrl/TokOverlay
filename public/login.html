@@ -84,22 +84,31 @@
     </div>
 
     <!-- Formulaire Connexion -->
-    <form id="form-login" class="auth-form" action="/login" method="POST">
+    <form id="form-login" class="auth-form" onsubmit="soumettreConnexion(event)">
       <div>
-        <label>Pseudo TikTok (sans @)</label>
-        <input type="text" name="pseudo" placeholder="ex: mon_pseudo" required>
+        <label for="pseudo">Pseudo TikTok (sans @)</label>
+        <input type="text" id="pseudo" name="pseudo" placeholder="ex: mon_pseudo" required>
       </div>
       <div>
-        <label>Mot de passe</label>
-        <input type="password" name="password" placeholder="••••••••" required>
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
       </div>
+
+      <!-- Checkbox Se Souvenir de Moi -->
+      <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
+        <input type="checkbox" id="rememberMe" name="rememberMe" style="width: auto !important; cursor: pointer;">
+        <label for="rememberMe" style="text-transform: none; font-weight: 500; cursor: pointer; color: #d4d4d8; margin:0;">
+          Se souvenir de moi (30 jours)
+        </label>
+      </div>
+
       <div>
         <a href="#" onclick="motDePasseOublie(event)" style="font-size: 11px; color: var(--cyan); text-decoration: none;">Mot de passe oublié ?</a>
       </div>
       <button type="submit" class="btn btn-primary" style="margin-top: 6px; padding: 13px;">Se connecter</button>
     </form>
 
-    <!-- Formulaire Inscription avec tutoriel Clé API -->
+    <!-- Formulaire Inscription -->
     <form id="form-register" class="auth-form hidden" action="/register" method="POST">
       <div>
         <label>Pseudo TikTok</label>
@@ -122,7 +131,7 @@
     </form>
   </div>
 
-  <!-- Modal Tutoriel Clé API EulerStream -->
+  <!-- Modal Tutoriel Clé API -->
   <div id="modal-tuto">
     <div class="tuto-modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -169,6 +178,34 @@
       
       document.getElementById('form-login').classList.toggle('hidden', t !== 'login');
       document.getElementById('form-register').classList.toggle('hidden', t !== 'register');
+    }
+
+    async function soumettreConnexion(e) {
+      e.preventDefault();
+      const pseudo = document.getElementById('pseudo').value;
+      const password = document.getElementById('password').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+      const alertBox = document.getElementById('error-alert');
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pseudo, password, rememberMe })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          window.location.href = data.redirect || '/choix.html';
+        } else {
+          alertBox.classList.remove('hidden');
+          alertBox.textContent = data.error || "Pseudo ou mot de passe incorrect.";
+        }
+      } catch (err) {
+        alertBox.classList.remove('hidden');
+        alertBox.textContent = "Erreur de connexion au serveur.";
+      }
     }
 
     function motDePasseOublie(e) {

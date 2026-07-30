@@ -7,7 +7,7 @@ const path = require('path');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const crypto = require('crypto');
 const { Resend } = require('resend');
 
@@ -32,6 +32,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
+
+// Helper Cookie Parser Natif (Zero Dépendance npm)
+function parseCookies(req) {
+  const list = {};
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      const name = parts.shift().trim();
+      if (name) {
+        list[name] = decodeURIComponent(parts.join('='));
+      }
+    });
+  }
+  return list;
+}
 
 // Session Store
 const sessionMiddleware = session({
@@ -58,7 +74,7 @@ io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, next);
 });
 
-// Rate Limiter Natif sans dépendance externe npm
+// Rate Limiter Natif
 function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 15, message = "Trop de tentatives. Réessayez plus tard." }) {
   const requests = new Map();
 
@@ -97,11 +113,7 @@ const authLimiter = createRateLimiter({
   message: "Trop de tentatives. Réessayez dans 15 minutes."
 });
 
-app.use('/login', authLimiter);
-app.use('/register', authLimiter);
-app.use('/api/forgot-password', authLimiter);
-
-// MongoDB Atlas
+// MongoDB Atlas & Indexes
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 let vouchesGlobalCount = 0;
@@ -116,6 +128,10 @@ async function connectMongo() {
     await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
     await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
 
+    // Indexation pour le système "Se souvenir de moi"
+    await db.collection('remember_tokens').createIndex({ selector: 1 }, { unique: true }).catch(() => {});
+    await db.collection('remember_tokens').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }).catch(() => {});
+
     const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
     vouchesGlobalCount = compteur?.total || 0;
   } catch (err) {
@@ -124,7 +140,83 @@ async function connectMongo() {
 }
 connectMongo();
 
-// Helpers de sécurité
+// =========================================================================
+// MIDDLEWARE : Authentification Automatique "Se Souvenir de Moi"
+// =========================================================================
+async function checkRememberMe(req, res, next) {
+  try {
+    if (req.session && req.session.user) {
+      return next();
+    }
+
+    const cookies = parseCookies(req);
+    const cookieToken = cookies.remember_token;
+    if (!cookieToken || !db) {
+      return next();
+    }
+
+    const [selector, validator] = cookieToken.split(':');
+    if (!selector || !validator) {
+      return next();
+    }
+
+    const tokenDoc = await db.collection('remember_tokens').findOne({ selector });
+    if (!tokenDoc || new Date() > tokenDoc.expiresAt) {
+      res.clearCookie('remember_token', { path: '/' });
+      return next();
+    }
+
+    const hashedValidator = crypto.createHash('sha256').update(validator).digest('hex');
+    if (hashedValidator !== tokenDoc.validatorHash) {
+      console.warn(`🚨 Alerte Sécurité : Token invalide détecté pour selector ${selector}`);
+      await db.collection('remember_tokens').deleteMany({ userId: tokenDoc.userId }).catch(() => {});
+      res.clearCookie('remember_token', { path: '/' });
+      return next();
+    }
+
+    const user = await db.collection('users').findOne({ _id: new ObjectId(tokenDoc.userId) });
+    if (!user) {
+      res.clearCookie('remember_token', { path: '/' });
+      return next();
+    }
+
+    // Restauration transparente de la session
+    req.session.user = {
+      id: user._id,
+      pseudo: user.pseudo,
+      email: user.email,
+      role: user.role || 'streamer'
+    };
+
+    // Rotation du token (Sécurité anti-rejeu)
+    const newSelector = crypto.randomBytes(16).toString('hex');
+    const newValidator = crypto.randomBytes(32).toString('hex');
+    const newValidatorHash = crypto.createHash('sha256').update(newValidator).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await db.collection('remember_tokens').updateOne(
+      { _id: tokenDoc._id },
+      { $set: { selector: newSelector, validatorHash: newValidatorHash, expiresAt } }
+    );
+
+    res.cookie('remember_token', `${newSelector}:${newValidator}`, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
+    next();
+  } catch (err) {
+    console.error("Erreur checkRememberMe :", err);
+    next();
+  }
+}
+
+app.use(checkRememberMe);
+
+// Helpers
 function normalizePseudo(value) {
   if (typeof value !== 'string') throw new Error('Pseudo invalide.');
   const pseudo = value.replace(/^@/, '').trim().toLowerCase();
@@ -166,13 +258,8 @@ function avatarFor(user = {}, nickname = 'Anonyme') {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random`;
 }
 
-function isAdmin(user) {
-  return user && user.role === 'admin';
-}
-
-function canManage(user, pseudo) {
-  return Boolean(user && (isAdmin(user) || user.pseudo === pseudo));
-}
+function isAdmin(user) { return user && user.role === 'admin'; }
+function canManage(user, pseudo) { return Boolean(user && (isAdmin(user) || user.pseudo === pseudo)); }
 
 function signOverlayToken(pseudo) {
   const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7);
@@ -223,7 +310,7 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
-// Cache Mémoire du catalogue de cadeaux
+// Cache Mémoire cadeaux
 const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
 let giftsCatalogCache = null;
 
@@ -240,7 +327,7 @@ function reloadGiftsCatalog() {
 reloadGiftsCatalog();
 
 // ----------------------------------------------------
-// ROUTES FRONT-END & AUTH
+// ROUTES FRONT-END & AUTHENTIFICATION
 // ----------------------------------------------------
 
 app.get('/', (req, res) => {
@@ -257,7 +344,7 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.post('/register', async (req, res) => {
+app.post('/register', authLimiter, async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
@@ -308,14 +395,17 @@ app.post('/register', async (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
-  let { pseudo, password } = req.body;
+app.post('/login', authLimiter, async (req, res) => {
+  let { pseudo, password, rememberMe } = req.body;
   try {
     if (!db) return res.status(500).send("Base de données en cours de connexion.");
     let pseudoNettoye;
     try {
       pseudoNettoye = normalizePseudo(pseudo);
     } catch {
+      if (req.headers['content-type']?.includes('application/json')) {
+        return res.status(401).json({ error: "Identifiants invalides." });
+      }
       return res.redirect('/login.html?error=wrong_credentials');
     }
 
@@ -329,7 +419,38 @@ app.post('/login', async (req, res) => {
       req.session.user = { id: user._id, pseudo: user.pseudo, email: user.email, role: user.role || 'streamer' };
       await new Promise((resolve, reject) => req.session.save((err) => err ? reject(err) : resolve()));
 
+      // Option : Se souvenir de moi (30 jours)
+      if (rememberMe) {
+        const selector = crypto.randomBytes(16).toString('hex');
+        const validator = crypto.randomBytes(32).toString('hex');
+        const validatorHash = crypto.createHash('sha256').update(validator).digest('hex');
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        await db.collection('remember_tokens').insertOne({
+          userId: user._id,
+          selector,
+          validatorHash,
+          expiresAt,
+          createdAt: new Date()
+        });
+
+        res.cookie('remember_token', `${selector}:${validator}`, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 30 * 24 * 60 * 60 * 1000
+        });
+      }
+
+      if (req.headers['content-type']?.includes('application/json')) {
+        return res.json({ success: true, redirect: '/choix.html' });
+      }
       return res.redirect('/choix.html');
+    }
+
+    if (req.headers['content-type']?.includes('application/json')) {
+      return res.status(401).json({ error: "Pseudo ou mot de passe incorrect." });
     }
     res.redirect('/login.html?error=wrong_credentials');
   } catch (err) {
@@ -337,7 +458,32 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/api/forgot-password', async (req, res) => {
+async function effectuerDeconnexion(req, res) {
+  try {
+    const cookies = parseCookies(req);
+    const cookieToken = cookies.remember_token;
+    if (cookieToken && db) {
+      const [selector] = cookieToken.split(':');
+      if (selector) {
+        await db.collection('remember_tokens').deleteOne({ selector }).catch(() => {});
+      }
+    }
+  } catch {}
+
+  res.clearCookie('remember_token', { path: '/' });
+  req.session.destroy(() => {
+    res.clearCookie('__Host-tokoverlay', { path: '/' });
+    if (req.headers['content-type']?.includes('application/json')) {
+      return res.json({ success: true });
+    }
+    res.redirect('/login.html');
+  });
+}
+
+app.get('/logout', effectuerDeconnexion);
+app.post('/logout', effectuerDeconnexion);
+
+app.post('/api/forgot-password', authLimiter, async (req, res) => {
   let { email } = req.body;
   try {
     if (!db) return res.status(500).json({ error: "Base de données indisponible." });
@@ -520,20 +666,6 @@ app.post('/api/update-profile', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
   }
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('__Host-tokoverlay');
-    res.redirect('/');
-  });
-});
-
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('__Host-tokoverlay');
-    res.json({ success: true });
-  });
 });
 
 // ----------------------------------------------------

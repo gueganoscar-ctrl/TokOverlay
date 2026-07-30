@@ -101,7 +101,7 @@
     <div style="display: flex; align-items: center; gap: 12px;">
       <div class="user-badge"><span class="dot offline" id="status-dot"></span><span id="user-pseudo-display">Connexion...</span></div>
       <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="padding: 8px 12px; font-size: 12px;">⚙️ Profil</button>
-      <a href="/logout" class="btn btn-danger" style="padding: 8px 12px; font-size: 12px;">Déconnexion</a>
+      <button class="btn btn-danger" onclick="deconnexion()" style="padding: 8px 12px; font-size: 12px;">Déconnexion</button>
     </div>
   </header>
 
@@ -327,6 +327,17 @@
       socket.on('connect', () => { socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' }); });
       verifierStatutLive(user.pseudo); setInterval(() => verifierStatutLive(user.pseudo), 3000);
     });
+
+    async function deconnexion() {
+      try {
+        const res = await fetch('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        if (res.ok) {
+          window.location.href = '/login.html';
+        }
+      } catch (err) {
+        window.location.href = '/logout';
+      }
+    }
 
     function toggleSidebar() {
       document.getElementById('app-sidebar').classList.toggle('open');
