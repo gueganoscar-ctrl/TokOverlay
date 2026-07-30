@@ -483,7 +483,7 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
     
     const user = await db.collection('users').findOne({ email });
     if (!user) {
-      return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé." });
+      return res.json({ success: true, message: "Si cet e-mail existe, un lien a été envoyé. Pensez à vérifier votre dossier Spams / Courriers indésirables." });
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -519,7 +519,7 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
       return res.status(500).json({ error: "Erreur lors de l'envoi de l'e-mail." });
     }
 
-    res.json({ success: true, message: "E-mail de réinitialisation envoyé avec succès !" });
+    res.json({ success: true, message: "E-mail de réinitialisation envoyé avec succès ! Pensez à vérifier votre dossier Spams / Courriers indésirables." });
   } catch (err) {
     console.error("Erreur serveur forgot-password :", err);
     res.status(500).json({ error: "Erreur serveur" });
