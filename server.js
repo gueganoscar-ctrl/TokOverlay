@@ -30,10 +30,8 @@ app.set('trust proxy', 1);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/img', express.static(path.join(__dirname, 'img')));
 
-// Helper Cookie Parser Natif (Zero Dépendance npm)
+// Helper Cookie Parser Natif
 function parseCookies(req) {
   const list = {};
   const rc = req.headers.cookie;
@@ -49,7 +47,7 @@ function parseCookies(req) {
   return list;
 }
 
-// Session Store
+// 1. SESSIONS
 const sessionMiddleware = session({
   name: '__Host-tokoverlay',
   secret: process.env.SESSION_SECRET,
@@ -113,7 +111,7 @@ const authLimiter = createRateLimiter({
   message: "Trop de tentatives. Réessayez dans 15 minutes."
 });
 
-// MongoDB Atlas & Indexes
+// MongoDB Atlas
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 let vouchesGlobalCount = 0;
@@ -128,7 +126,6 @@ async function connectMongo() {
     await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
     await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
 
-    // Indexation pour le système "Se souvenir de moi"
     await db.collection('remember_tokens').createIndex({ selector: 1 }, { unique: true }).catch(() => {});
     await db.collection('remember_tokens').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }).catch(() => {});
 
@@ -140,9 +137,7 @@ async function connectMongo() {
 }
 connectMongo();
 
-// =========================================================================
-// MIDDLEWARE : Authentification Automatique "Se Souvenir de Moi"
-// =========================================================================
+// 2. MIDDLEWARE AUTO-CONNEXION "Se souvenir de moi"
 async function checkRememberMe(req, res, next) {
   try {
     if (req.session && req.session.user) {
@@ -168,7 +163,6 @@ async function checkRememberMe(req, res, next) {
 
     const hashedValidator = crypto.createHash('sha256').update(validator).digest('hex');
     if (hashedValidator !== tokenDoc.validatorHash) {
-      console.warn(`🚨 Alerte Sécurité : Token invalide détecté pour selector ${selector}`);
       await db.collection('remember_tokens').deleteMany({ userId: tokenDoc.userId }).catch(() => {});
       res.clearCookie('remember_token', { path: '/' });
       return next();
@@ -180,7 +174,7 @@ async function checkRememberMe(req, res, next) {
       return next();
     }
 
-    // Restauration transparente de la session
+    // Restauration de session
     req.session.user = {
       id: user._id,
       pseudo: user.pseudo,
@@ -188,7 +182,7 @@ async function checkRememberMe(req, res, next) {
       role: user.role || 'streamer'
     };
 
-    // Rotation du token (Sécurité anti-rejeu)
+    // Rotation du token
     const newSelector = crypto.randomBytes(16).toString('hex');
     const newValidator = crypto.randomBytes(32).toString('hex');
     const newValidatorHash = crypto.createHash('sha256').update(newValidator).digest('hex');
@@ -215,6 +209,32 @@ async function checkRememberMe(req, res, next) {
 }
 
 app.use(checkRememberMe);
+
+// 3. REDIRECTIONS AUTOMATIQUES DES PAGES D'ACCUEIL & LOGIN (PLACCÉES AVANT express.static)
+app.get('/', (req, res) => {
+  if (req.session && req.session.user) {
+    return res.redirect('/choix.html');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/index.html', (req, res) => {
+  if (req.session && req.session.user) {
+    return res.redirect('/choix.html');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/login.html', (req, res) => {
+  if (req.session && req.session.user) {
+    return res.redirect('/choix.html');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// 4. SERVIR LES FICHIERS STATIQUES (APRES LES REDIRECTIONS)
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/img', express.static(path.join(__dirname, 'img')));
 
 // Helpers
 function normalizePseudo(value) {
@@ -318,7 +338,6 @@ function reloadGiftsCatalog() {
   try {
     if (fs.existsSync(GIFTS_CATALOG_PATH)) {
       giftsCatalogCache = JSON.parse(fs.readFileSync(GIFTS_CATALOG_PATH, 'utf8'));
-      console.log("✅ Catalogue cadeaux chargé en mémoire cache.");
     }
   } catch (err) {
     console.error("Erreur chargement gifts-catalog.json :", err);
@@ -327,22 +346,8 @@ function reloadGiftsCatalog() {
 reloadGiftsCatalog();
 
 // ----------------------------------------------------
-// ROUTES FRONT-END & AUTHENTIFICATION
+// AUTHENTIFICATION & API
 // ----------------------------------------------------
-
-app.get('/', (req, res) => {
-  if (req.session.user) {
-    return res.redirect('/choix.html');
-  }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/login.html', (req, res) => {
-  if (req.session.user) {
-    return res.redirect('/choix.html');
-  }
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
 
 app.post('/register', authLimiter, async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
