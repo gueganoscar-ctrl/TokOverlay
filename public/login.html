@@ -9,25 +9,56 @@
   <link rel="stylesheet" href="/style.css">
   <style>
     body.app-bg {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
     }
     .auth-card {
-      width: 100%;
-      max-width: 420px;
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+      width: 100%; max-width: 420px; padding: 36px;
+      display: flex; flex-direction: column; gap: 24px;
+      margin-top: 10px;
     }
     .tabs { display: flex; background: #0c0f18; padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
     .tab { flex: 1; text-align: center; padding: 10px; font-size: 13px; font-weight: 700; color: var(--text-lo); cursor: pointer; border-radius: 8px; transition: 0.2s; }
     .tab.active { background: #1c2236; color: #FFFFFF; }
     .auth-form { display: flex; flex-direction: column; gap: 14px; }
+
+    .lien-tuto {
+      font-size: 11px;
+      color: var(--cyan, #22e5e0);
+      text-decoration: none;
+      margin-top: 4px;
+      display: inline-block;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .lien-tuto:hover { opacity: 0.8; text-decoration: underline; }
+
+    /* Modal Tutoriel Clé API */
+    #modal-tuto {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+    }
+    .tuto-modal-box {
+      background: var(--surface, #11141d);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      border-radius: 20px; padding: 28px; max-width: 480px; width: 100%;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .tuto-badge-gratuit {
+      background: rgba(34, 229, 224, 0.08);
+      border: 1px solid rgba(34, 229, 224, 0.3);
+      border-left: 4px solid var(--cyan, #22e5e0);
+      padding: 12px 14px; font-size: 12px; color: #f2f2f5; border-radius: 8px; line-height: 1.5;
+    }
+    .tuto-steps {
+      color: var(--text-lo, #9ca3af); font-size: 13px; padding-left: 20px; margin: 0; line-height: 1.7;
+    }
+    .tuto-steps li { margin-bottom: 6px; }
+    .tuto-steps a { color: var(--cyan, #22e5e0); text-decoration: none; font-weight: 700; }
+    .tuto-steps a:hover { text-decoration: underline; }
   </style>
 </head>
 <body class="app-bg">
@@ -40,7 +71,7 @@
     <div style="text-align: center;">
       <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:6px;">
         <span class="live-dot"></span>
-        <h1 class="brand-text" style="font-size: 24px;">TokOverlay</h1>
+        <h1 class="brand-text" style="font-size: 26px;">TokOverlay</h1>
       </div>
       <p style="color: var(--text-lo); font-size: 13px;">Accédez à votre studio streamer</p>
     </div>
@@ -65,10 +96,10 @@
       <div>
         <a href="#" onclick="motDePasseOublie(event)" style="font-size: 11px; color: var(--cyan); text-decoration: none;">Mot de passe oublié ?</a>
       </div>
-      <button type="submit" class="btn btn-primary" style="margin-top: 6px;">Se connecter</button>
+      <button type="submit" class="btn btn-primary" style="margin-top: 6px; padding: 13px;">Se connecter</button>
     </form>
 
-    <!-- Formulaire Inscription -->
+    <!-- Formulaire Inscription avec tutoriel Clé API -->
     <form id="form-register" class="auth-form hidden" action="/register" method="POST">
       <div>
         <label>Pseudo TikTok</label>
@@ -77,6 +108,7 @@
       <div>
         <label>Clé API Live Connector</label>
         <input type="text" name="apiKey" placeholder="Votre Clé API" required>
+        <a href="#" onclick="ouvrirTuto(event)" class="lien-tuto">👉 Comment obtenir ma Clé API ? (Tutoriel rapide)</a>
       </div>
       <div>
         <label>Email</label>
@@ -86,8 +118,32 @@
         <label>Mot de passe</label>
         <input type="password" name="password" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="margin-top: 6px;">Créer mon compte</button>
+      <button type="submit" class="btn btn-primary" style="margin-top: 6px; padding: 13px;">Créer mon compte</button>
     </form>
+  </div>
+
+  <!-- Modal Tutoriel Clé API EulerStream -->
+  <div id="modal-tuto">
+    <div class="tuto-modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size: 18px; margin:0;">Comment obtenir votre clé API</h2>
+        <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer;" onclick="fermerTuto()">✕</button>
+      </div>
+
+      <div class="tuto-badge-gratuit">
+        💡 <strong>Bon à savoir :</strong> Si TokOverlay est <strong>100% gratuit</strong>, c'est grâce à ce service de connexion API qui est entièrement gratuit !
+      </div>
+
+      <ol class="tuto-steps">
+        <li>Rendez-vous sur le site <a href="https://www.eulerstream.com" target="_blank" rel="noopener">www.eulerstream.com</a>.</li>
+        <li>Cliquez sur le bouton pour obtenir une clé API.</li>
+        <li>Créez votre compte gratuitement.</li>
+        <li>Créez votre clé API.</li>
+        <li>Copiez la clé API générée et collez-la dans le formulaire d'inscription TokOverlay.</li>
+      </ol>
+
+      <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="fermerTuto()">J'ai compris / Fermer</button>
+    </div>
   </div>
 
   <script>
@@ -124,6 +180,15 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       }).then(r => r.json()).then(data => alert(data.message || "Instructions envoyées."));
+    }
+
+    function ouvrirTuto(e) {
+      e.preventDefault();
+      document.getElementById('modal-tuto').style.display = 'flex';
+    }
+
+    function fermerTuto() {
+      document.getElementById('modal-tuto').style.display = 'none';
     }
   </script>
 </body>
