@@ -277,11 +277,13 @@ function avatarFor(user = {}, nickname = 'Anonyme') {
 }
 
 function isAdmin(user) { return user && user.role === 'admin'; }
-function canManage(user, pseudo) { return Boolean(user && (isAdmin(user) || user.pseudo === pseudo)); }
+function canManage(user, pseudo) { return Boolean(user && (isAdmin(user) || normalizePseudo(user.pseudo) === normalizePseudo(pseudo))); }
 
+// SIGNATURE ET VÉRIFICATION DU TOKEN OVERLAY AVEC HARMONISATION HARMONIEUSE DES PSEUDOS
 function signOverlayToken(pseudo) {
-  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 7);
-  const payload = Buffer.from(JSON.stringify({ pseudo: normalizePseudo(pseudo), expiresAt })).toString('base64url');
+  const cleanPseudo = normalizePseudo(pseudo);
+  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 30); // 30 jours
+  const payload = Buffer.from(JSON.stringify({ pseudo: cleanPseudo, expiresAt })).toString('base64url');
   const signature = crypto
     .createHmac('sha256', OVERLAY_TOKEN_SECRET)
     .update(payload)
@@ -306,7 +308,9 @@ function verifyOverlayToken(token, expectedPseudo) {
 
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return normalizePseudo(data.pseudo) === normalizePseudo(expectedPseudo) && data.expiresAt > Date.now();
+    const tokenPseudo = normalizePseudo(data.pseudo);
+    const targetPseudo = normalizePseudo(expectedPseudo);
+    return tokenPseudo === targetPseudo && data.expiresAt > Date.now();
   } catch {
     return false;
   }
@@ -974,11 +978,11 @@ function demarrerEcouteLive(pseudo, apiKey) {
       io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
       p.objectif = false;
     }
-  }, 1500); 
+  }, 1000); 
 
   connection.connect().catch((err) => {
     console.error(`[TikTokLive] Erreur connexion pour @${pseudo}:`, err);
-    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live. Vérifiez votre clé API ou que vous êtes bien en direct.");
+    io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live.");
     arreterEcouteLive(pseudo, data, 'connect_error');
   });
 
@@ -1002,7 +1006,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'likes') data.pendingUpdates.objectif = true;
 
-    // Émission temps réel immédiate
+    // DIFFUSION TEMPS RÉEL IMMÉDIATE
     io.to(`streamer:${pseudo}`).emit('updateTopLikers', Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3));
   });
 
@@ -1094,7 +1098,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     data.pendingUpdates.stats = true;
     if (data.objectif && data.objectif.metrique === 'diamants') data.pendingUpdates.objectif = true;
 
-    // Émission temps réel immédiate
+    // DIFFUSION TEMPS RÉEL IMMÉDIATE AUX OVERLAYS
     io.to(`streamer:${pseudo}`).emit('updateTopGifters', Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3));
     if (data.objectif) io.to(`streamer:${pseudo}`).emit('updateObjectif', etatObjectif(pseudo));
   });
@@ -1580,6 +1584,7 @@ io.on('connection', socket => {
         || verifyOverlayToken(token, pseudoNettoye);
 
       if (!allowed) {
+        console.warn(`[Socket.IO] Accès refusé pour rejoindre @${pseudoNettoye} (Token ou Session invalide)`);
         return ack({ ok: false, error: 'Authentification invalide.' });
       }
 
@@ -1592,27 +1597,28 @@ io.on('connection', socket => {
       socket.join(`streamer:${pseudoNettoye}`);
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
       ack({ ok: true });
-      
-      // ENVOI IMMÉDIAT DES DONNÉES EN TEMPS RÉEL À LA CONNEXION D'UN OVERLAY
+
+      // ENVOI IMMÉDIAT ET SYNCHRONE DES DONNÉES TEMPS RÉEL AU REJOIGNANT
       const data = connexionsActives[pseudoNettoye];
       if (data) {
-        // Top Donateurs & Likers actuels
-        const top3Gifters = Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3);
-        const top3Likers = Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3);
-        socket.emit('updateTopGifters', top3Gifters);
-        socket.emit('updateTopLikers', top3Likers);
+        const topGifters = Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3);
+        const topLikers = Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3);
+        socket.emit('updateTopGifters', topGifters);
+        socket.emit('updateTopLikers', topLikers);
 
-        // Stats globales actuelles
         const totalDiamonds = Object.values(data.gifters).reduce((sum, g) => sum + g.coins, 0);
         const totalLikes = Object.values(data.likers).reduce((sum, l) => sum + l.likes, 0);
         socket.emit('updateStatsLive', { totalDiamonds, totalLikes });
 
-        // Widgets
-        if (data.enchere && data.enchere.actif) socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
+        if (data.enchere && data.enchere.actif) {
+          socket.emit('enchereDemarree', etatEnchere(pseudoNettoye));
+          socket.emit('updateEnchere', etatEnchere(pseudoNettoye));
+        }
+
         if (data.bestGift) socket.emit('updateBestGift', data.bestGift);
         if (data.objectif) socket.emit('updateObjectif', etatObjectif(pseudoNettoye));
         if (data.coffre) socket.emit('updateCoffre', etatCoffrePublic(pseudoNettoye));
-        
+
         if (type === 'elimination-boucle') {
           if (data.eliminationBoucle) socket.emit('updateEliminationBoucle', etatEliminationBoucle(pseudoNettoye));
         } else {
@@ -1620,7 +1626,8 @@ io.on('connection', socket => {
         }
       }
     } 
-    catch {
+    catch (err) {
+      console.error('[Socket.IO] Erreur dans rejoindre:', err);
       ack({ ok: false, error: 'Requête invalide.' });
     }
   });
@@ -1841,7 +1848,7 @@ io.on('connection', socket => {
         }, elim.tempsOuverture * 1000);
       } else if (action === 'reset') {
         if (elim.timer) clearTimeout(elim.timer);
-        if (elim.openTimer) clearTimeout(elim.openTimer);
+        if (elim.openTimer) clearInterval(elim.openTimer);
         data.eliminationBoucle = null;
         io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', { actif: false });
         return;
