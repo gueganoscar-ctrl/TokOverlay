@@ -251,7 +251,7 @@
       info.className = 'info';
       const nickname = document.createElement('span');
       nickname.className = 'nickname'; 
-      nickname.textContent = user.nickname; // Anti-XSS
+      nickname.textContent = user.nickname;
 
       const valeur = document.createElement('span');
       valeur.className = 'valeur';
@@ -265,7 +265,7 @@
     const socket = io();
 
     socket.on('connect', () => {
-      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token });
+      if (pseudo && !isDemo) socket.emit('rejoindre', { pseudo, token, type });
     });
 
     if (type === 'bestgift') {
@@ -273,9 +273,9 @@
     }
 
     socket.on('updateBestGift', data => {
-      if (type === 'bestgift') {
+      if (type === 'bestgift' && data) {
         document.getElementById('bg-icon').src = safeImageUrl(data.icon, 'https://via.placeholder.com/60');
-        document.getElementById('bg-pseudo').textContent = data.pseudo; // Anti-XSS
+        document.getElementById('bg-pseudo').textContent = data.pseudo;
       }
     });
 
@@ -288,7 +288,7 @@
         const msg = document.getElementById('message-attente-simple');
         if(msg) msg.remove();
         leaderboard.querySelectorAll('.carte-joueur').forEach(el => el.remove());
-        top3.forEach((user, i) => leaderboard.appendChild(creerCarteJoueur(user, i + 1, cle, emoji)));
+        (top3 || []).forEach((user, i) => leaderboard.appendChild(creerCarteJoueur(user, i + 1, cle, emoji)));
       }
 
       socket.on(type === 'donateurs' ? 'updateTopGifters' : 'updateTopLikers', top3 => afficherClassementSimple(top3, type === 'donateurs' ? 'coins' : 'likes', type === 'donateurs' ? '💎 ' : '❤️ '));
@@ -324,13 +324,42 @@
 
       encherePanel.style.display = 'block';
 
+      // TIMER DÉCOMPTE DYNAMIQUE SUR L'OVERLAY
+      let intervalleChronoOverlay = null;
+
+      function demarrerTimerChronoOverlay(finTimestamp) {
+        if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
+
+        function tick() {
+          const restant = Math.max(0, finTimestamp - Date.now());
+          const secondes = Math.ceil(restant / 1000);
+          chronoEl.textContent = secondes + 's';
+
+          if (restant <= 0 && intervalleChronoOverlay) {
+            clearInterval(intervalleChronoOverlay);
+            intervalleChronoOverlay = null;
+          }
+        }
+
+        tick();
+        intervalleChronoOverlay = setInterval(tick, 200);
+      }
+
       function afficherEtat(etat) {
         if (!etat) return;
         gagnantEcran.style.display = 'none';
         groupeChrono.style.display = 'block';
         classementEl.style.display = 'flex';
 
-        chronoEl.textContent = Math.ceil(etat.tempsRestant / 1000) + 's';
+        const finTimestamp = Date.now() + etat.tempsRestant;
+        demarrerTimerChronoOverlay(finTimestamp);
+
+        if (etat.phase === 'snipe') {
+          chronoEl.classList.add('phase-snipe');
+        } else {
+          chronoEl.classList.remove('phase-snipe');
+        }
+
         infoMiseMinEl.textContent = etat.miseMinimale > 0 ? etat.miseMinimale.toLocaleString() + ' 💎' : '0 💎';
         infoSnipeDelayEl.textContent = Math.round(etat.snipeMs / 1000) + 's';
 
@@ -348,7 +377,7 @@
 
           const nickSpan = document.createElement('span');
           nickSpan.className = 'nickname';
-          nickSpan.textContent = user.nickname; // Anti-XSS
+          nickSpan.textContent = user.nickname;
 
           infoDiv.appendChild(nickSpan);
 
@@ -365,6 +394,7 @@
       socket.on('updateEnchere', afficherEtat);
 
       socket.on('enchereTerminee', ({ gagnant }) => {
+        if (intervalleChronoOverlay) clearInterval(intervalleChronoOverlay);
         groupeChrono.style.display = 'none';
         classementEl.style.display = 'none';
         gagnantEcran.style.display = 'block';
@@ -372,7 +402,7 @@
         if (gagnant) {
           document.getElementById('gagnant-avatar').style.display = 'inline-block';
           document.getElementById('gagnant-avatar').src = safeImageUrl(gagnant.profilePictureUrl, 'https://ui-avatars.com/api/?name=Winner');
-          document.getElementById('gagnant-nom').textContent = gagnant.nickname; // Anti-XSS
+          document.getElementById('gagnant-nom').textContent = gagnant.nickname;
           document.getElementById('gagnant-total').textContent = gagnant.coins.toLocaleString() + ' 💎 envoyés';
           document.getElementById('gagnant-chat-message').textContent = gagnant.dernierMessageChat ? `"${gagnant.dernierMessageChat}"` : 'En attente...';
           vouchStatusEl.textContent = '⏳ En attente du vouch dans le chat';

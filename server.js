@@ -31,7 +31,6 @@ app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Helper Cookie Parser Natif
 function parseCookies(req) {
   const list = {};
   const rc = req.headers.cookie;
@@ -47,7 +46,6 @@ function parseCookies(req) {
   return list;
 }
 
-// 1. SESSIONS
 const sessionMiddleware = session({
   name: '__Host-tokoverlay',
   secret: process.env.SESSION_SECRET,
@@ -72,7 +70,6 @@ io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, next);
 });
 
-// Rate Limiter Natif
 function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 15, message = "Trop de tentatives. Réessayez plus tard." }) {
   const requests = new Map();
 
@@ -111,7 +108,6 @@ const authLimiter = createRateLimiter({
   message: "Trop de tentatives. Réessayez dans 15 minutes."
 });
 
-// MongoDB Atlas
 const mongoUri = process.env.MONGO_URI;
 let db = null;
 let vouchesGlobalCount = 0;
@@ -137,7 +133,6 @@ async function connectMongo() {
 }
 connectMongo();
 
-// 2. MIDDLEWARE AUTO-CONNEXION "Se souvenir de moi"
 async function checkRememberMe(req, res, next) {
   try {
     if (req.session && req.session.user) {
@@ -208,7 +203,6 @@ async function checkRememberMe(req, res, next) {
 
 app.use(checkRememberMe);
 
-// 3. REDIRECTIONS AUTOMATIQUES
 app.get('/', (req, res) => {
   if (req.session && req.session.user) {
     return res.redirect('/choix.html');
@@ -230,11 +224,9 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// 4. SERVIR LES FICHIERS STATIQUES
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
-// Helpers
 function normalizePseudo(value) {
   if (typeof value !== 'string') throw new Error('Pseudo invalide.');
   const pseudo = value.replace(/^@/, '').trim().toLowerCase();
@@ -279,10 +271,9 @@ function avatarFor(user = {}, nickname = 'Anonyme') {
 function isAdmin(user) { return user && user.role === 'admin'; }
 function canManage(user, pseudo) { return Boolean(user && (isAdmin(user) || normalizePseudo(user.pseudo) === normalizePseudo(pseudo))); }
 
-// SIGNATURE ET VÉRIFICATION DU TOKEN OVERLAY AVEC HARMONISATION HARMONIEUSE DES PSEUDOS
 function signOverlayToken(pseudo) {
   const cleanPseudo = normalizePseudo(pseudo);
-  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 30); // 30 jours
+  const expiresAt = Date.now() + (1000 * 60 * 60 * 24 * 30);
   const payload = Buffer.from(JSON.stringify({ pseudo: cleanPseudo, expiresAt })).toString('base64url');
   const signature = crypto
     .createHmac('sha256', OVERLAY_TOKEN_SECRET)
@@ -332,7 +323,6 @@ async function incrementerVouchGlobal() {
   io.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 }
 
-// Cache Mémoire cadeaux
 const GIFTS_CATALOG_PATH = path.join(__dirname, 'public', 'gifts-catalog.json');
 let giftsCatalogCache = null;
 
@@ -346,10 +336,6 @@ function reloadGiftsCatalog() {
   }
 }
 reloadGiftsCatalog();
-
-// ----------------------------------------------------
-// AUTHENTIFICATION & API
-// ----------------------------------------------------
 
 app.post('/register', authLimiter, async (req, res) => {
   let { pseudo, apiKey, email, password } = req.body;
@@ -673,10 +659,6 @@ app.post('/api/update-profile', async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
-
-// ----------------------------------------------------
-// ROUTES OVERLAYS ET API
-// ----------------------------------------------------
 
 app.get('/overlay/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/overlay-vip/:username', (req, res) => res.sendFile(path.join(__dirname, 'public', 'vip-overlay.html')));
@@ -1396,12 +1378,23 @@ function programmerTransitionOuFin(pseudo, enchere) {
   }, isNaN(delai) || delai < 0 ? 1000 : delai);
 }
 
+// TRAITEMENT DES DONS ENCHÈRE AVEC EXTENSION ANTI-SNIPE EN TEMPS RÉEL
 function traiterDonPourEnchere(pseudo, id, nickname, avatar, totalPieces) {
   const enchere = connexionsActives[pseudo]?.enchere;
   if (!enchere || !enchere.actif) return;
+
   if (!enchere.dons[id]) enchere.dons[id] = { id, nickname, profilePictureUrl: avatar, coins: 0, dernierMessageChat: '' };
   enchere.dons[id].coins += totalPieces;
   enchere.totalDiamantsEnchere += totalPieces;
+
+  // RÈGLE ANTI-SNIPE : Si un don arrive pendant la phase Snipe ou à moins de SnipeMs de la fin, on repousse le chrono !
+  const restant = enchere.finTimestamp - Date.now();
+  if (enchere.phase === 'snipe' || restant <= enchere.snipeMs) {
+    enchere.phase = 'snipe';
+    enchere.finTimestamp = Date.now() + enchere.snipeMs;
+    programmerTransitionOuFin(pseudo, enchere);
+  }
+
   io.to(`streamer:${pseudo}`).emit('updateEnchere', etatEnchere(pseudo));
 }
 
