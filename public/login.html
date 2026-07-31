@@ -1,74 +1,101 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wave Studio - Authentification</title>
+  <title>Wave Studio - Connexion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo.png">
   <style>
     body.app-bg {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 100vh; padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 50% 0%, rgba(34, 229, 224, 0.12), transparent 60%);
     }
+
     .auth-card {
-      width: 100%; max-width: 420px; padding: 36px;
-      display: flex; flex-direction: column; gap: 24px;
-      margin-top: 10px;
+      width: 100%;
+      max-width: 420px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-card);
     }
-    .tabs { display: flex; background: #0c0f18; padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
-    .tab { flex: 1; text-align: center; padding: 10px; font-size: 13px; font-weight: 700; color: var(--text-lo); cursor: pointer; border-radius: 8px; transition: 0.2s; }
-    .tab.active { background: #1c2236; color: #FFFFFF; }
-    .auth-form { display: flex; flex-direction: column; gap: 14px; }
+
+    .tabs {
+      display: flex;
+      background: #0c0f18;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-lo);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      background: #1c2236;
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
 
     .lien-tuto {
       font-size: 11px;
-      color: var(--cyan, #22e5e0);
+      color: var(--cyan);
       text-decoration: none;
       margin-top: 4px;
       display: inline-block;
       font-weight: 600;
-      transition: opacity 0.2s;
     }
-    .lien-tuto:hover { opacity: 0.8; text-decoration: underline; }
+    .lien-tuto:hover { text-decoration: underline; }
 
-    /* Modal Tutoriel Clé API */
-    #modal-tuto {
-      position: fixed; inset: 0;
-      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
-    }
     .tuto-modal-box {
-      background: var(--surface, #11141d);
-      border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-radius: 20px; padding: 28px; max-width: 480px; width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-      display: flex; flex-direction: column; gap: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
-    .tuto-badge-gratuit {
-      background: rgba(34, 229, 224, 0.08);
-      border: 1px solid rgba(34, 229, 224, 0.3);
-      border-left: 4px solid var(--cyan, #22e5e0);
-      padding: 12px 14px; font-size: 12px; color: #f2f2f5; border-radius: 8px; line-height: 1.5;
-    }
-    .tuto-steps {
-      color: var(--text-lo, #9ca3af); font-size: 13px; padding-left: 20px; margin: 0; line-height: 1.7;
-    }
-    .tuto-steps li { margin-bottom: 6px; }
-    .tuto-steps a { color: var(--cyan, #22e5e0); text-decoration: none; font-weight: 700; }
-    .tuto-steps a:hover { text-decoration: underline; }
   </style>
 </head>
 <body class="app-bg">
 
-  <div style="margin-bottom: 12px;">
+  <div style="margin-bottom: 16px;">
     <a href="/" class="btn btn-secondary">← Retour au site</a>
   </div>
 
-  <div class="auth-card card">
+  <div class="auth-card">
     <div style="text-align: center;">
       <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:6px;">
         <span class="live-dot"></span>
@@ -95,7 +122,6 @@
         <input type="password" id="password" name="password" placeholder="••••••••" required>
       </div>
 
-      <!-- Checkbox Se Souvenir de Moi -->
       <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
         <input type="checkbox" id="rememberMe" name="rememberMe" style="width: auto !important; cursor: pointer;">
         <label for="rememberMe" style="text-transform: none; font-weight: 500; cursor: pointer; color: #d4d4d8; margin:0;">
@@ -133,23 +159,22 @@
   </div>
 
   <!-- Modal Tutoriel Clé API -->
-  <div id="modal-tuto">
+  <div id="modal-tuto" class="modal-backdrop">
     <div class="tuto-modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h2 style="font-size: 18px; margin:0;">Comment obtenir votre clé API</h2>
         <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer;" onclick="fermerTuto()">✕</button>
       </div>
 
-      <div class="tuto-badge-gratuit">
+      <div style="background: rgba(34, 229, 224, 0.08); border-left: 4px solid var(--cyan); padding: 12px; font-size: 12px; color: #f2f2f5; border-radius: 6px;">
         💡 <strong>Bon à savoir :</strong> Si Wave Studio est <strong>100% gratuit</strong>, c'est grâce à ce service de connexion API qui est entièrement gratuit !
       </div>
 
-      <ol class="tuto-steps">
-        <li>Rendez-vous sur le site <a href="https://www.eulerstream.com" target="_blank" rel="noopener">www.eulerstream.com</a>.</li>
-        <li>Cliquez sur le bouton pour obtenir une clé API.</li>
+      <ol style="color: var(--text-lo); font-size: 13px; padding-left: 20px; line-height: 1.7;">
+        <li>Rendez-vous sur <a href="https://www.eulerstream.com" target="_blank" rel="noopener" style="color: var(--cyan); font-weight:700;">www.eulerstream.com</a>.</li>
         <li>Créez votre compte gratuitement.</li>
-        <li>Créez votre clé API.</li>
-        <li>Copiez la clé API générée et collez-la dans le formulaire d'inscription Wave Studio.</li>
+        <li>Générez votre clé API.</li>
+        <li>Copiez la clé API et collez-la dans le formulaire d'inscription.</li>
       </ol>
 
       <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="fermerTuto()">J'ai compris / Fermer</button>
@@ -220,14 +245,8 @@
       }).then(r => r.json()).then(data => alert(data.message || "Instructions envoyées."));
     }
 
-    function ouvrirTuto(e) {
-      e.preventDefault();
-      document.getElementById('modal-tuto').style.display = 'flex';
-    }
-
-    function fermerTuto() {
-      document.getElementById('modal-tuto').style.display = 'none';
-    }
+    function ouvrirTuto(e) { e.preventDefault(); document.getElementById('modal-tuto').style.display = 'flex'; }
+    function fermerTuto() { document.getElementById('modal-tuto').style.display = 'none'; }
   </script>
 </body>
 </html>

@@ -1,41 +1,27 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <!-- SEO & Référencement Google -->
-  <title>Wave Studio — La Suite N°1 d'Overlays & Jeux TikTok Live 100% Gratuite</title>
-  <meta name="description" content="Maximisez vos dons et l'engagement de votre Live TikTok. Suite d'overlays interactifs et jeux pour OBS & TikTok Live Studio : Mode Élimination, Enchères, Coffre-Fort, Top Donateurs. 100% Gratuit.">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave Studio — La Suite N°1 d'Overlays &amp; Jeux TikTok Live 100% Gratuite</title>
+  <meta name="description" content="Maximisez vos dons et l'engagement de votre Live TikTok. Suite d'overlays interactifs et jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Enchères, Coffre-Fort, Top Donateurs. 100% Gratuit.">
   <meta name="keywords" content="overlay tiktok live, wave studio, jeux tiktok live, mode elimination tiktok, enchere tiktok, obs overlay tiktok, donateur tiktok">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://wave-studio.onrender.com/">
 
-  <!-- Favicon / Logo Onglet -->
-  <link rel="icon" type="image/png" href="/img/logo.png">
-
-  <!-- Open Graph / Aperçu Partage Réseaux (Discord, Twitter, WhatsApp, TikTok) -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Wave Studio — Overlays & Jeux TikTok Live 100% Gratuits">
-  <meta property="og:description" content="Maximisez vos dons et l'engagement de votre Live TikTok avec nos jeux interactifs pour OBS & TikTok Live Studio.">
-  <meta property="og:image" content="https://wave-studio.onrender.com/img/logo.png">
-  <meta property="og:url" content="https://wave-studio.onrender.com/">
-  <link rel="icon" type="image/png" href="/img/logo.png">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wave Studio — La Suite N°1 d'Overlays TikTok Live</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-  <style>
-    /* CSS DÉDIÉ ET AUTONOME POUR LA PAGE D'ACCUEIL */
-    :root {
-      --bg-dark: #07090e;
-      --surface: #11141d;
-      --border: rgba(255, 255, 255, 0.1);
-      --cyan: #22e5e0;
-      --live-red: #ff2a55;
-      --text-hi: #ffffff;
-      --text-lo: #9ca3af;
-    }
+  <link rel="icon" type="image/png" href="/img/logo.png">
 
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Wave Studio — Overlays &amp; Jeux TikTok Live 100% Gratuits">
+  <meta property="og:description" content="Maximisez vos dons et l'engagement de votre Live TikTok avec nos jeux interactifs pour OBS &amp; TikTok Live Studio.">
+  <meta property="og:image" content="https://wave-studio.onrender.com/img/logo.png">
+  <meta property="og:url" content="https://wave-studio.onrender.com/">
+
+  <style>
     body.app-bg {
       margin: 0;
       padding: 0;
@@ -47,7 +33,6 @@
       overflow-x: hidden;
     }
 
-    /* Fixed Header Nav */
     .landing-nav {
       position: fixed;
       top: 0;
@@ -67,33 +52,9 @@
       box-sizing: border-box;
     }
 
-    .brand-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-text {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 22px;
-      font-weight: 800;
-      color: #ffffff;
-    }
-
-    .live-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--live-red);
-      box-shadow: 0 0 10px var(--live-red);
-      display: inline-block;
-      flex-shrink: 0;
-    }
-
-    /* Hero Section Centrée */
     .hero-section {
       margin-top: 72px;
-      padding: 80px 20px 50px;
+      padding: 80px 20px 40px;
       text-align: center;
       max-width: 850px;
       margin-left: auto;
@@ -128,13 +89,10 @@
       max-width: 800px;
       text-align: center;
       margin: 0 auto;
-      word-wrap: break-word;
       font-family: 'Space Grotesk', sans-serif;
     }
 
-    .highlight-cyan {
-      color: var(--cyan) !important;
-    }
+    .highlight-cyan { color: var(--cyan) !important; }
 
     .hero-desc {
       font-size: 16px;
@@ -155,67 +113,25 @@
       width: 100%;
     }
 
-    /* Boutons de la page d'accueil */
-    .nav-btn, .hero-btn {
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: inherit;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-    }
-
-    .btn-cyan {
-      background: var(--cyan);
-      color: #051313;
-      font-weight: 800;
-      box-shadow: 0 0 20px rgba(34, 229, 224, 0.3);
-      border: 1px solid var(--cyan);
-    }
-
-    .btn-cyan:hover {
-      background: #3eeeea;
-      transform: translateY(-2px);
-      box-shadow: 0 0 25px rgba(34, 229, 224, 0.5);
-    }
-
-    .btn-outline {
-      background: #141622;
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-    }
-
-    .btn-outline:hover {
-      background: #1e2235;
-      border-color: var(--cyan);
-      color: var(--cyan);
-    }
-
     .features-grid {
       max-width: 1100px;
       margin: 40px auto 60px;
       padding: 0 20px;
       box-sizing: border-box;
+      width: 100%;
     }
 
     @media (max-width: 640px) {
       .landing-nav { padding: 0 16px; height: 64px; }
       .hero-section { margin-top: 64px; padding: 40px 16px 30px; gap: 16px; }
       .hero-ctas { flex-direction: column; width: 100%; }
-      .hero-ctas .nav-btn, .hero-ctas .hero-btn { width: 100%; text-align: center; }
+      .hero-ctas .btn { width: 100%; text-align: center; }
     }
   </style>
 </head>
 <body class="app-bg">
 
-  <!-- Auto-Connexion Secours Client -->
+  <!-- Auto-Connexion -->
   <script>
     fetch('/api/me')
       .then(res => res.json())
@@ -227,15 +143,15 @@
       .catch(() => {});
   </script>
 
-  <!-- Top Fixed Navbar -->
+  <!-- Navbar -->
   <nav class="landing-nav">
-    <div class="brand-row">
+    <div style="display: flex; align-items: center; gap: 12px;">
       <span class="live-dot"></span>
-      <span class="brand-text">Wave Studio</span>
+      <span class="brand-text" style="font-size: 22px;">Wave Studio</span>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
-      <a href="/login.html" class="nav-btn btn-outline" style="padding: 8px 18px; font-size: 13px;">Connexion</a>
-      <a href="/login.html?tab=register" class="nav-btn btn-cyan" style="padding: 8px 18px; font-size: 13px;">Créer un compte</a>
+      <a href="/login.html" class="btn btn-secondary" style="padding: 8px 18px; font-size: 13px;">Connexion</a>
+      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 8px 18px; font-size: 13px;">Créer un compte</a>
     </div>
   </nav>
 
@@ -251,58 +167,60 @@
     </h1>
 
     <p class="hero-desc">
-      Une suite complète d'overlays interactifs et de jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Roue de la Fortune, Enchères, Jeu du Coffre-Fort et Top Donateurs.
+      Une suite complète d'overlays interactifs et de jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Enchères, Jeu du Coffre-Fort et Top Donateurs.
     </p>
 
     <div class="hero-ctas">
-      <a href="/login.html?tab=register" class="hero-btn btn-cyan">Démarrer maintenant →</a>
-      <a href="#features" class="hero-btn btn-outline">Découvrir les Overlays</a>
+      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 12px 24px;">Démarrer maintenant →</a>
+      <a href="#features" class="btn btn-secondary" style="padding: 12px 24px;">Découvrir les Overlays</a>
     </div>
   </section>
 
-  <!-- Features Grid -->
+  <!-- Features Bento Grid (6 Cartes bien proportionnées) -->
   <section id="features" class="features-grid">
     <div class="bento-grid">
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">💀</div>
-        <h3>Mode Élimination Fermée</h3>
+      
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-game">💀</div>
+        <h3 style="margin-top: 10px;">Mode Élimination Fermée</h3>
         <p>1 don = 1 place. Les joueurs s'éliminent automatiquement jusqu'au vainqueur final !</p>
       </div>
 
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">⚡</div>
-        <h3>Mode Élimination Classique</h3>
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-game">⚡</div>
+        <h3 style="margin-top: 10px;">Mode Élimination Classique</h3>
         <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place.</p>
       </div>
 
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">⚖️</div>
-        <h3>Panneau d'Enchères Live</h3>
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-game">⚖️</div>
+        <h3 style="margin-top: 10px;">Panneau d'Enchères Live</h3>
         <p>Gérez des enchères en direct avec règles anti-snipe et validation dans le chat.</p>
       </div>
 
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">🔐</div>
-        <h3>Jeu du Coffre-Fort</h3>
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-game">🔐</div>
+        <h3 style="margin-top: 10px;">Jeu du Coffre-Fort</h3>
         <p>Le chat devine un mot secret case par case avec détection automatique.</p>
       </div>
 
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">💎</div>
-        <h3>Top Donateurs &amp; Likers</h3>
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-widget">💎</div>
+        <h3 style="margin-top: 10px;">Top Donateurs &amp; Likers</h3>
         <p>Classement esthétique en temps réel de vos plus gros supporters pendant le live.</p>
       </div>
 
-      <div class="bento-col-4 overlay-card card">
-        <div class="overlay-icon-wrapper">🎯</div>
-        <h3>Objectifs &amp; Best Gift</h3>
+      <div class="bento-col-4 card overlay-card">
+        <div class="overlay-icon-wrapper icon-square-widget">🎯</div>
+        <h3 style="margin-top: 10px;">Objectifs &amp; Best Gift</h3>
         <p>Barre de progression pour vos objectifs et mise en valeur du plus gros cadeau reçu.</p>
       </div>
+
     </div>
   </section>
 
   <!-- Footer -->
-  <footer style="text-align: center; padding: 40px 20px; color: #6b7280; font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+  <footer style="text-align: center; padding: 40px 20px; color: #6b7280; font-size: 12px; border-top: 1px solid var(--border);">
     <a href="/mentions-legales.html" style="color: #9ca3af; text-decoration: none;">Mentions Légales</a> &bull; &copy; 2026 Wave Studio
   </footer>
 
