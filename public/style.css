@@ -31,7 +31,13 @@
 }
 
 /* RESET & BASE */
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
 
 html, body {
   width: 100%;
@@ -40,16 +46,32 @@ html, body {
   color: var(--text-hi);
   font-family: 'Inter', -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden !important;
 }
 
-/* FIX CRITIQUE: Liens sans couleur bleue/violette par défaut */
+/* STYLISATION DES SCROLLBARS SOMBRES DISCRÈTES (SUPPRESSION DU BLANC ET DU HORIZONTAL) */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 0px !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 10px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan) !important;
+}
+
+/* FIX LIENS */
 a, a:visited, a:hover, a:active {
   color: inherit;
   text-decoration: none;
 }
 
 .hidden { display: none !important; }
-
 body.modal-open { overflow: hidden !important; }
 
 h1, h2, h3, .brand-text {
@@ -86,11 +108,7 @@ h1, h2, h3, .brand-text {
   color: #ffffff;
 }
 
-.user-badge-pill .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
+.user-badge-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
 .user-badge-pill .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
 .user-badge-pill .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.6); }
 
@@ -142,7 +160,7 @@ h1, h2, h3, .brand-text {
   white-space: nowrap;
 }
 
-/* FORM INPUTS */
+/* INPUTS */
 input[type="text"], 
 input[type="email"], 
 input[type="password"], 
@@ -167,25 +185,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 12px rgba(34, 229, 224, 0.3) !important;
 }
 
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #141824 inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-lo);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-  display: block;
-}
-
-/* BUTTONS */
+/* BOUTONS */
 .btn {
   padding: 10px 18px;
   border-radius: var(--r-sm);
@@ -235,7 +235,6 @@ label {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s;
 }
 .btn-text-grey:hover { color: #ffffff; }
 
@@ -305,61 +304,7 @@ label {
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
-.card-status-badge {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 12px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
-.status-actif {
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  color: #34d399;
-}
-
-.status-configure {
-  background: rgba(255, 190, 61, 0.12);
-  border: 1px solid rgba(255, 190, 61, 0.35);
-  color: #ffbe3d;
-}
-
-.status-desactive {
-  background: rgba(156, 163, 175, 0.12);
-  border: 1px solid rgba(156, 163, 175, 0.3);
-  color: #9ca3af;
-}
-
-.card-action-btn {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: var(--r-sm);
-  font-weight: 700;
-  font-size: 12px;
-  background: rgba(34, 229, 224, 0.12);
-  border: 1px solid rgba(34, 229, 224, 0.35);
-  color: var(--cyan);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 12px;
-}
-
-.card-action-btn:hover {
-  background: var(--cyan);
-  color: #051313;
-  box-shadow: 0 0 15px rgba(34, 229, 224, 0.4);
-}
-
-/* FIX MODALE : Cachée par défaut */
+/* FIX DÉFINITIF DE LA MODALE & DU SÉLECTEUR DE STYLE */
 .modal-backdrop {
   display: none;
   position: fixed;
@@ -371,6 +316,135 @@ label {
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+}
+
+.modal-box {
+  width: 100% !important;
+  max-width: 640px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--cyan) !important;
+  border-radius: var(--r-lg) !important;
+  padding: 26px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  max-height: 85vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  margin: auto !important;
+}
+
+/* FIX DU SÉLECTEUR DE STYLE (CYBER CYAN, GOLD, ETC.) */
+.style-picker-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+  margin-top: 6px !important;
+  width: 100% !important;
+}
+
+.style-picker-option {
+  background: #181c28 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+}
+
+.style-picker-option:hover, .style-picker-option.selected {
+  border-color: #22e5e0 !important;
+  background: rgba(34, 229, 224, 0.08) !important;
+  box-shadow: 0 0 10px rgba(34, 229, 224, 0.15) !important;
+}
+
+.style-dot {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+/* FIX BOÎTE URL OBS (PAS DE DÉBORDEMENT TEXTUEL) */
+.obs-link-box {
+  background: #07090e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.obs-url {
+  font-size: 11px !important;
+  color: #9ca3af !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* FIX GRILLE DES CADEAUX ET IMAGES CADEAUX (TAILLE NORMALE 36px) */
+.gift-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 8px !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #07090e !important;
+  padding: 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  width: 100% !important;
+}
+
+.gift-item {
+  background: #181c28 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  padding: 10px 6px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.gift-item:hover, .gift-item.selected {
+  border-color: #22e5e0 !important;
+  background: rgba(34, 229, 224, 0.12) !important;
+}
+
+.gift-icon {
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  object-fit: contain !important;
+  margin-bottom: 4px !important;
+}
+
+.gift-price {
+  font-size: 11px !important;
+  color: #ffbe3d !important;
+  font-weight: 800 !important;
 }
 
 .live-dot {
