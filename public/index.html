@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo.png">
 
-  <!-- Open Graph -->
+  <!-- Open Graph / Partage Réseaux -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Wave Studio — Overlays &amp; Jeux TikTok Live 100% Gratuits">
   <meta property="og:description" content="Maximisez vos dons et l'engagement de votre Live TikTok avec nos jeux interactifs pour OBS &amp; TikTok Live Studio.">
@@ -22,17 +22,31 @@
   <meta property="og:url" content="https://wave-studio.onrender.com/">
 
   <style>
-    body.app-bg {
+    /* 1. CONTENEUR GLOBAL DÉFILEMENT UNIQUE & ARRIÈRE-PLAN CONTINU */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
       margin: 0;
       padding: 0;
       background-color: var(--bg-dark);
-      background-image: radial-gradient(circle at 50% 0%, rgba(34, 229, 224, 0.14), transparent 55%);
-      min-height: 100vh;
       color: var(--text-hi);
       font-family: 'Inter', sans-serif;
+    }
+
+    .wave-studio-app-container {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 50% 0%, rgba(34, 229, 224, 0.16), transparent 70%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
       overflow-x: hidden;
     }
 
+    /* BARRE DE NAVIGATION FIXE */
     .landing-nav {
       position: fixed;
       top: 0;
@@ -52,9 +66,10 @@
       box-sizing: border-box;
     }
 
+    /* 2. SECTION HERO */
     .hero-section {
       margin-top: 72px;
-      padding: 80px 20px 40px;
+      padding: 90px 20px 60px;
       text-align: center;
       max-width: 850px;
       margin-left: auto;
@@ -65,6 +80,7 @@
       justify-content: center;
       gap: 24px;
       box-sizing: border-box;
+      min-height: calc(100vh - 72px);
     }
 
     .hero-badge {
@@ -97,132 +113,479 @@
     .hero-desc {
       font-size: 16px;
       color: var(--text-lo);
-      max-width: 680px;
-      line-height: 1.6;
+      max-width: 720px;
+      line-height: 1.65;
       text-align: center;
       margin: 0 auto;
     }
 
     .hero-ctas {
       display: flex;
-      gap: 16px;
+      flex-direction: column;
+      gap: 20px;
       justify-content: center;
       align-items: center;
-      flex-wrap: wrap;
-      margin-top: 8px;
+      margin-top: 12px;
       width: 100%;
     }
 
-    .features-grid {
+    .scroll-down-cta {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-lo);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .scroll-down-cta:hover {
+      color: var(--cyan);
+      transform: translateY(2px);
+    }
+
+    .animated-arrow {
+      font-size: 20px;
+      line-height: 1;
+      animation: bounceArrow 1.6s infinite ease-in-out;
+    }
+
+    @keyframes bounceArrow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    /* 3. SECTION PRODUITS & CARTE HOVER ANIMATIONS */
+    .wave-products-grid {
       max-width: 1100px;
-      margin: 40px auto 60px;
+      margin: 20px auto 80px;
       padding: 0 20px;
       box-sizing: border-box;
       width: 100%;
     }
 
-    @media (max-width: 640px) {
+    .section-title {
+      text-align: center;
+      font-size: clamp(24px, 4vw, 36px);
+      color: #ffffff;
+      margin-bottom: 36px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .product-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .product-card:hover .overlay-icon-wrapper {
+      transform: scale(1.12);
+      transition: transform 0.2s ease;
+    }
+
+    .product-card:hover .animate-icon-skull {
+      animation: glowSkull 0.6s ease infinite alternate;
+    }
+
+    .product-card:hover .animate-icon-lightning {
+      animation: pulseLightning 0.5s ease infinite alternate;
+    }
+
+    .product-card:hover .animate-icon-lock {
+      animation: wiggleLock 0.5s ease;
+    }
+
+    .product-card:hover .animate-icon-scales {
+      animation: balanceScales 0.6s ease infinite alternate;
+    }
+
+    .product-card:hover .animate-icon-diamond {
+      animation: glowDiamond 0.6s ease infinite alternate;
+    }
+
+    .product-card:hover .animate-icon-target {
+      animation: pulseTarget 0.5s ease;
+    }
+
+    @keyframes glowSkull {
+      0% { filter: drop-shadow(0 0 2px #ef4444); }
+      100% { filter: drop-shadow(0 0 12px #ef4444); }
+    }
+
+    @keyframes pulseLightning {
+      0% { filter: drop-shadow(0 0 2px #eab308); }
+      100% { filter: drop-shadow(0 0 12px #eab308); }
+    }
+
+    @keyframes wiggleLock {
+      0%, 100% { transform: rotate(0deg) scale(1.12); }
+      25% { transform: rotate(-12deg) scale(1.12); }
+      75% { transform: rotate(12deg) scale(1.12); }
+    }
+
+    @keyframes balanceScales {
+      0% { transform: rotate(-6deg) scale(1.12); }
+      100% { transform: rotate(6deg) scale(1.12); }
+    }
+
+    @keyframes glowDiamond {
+      0% { filter: drop-shadow(0 0 2px #22e5e0); }
+      100% { filter: drop-shadow(0 0 12px #22e5e0); }
+    }
+
+    @keyframes pulseTarget {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1.12); }
+    }
+
+    .card-footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .card-cta {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .card-cta:hover {
+      color: #3eeeea;
+      transform: translateX(4px);
+    }
+
+    /* 4. SECTION RÉASSURANCE & BANNIÈRE CTA FINAL */
+    .reassurance-section {
+      max-width: 1100px;
+      margin: 0 auto 60px;
+      padding: 0 20px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .reassurance-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .reassurance-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 28px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .reassurance-icon {
+      font-size: 32px;
+    }
+
+    .reassurance-col h3 {
+      font-size: 16px;
+      color: #ffffff;
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .reassurance-col p {
+      font-size: 13px;
+      color: var(--text-lo);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .final-cta-section {
+      max-width: 1100px;
+      margin: 20px auto 80px;
+      padding: 0 20px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .final-cta-banner {
+      padding: 48px 24px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(34, 229, 224, 0.1) 0%, rgba(17, 20, 29, 0.98) 100%);
+      border: 1px solid var(--cyan);
+      border-radius: var(--r-lg);
+      box-shadow: 0 0 35px rgba(34, 229, 224, 0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .final-cta-banner h2 {
+      font-size: clamp(24px, 4vw, 34px);
+      color: #ffffff;
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .final-cta-banner p {
+      font-size: 14px;
+      color: var(--text-lo);
+      margin: 0;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+
+    /* 5. FOOTER & RÉSEAUX SOCIAUX */
+    .main-footer {
+      border-top: 1px solid var(--border);
+      padding: 30px 20px;
+      background: rgba(7, 9, 14, 0.95);
+      margin-top: auto;
+    }
+
+    .footer-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .social-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .social-icon {
+      color: var(--text-lo);
+      transition: color 0.2s ease, transform 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .social-icon:hover {
+      color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .legal-info {
+      color: var(--text-faint);
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
       .landing-nav { padding: 0 16px; height: 64px; }
-      .hero-section { margin-top: 64px; padding: 40px 16px 30px; gap: 16px; }
-      .hero-ctas { flex-direction: column; width: 100%; }
-      .hero-ctas .btn { width: 100%; text-align: center; }
+      .hero-section { margin-top: 64px; padding: 50px 16px 40px; gap: 18px; min-height: auto; }
+      .reassurance-grid { grid-template-columns: 1fr; }
+      .footer-container { flex-direction: column; text-align: center; }
     }
   </style>
 </head>
-<body class="app-bg">
+<body>
 
-  <!-- Auto-Connexion -->
-  <script>
-    fetch('/api/me')
-      .then(res => res.json())
-      .then(user => {
-        if (user && user.pseudo) {
-          window.location.href = '/choix.html';
-        }
-      })
-      .catch(() => {});
-  </script>
+  <!-- CONTENEUR PARENT GLOBAL DÉFILEMENT UNIQUE -->
+  <div class="wave-studio-app-container">
 
-  <!-- Navbar -->
-  <nav class="landing-nav">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <span class="live-dot"></span>
-      <span class="brand-text" style="font-size: 22px;">Wave Studio</span>
-    </div>
-    <div style="display: flex; gap: 12px; align-items: center;">
-      <a href="/login.html" class="btn btn-secondary" style="padding: 8px 18px; font-size: 13px;">Connexion</a>
-      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 8px 18px; font-size: 13px;">Créer un compte</a>
-    </div>
-  </nav>
+    <!-- Auto-Connexion -->
+    <script>
+      fetch('/api/me')
+        .then(res => res.json())
+        .then(user => {
+          if (user && user.pseudo) {
+            window.location.href = '/choix.html';
+          }
+        })
+        .catch(() => {});
+    </script>
 
-  <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="hero-badge">
-      <span class="live-dot"></span> 100% Gratuit &amp; Synchronisé avec TikTok Live
-    </div>
+    <!-- Header (Barre de Navigation) -->
+    <nav class="landing-nav">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="live-dot"></span>
+        <span class="brand-text" style="font-size: 22px;">Wave Studio</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="/login.html" class="btn btn-secondary" style="padding: 8px 18px; font-size: 13px;">Connexion</a>
+        <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 8px 18px; font-size: 13px;">Créer un compte</a>
+      </div>
+    </nav>
 
-    <h1 class="hero-title">
-      Maximisez <span class="highlight-cyan">les dons et</span><br>
-      l'engagement <span class="highlight-cyan">de votre Live TikTok</span>
-    </h1>
+    <!-- 2. SECTION HERO (Contenu Supérieur) -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <span class="live-dot"></span> 100% Gratuit &amp; Synchronisé avec TikTok Live
+      </div>
 
-    <p class="hero-desc">
-      Une suite complète d'overlays interactifs et de jeux pour OBS &amp; TikTok Live Studio : Mode Élimination, Enchères, Jeu du Coffre-Fort et Top Donateurs.
-    </p>
+      <h1 class="hero-title">
+        Maximisez <span class="highlight-cyan">les dons et</span><br>
+        l'engagement <span class="highlight-cyan">de votre Live TikTok</span>
+      </h1>
 
-    <div class="hero-ctas">
-      <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 12px 24px;">Démarrer maintenant →</a>
-      <a href="#features" class="btn btn-secondary" style="padding: 12px 24px;">Découvrir les Overlays</a>
-    </div>
-  </section>
+      <p class="hero-desc">
+        Devenez le roi du TikTok Live. Wave Studio vous offre une suite complète d’outils interactifs pour divertir votre audience et exploser vos revenus. Passez du stream passif à une expérience interactive.
+      </p>
 
-  <!-- Features Bento Grid (6 Cartes bien proportionnées) -->
-  <section id="features" class="features-grid">
-    <div class="bento-grid">
+      <div class="hero-ctas">
+        <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 28px; font-size: 15px;">Démarrer maintenant →</a>
+        <a href="#products" class="scroll-down-cta">
+          <span>Découvrez la suite d’outils</span>
+          <span class="animated-arrow">↓</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 3. SECTION PRODUITS (Grille de 6 Outils) -->
+    <section id="products" class="wave-products-grid">
+      <h2 class="section-title">6 Outils Puissants pour un Live Interactif</h2>
       
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-game">💀</div>
-        <h3 style="margin-top: 10px;">Mode Élimination Fermée</h3>
-        <p>1 don = 1 place. Les joueurs s'éliminent automatiquement jusqu'au vainqueur final !</p>
+      <div class="bento-grid">
+        
+        <!-- Carte 1 : Mode Élimination Fermée -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-game animate-icon-skull">💀</div>
+            <h3 style="margin-top: 12px;">Mode Élimination Fermée</h3>
+            <p>1 don = 1 place. Les joueurs s'éliminent automatiquement jusqu'au vainqueur final !</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
+        <!-- Carte 2 : Mode Élimination Classique -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-game animate-icon-lightning">⚡</div>
+            <h3 style="margin-top: 12px;">Mode Élimination Classique</h3>
+            <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place.</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
+        <!-- Carte 3 : Panneau d'Enchères Live -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-game animate-icon-scales">⚖️</div>
+            <h3 style="margin-top: 12px;">Panneau d'Enchères Live</h3>
+            <p>Gérez des enchères en direct avec règles anti-snipe et validation dans le chat.</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
+        <!-- Carte 4 : Jeu du Coffre-Fort -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-game animate-icon-lock">🔐</div>
+            <h3 style="margin-top: 12px;">Jeu du Coffre-Fort</h3>
+            <p>Le chat devine un mot secret case par case avec détection automatique.</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
+        <!-- Carte 5 : Top Donateurs & Likers -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-widget animate-icon-diamond">💎</div>
+            <h3 style="margin-top: 12px;">Top Donateurs &amp; Likers</h3>
+            <p>Classement esthétique en temps réel de vos plus gros supporters pendant le live.</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
+        <!-- Carte 6 : Objectifs & Best Gift -->
+        <div class="bento-col-4 card overlay-card product-card">
+          <div>
+            <div class="overlay-icon-wrapper icon-square-widget animate-icon-target">🎯</div>
+            <h3 style="margin-top: 12px;">Objectifs &amp; Best Gift</h3>
+            <p>Barre de progression pour vos objectifs et mise en valeur du plus gros cadeau reçu.</p>
+          </div>
+          <div class="card-footer">
+            <a href="/login.html?tab=register" class="card-cta">Essayer ce mode →</a>
+          </div>
+        </div>
+
       </div>
+    </section>
 
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-game">⚡</div>
-        <h3 style="margin-top: 10px;">Mode Élimination Classique</h3>
-        <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place.</p>
+    <!-- 4. SECTION RÉASSURANCE -->
+    <section class="reassurance-section">
+      <div class="reassurance-grid">
+        <div class="reassurance-col">
+          <div class="reassurance-icon">🔌</div>
+          <h3>Facile à Utiliser</h3>
+          <p>Intégration en 2 clics avec OBS et TikTok Live Studio.</p>
+        </div>
+
+        <div class="reassurance-col">
+          <div class="reassurance-icon">🛡️</div>
+          <h3>100% Sécurisé</h3>
+          <p>Vos données sont protégées, nous ne stockons aucune information de compte.</p>
+        </div>
+
+        <div class="reassurance-col">
+          <div class="reassurance-icon">💬</div>
+          <h3>Support Réactif</h3>
+          <p>Une question ? Notre communauté et notre équipe sont là pour vous aider.</p>
+        </div>
       </div>
+    </section>
 
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-game">⚖️</div>
-        <h3 style="margin-top: 10px;">Panneau d'Enchères Live</h3>
-        <p>Gérez des enchères en direct avec règles anti-snipe et validation dans le chat.</p>
+    <!-- BANNIÈRE CTA FINAL -->
+    <section class="final-cta-section">
+      <div class="final-cta-banner">
+        <h2>Prêt à transformer vos Streams ?</h2>
+        <p>Rejoignez des centaines de streamers et dynamisez votre communauté dès aujourd'hui.</p>
+        <a href="/login.html?tab=register" class="btn btn-primary" style="padding: 14px 28px; font-size: 15px; margin-top: 6px;">Créer mon compte gratuit</a>
       </div>
+    </section>
 
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-game">🔐</div>
-        <h3 style="margin-top: 10px;">Jeu du Coffre-Fort</h3>
-        <p>Le chat devine un mot secret case par case avec détection automatique.</p>
+    <!-- 5. FOOTER & RÉSEAUX SOCIAUX -->
+    <footer class="main-footer">
+      <div class="footer-container">
+        <div class="social-links">
+          <a href="https://tiktok.com" target="_blank" rel="noopener" aria-label="TikTok" class="social-icon">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.83 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68 6.34 6.34 0 0 0 9.35 22a6.33 6.33 0 0 0 6.33-6.33V9.05a8.16 8.16 0 0 0 4.91 1.62V7.22a4.85 4.85 0 0 1-1-.53z"/></svg>
+          </a>
+          <a href="https://discord.com" target="_blank" rel="noopener" aria-label="Discord" class="social-icon">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.07 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+          <a href="https://youtube.com" target="_blank" rel="noopener" aria-label="YouTube" class="social-icon">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+        </div>
+        <div class="legal-info">
+          <a href="/mentions-legales.html" style="color: #9ca3af; text-decoration: none;">Mentions Légales</a> &bull; &copy; 2026 Wave Studio
+        </div>
       </div>
+    </footer>
 
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-widget">💎</div>
-        <h3 style="margin-top: 10px;">Top Donateurs &amp; Likers</h3>
-        <p>Classement esthétique en temps réel de vos plus gros supporters pendant le live.</p>
-      </div>
-
-      <div class="bento-col-4 card overlay-card">
-        <div class="overlay-icon-wrapper icon-square-widget">🎯</div>
-        <h3 style="margin-top: 10px;">Objectifs &amp; Best Gift</h3>
-        <p>Barre de progression pour vos objectifs et mise en valeur du plus gros cadeau reçu.</p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer style="text-align: center; padding: 40px 20px; color: #6b7280; font-size: 12px; border-top: 1px solid var(--border);">
-    <a href="/mentions-legales.html" style="color: #9ca3af; text-decoration: none;">Mentions Légales</a> &bull; &copy; 2026 Wave Studio
-  </footer>
+  </div>
 
 </body>
 </html>
