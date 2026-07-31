@@ -137,11 +137,11 @@
       </div>
     </div>
 
-    <!-- Header Right: Dark Grey Pill Badge + Grey Outline Profil + Subtle Text Déconnexion -->
+    <!-- Header Right -->
     <div style="display: flex; align-items: center; gap: 12px;">
       <div class="user-badge-pill">
         <span class="dot offline" id="status-dot"></span>
-        <span id="user-pseudo-display">@slacezzz — Hors Ligne</span>
+        <span id="user-pseudo-display">Connexion...</span>
       </div>
       <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="padding: 7px 14px; font-size: 12px;">⚙️ Profil</button>
       <button class="btn-text-grey" onclick="deconnexion()">Déconnexion</button>
@@ -165,13 +165,13 @@
       <div id="vip-menu-section" style="display:none; margin-top: 10px;">
         <div class="sidebar-section-label">SUPER ADMIN</div>
         <a onclick="ouvrirSimulateur()" class="sidebar-link">
-          🧪 Simulateur Cadeaux <span class="nav-badge">ADMIN</span>
+          <span>🧪 Simulateur Cadeaux</span><span class="nav-badge">ADMIN</span>
         </a>
         <a onclick="ouvrirVIPOverlay()" class="sidebar-link">
-          🌟 Overlay VIP <span class="nav-badge">VIP</span>
+          <span>🌟 Overlay VIP</span><span class="nav-badge">VIP</span>
         </a>
         <a onclick="ouvrirVIPRoom()" class="sidebar-link">
-          👑 VIP Room <span class="nav-badge">VIP</span>
+          <span>👑 VIP Room</span><span class="nav-badge">VIP</span>
         </a>
       </div>
     </aside>
@@ -193,7 +193,7 @@
               </div>
               <p>1 don = X places pendant le timer puis éliminations en série jusqu'au vainqueur final !</p>
             </div>
-            <button class="card-action-btn">Télécommande &amp; Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('elimination', 'Mode Élimination Fermée', '💀'); event.stopPropagation();">Télécommande &amp; Lien OBS →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Battle Royale', '⚡')">
@@ -205,7 +205,7 @@
               </div>
               <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place !</p>
             </div>
-            <button class="card-action-btn">Télécommande &amp; Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('elimination-boucle', 'Mode Battle Royale', '⚡'); event.stopPropagation();">Télécommande &amp; Lien OBS →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐')">
@@ -217,7 +217,7 @@
               </div>
               <p>Le chat devine un mot ou code secret masqué case par case avec validation automatique.</p>
             </div>
-            <button class="card-action-btn">Configurer &amp; Indices →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('coffre', 'Jeu du Coffre-Fort', '🔐'); event.stopPropagation();">Configurer &amp; Indices →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')">
@@ -229,7 +229,7 @@
               </div>
               <p>Gérez vos enchères en direct avec règles anti-snipe et détection automatique des vouchs.</p>
             </div>
-            <button class="card-action-btn">Ouvrir la régie →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️'); event.stopPropagation();">Ouvrir la régie →</button>
           </div>
 
         </div>
@@ -249,7 +249,7 @@
               </div>
               <p>Classement dynamique en temps réel des plus gros donateurs de votre live.</p>
             </div>
-            <button class="card-action-btn">Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('donateurs', 'Top Pièces (Donateurs)', '💎'); event.stopPropagation();">Lien OBS →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️')">
@@ -261,7 +261,7 @@
               </div>
               <p>Classement en temps réel des spectateurs tapoteurs d'écran.</p>
             </div>
-            <button class="card-action-btn">Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('likers', 'Top Likers', '❤️'); event.stopPropagation();">Lien OBS →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑')">
@@ -273,7 +273,7 @@
               </div>
               <p>Mise en valeur visuelle du plus gros cadeau reçu durant la session.</p>
             </div>
-            <button class="card-action-btn">Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('bestgift', 'Widget Best Gift', '👑'); event.stopPropagation();">Lien OBS →</button>
           </div>
 
           <div class="bento-col-6 card overlay-card" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯')">
@@ -285,7 +285,7 @@
               </div>
               <p>Barre de progression visuelle pour vos objectifs de pièces ou de likes.</p>
             </div>
-            <button class="card-action-btn">Lien OBS →</button>
+            <button class="card-action-btn" onclick="ouvrirPersonnalisation('objectif', 'Objectif de Live', '🎯'); event.stopPropagation();">Lien OBS →</button>
           </div>
 
         </div>
@@ -339,8 +339,8 @@
 
   <!-- Modal Profil -->
   <div id="modal-profil" class="modal-backdrop">
-    <div class="modal-content" style="background:var(--surface); border:1px solid var(--border); border-radius:20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="modal-content" style="background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <h2>Modifier vos accès</h2>
         <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer;" onclick="fermerModalProfil()">✕</button>
       </div>
@@ -349,7 +349,7 @@
         <div><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle"></div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
           <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
-          <button type="submit" class="btn btn-secondary">Enregistrer</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </form>
     </div>
