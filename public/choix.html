@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>Wave Studio — Tableau de bord</title>
+  <title>Wave Studio — Cockpit Streaming</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
@@ -26,28 +26,256 @@
     }
 
     .sidebar {
-      width: 240px;
+      width: 230px;
       background: var(--surface);
       border-right: 1px solid var(--border);
-      padding: 20px 14px;
+      padding: 18px 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
       overflow-y: auto;
     }
 
     .main-viewport {
       flex: 1;
-      padding: 28px 24px;
+      padding: 20px 20px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 20px;
       width: 100%;
     }
 
-    /* MODALES & SUPPRESSION DES BARRES DE DÉFILEMENT INESTHÉTIQUES */
+    /* 1. HEADER COCKPIT & STATUTS */
+    .status-pill-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #141824;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .status-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .status-pill .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
+    .status-pill .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.6); }
+
+    /* 2. DENSITÉ & GRILLE COCKPIT (3 À 4 COLONNES) */
+    .cockpit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    /* CARTE COMPACTE */
+    .cockpit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+      transition: opacity 0.25s ease, filter 0.25s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .cockpit-card:hover {
+      border-color: rgba(34, 229, 224, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .cockpit-card.card-disabled {
+      opacity: 0.6;
+      filter: grayscale(0.2);
+    }
+
+    /* EN-TÊTE COMPACT DE LA CARTE */
+    .cockpit-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .cockpit-card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .cockpit-card-title-group h3 {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+
+    .cockpit-card p {
+      color: #9ca3af;
+      font-size: 12px;
+      line-height: 1.4;
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* TOGGLE SWITCH COMPACT */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0 !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: 0.2s ease;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #9ca3af;
+      transition: 0.2s ease;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: rgba(34, 229, 224, 0.25);
+      border-color: var(--cyan);
+      box-shadow: 0 0 8px rgba(34, 229, 224, 0.3);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(16px);
+      background-color: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    /* 3. TROIS BOUTONS DISTINCTS EN BAS DE CARTE */
+    .card-btn-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    /* Bouton 1 : Action Directe Live (🟢 Cyan Plein) */
+    .card-btn-primary {
+      flex: 1.2;
+      padding: 8px 10px !important;
+      font-size: 11px !important;
+      font-weight: 800 !important;
+      background: var(--cyan) !important;
+      color: #051313 !important;
+      border: none !important;
+      box-shadow: 0 0 10px rgba(34, 229, 224, 0.25);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .card-btn-primary:hover {
+      background: #3eeeea !important;
+      box-shadow: 0 0 15px rgba(34, 229, 224, 0.45);
+    }
+
+    /* Bouton 2 : Copie OBS (🔗 Violet-Bleu Outline) */
+    .card-btn-obs {
+      flex: 1;
+      padding: 8px 8px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      background: rgba(99, 102, 241, 0.12) !important;
+      border: 1px solid rgba(99, 102, 241, 0.4) !important;
+      color: #a5b4fc !important;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .card-btn-obs:hover {
+      background: rgba(99, 102, 241, 0.3) !important;
+      color: #ffffff !important;
+      border-color: #818cf8 !important;
+    }
+
+    /* Bouton 3 : Configuration (⚙️ Gris Neutre Outline) */
+    .card-btn-config {
+      flex: 1;
+      padding: 8px 8px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #d1d5db !important;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .card-btn-config:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      color: #ffffff !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    /* MODALES & SCROLLBARS */
     .modal-backdrop {
       display: none;
       position: fixed;
@@ -63,35 +291,18 @@
 
     .modal-box {
       width: 100%;
-      max-width: 650px !important;
+      max-width: 620px !important;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-lg);
-      padding: 26px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
-      max-height: 88vh;
+      gap: 16px;
+      max-height: 85vh;
       overflow-y: auto;
-      overflow-x: hidden !important;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
       margin: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-    }
-
-    .modal-box::-webkit-scrollbar,
-    .gift-grid::-webkit-scrollbar,
-    .modal-content::-webkit-scrollbar {
-      width: 5px;
-      height: 0px;
-    }
-
-    .modal-box::-webkit-scrollbar-thumb,
-    .gift-grid::-webkit-scrollbar-thumb,
-    .modal-content::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
     }
 
     .modal-close-btn {
@@ -100,91 +311,9 @@
       color: var(--text-lo);
       font-size: 20px;
       cursor: pointer;
-      transition: color 0.2s;
     }
     .modal-close-btn:hover { color: #ffffff; }
 
-    .obs-link-box {
-      background: var(--bg-dark);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .obs-url {
-      font-size: 11px;
-      color: var(--text-lo);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .style-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; }
-    .style-picker-option {
-      background: var(--surface-2);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .style-picker-option:hover, .style-picker-option.selected {
-      border-color: var(--cyan);
-      background: rgba(34, 229, 224, 0.08);
-    }
-    .style-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-
-    .gift-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-      overflow-x: hidden !important;
-      background: var(--bg-dark);
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      width: 100%;
-      box-sizing: border-box;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-    }
-
-    .gift-item {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 6px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      width: 100%;
-    }
-
-    .gift-item:hover, .gift-item.selected {
-      border-color: var(--cyan);
-      background: rgba(34, 229, 224, 0.12);
-    }
-
-    .gift-icon { width: 34px; height: 34px; object-fit: contain; margin-bottom: 4px; }
-    .gift-price { font-size: 11px; color: var(--gold); font-weight: bold; }
-
-    /* TOAST NOTIFICATION COPY OBS */
     .toast-notification {
       position: fixed;
       bottom: 24px;
@@ -203,7 +332,7 @@
       z-index: 2000;
       transform: translateY(100px);
       opacity: 0;
-      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+      transition: transform 0.3s ease, opacity 0.3s ease;
       pointer-events: none;
     }
 
@@ -212,128 +341,12 @@
       opacity: 1;
     }
 
-    /* ERGONOMIE DES CARTES (TOGGLE SWITCH & BOUTONS CÔTE À CÔTE) */
-    .card-top-right {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 5;
-    }
-
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 40px;
-      height: 22px;
-      cursor: pointer;
-    }
-
-    .toggle-switch input {
-      opacity: 0;
-      width: 0 !important;
-      height: 0 !important;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
-
-    .toggle-slider {
-      position: absolute;
-      inset: 0;
-      background-color: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      transition: 0.25s ease;
-      border-radius: 20px;
-    }
-
-    .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: #9ca3af;
-      transition: 0.25s ease;
-      border-radius: 50%;
-    }
-
-    .toggle-switch input:checked + .toggle-slider {
-      background-color: rgba(34, 229, 224, 0.2);
-      border-color: var(--cyan);
-      box-shadow: 0 0 10px rgba(34, 229, 224, 0.3);
-    }
-
-    .toggle-switch input:checked + .toggle-slider:before {
-      transform: translateX(18px);
-      background-color: var(--cyan);
-      box-shadow: 0 0 6px var(--cyan);
-    }
-
-    .status-tag-orange {
-      font-size: 9px;
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 6px;
-      background: rgba(255, 190, 61, 0.12);
-      border: 1px solid rgba(255, 190, 61, 0.35);
-      color: var(--gold);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .card-btn-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 16px;
-      width: 100%;
-    }
-
-    .card-btn-main {
-      flex: 2;
-      padding: 9px 12px !important;
-      font-size: 12px !important;
-      font-weight: 800 !important;
-      white-space: nowrap;
-    }
-
-    .card-btn-sub {
-      flex: 1;
-      padding: 9px 10px !important;
-      font-size: 12px !important;
-      font-weight: 700 !important;
-      white-space: nowrap;
-    }
-
-    /* MODALE PROFIL RECTANGULAIRE */
-    #modal-profil .modal-content {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px 32px;
-      width: 100%;
-      max-width: 540px !important;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-      margin: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
     .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
     @media (max-width: 768px) {
       .mobile-menu-btn { display: block; }
       .sidebar { position: absolute; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
-      .gift-grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); }
-    }
-
-    @media (max-width: 500px) {
-      .card-btn-row { gap: 6px; }
-      .btn-text-full { display: none; }
+      .status-pill-group { display: none; }
     }
   </style>
 </head>
@@ -349,13 +362,19 @@
       </div>
     </div>
 
-    <!-- Header Right -->
+    <!-- Header Right: Double Puce de Statut + Boutons Neutres -->
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div class="user-badge-pill">
-        <span class="dot offline" id="status-dot"></span>
-        <span id="user-pseudo-display">Connexion...</span>
+      <div class="status-pill-group">
+        <span class="status-pill">
+          <span class="dot offline" id="status-dot"></span>
+          <span id="user-pseudo-display">TikTok Live : Connecté...</span>
+        </span>
+        <span class="status-pill">
+          <span class="dot online"></span>
+          <span>OBS Sync : Connecté</span>
+        </span>
       </div>
-      <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="padding: 7px 14px; font-size: 12px;">⚙️ Profil</button>
+      <button class="btn btn-secondary" onclick="ouvrirModalProfil()" style="padding: 6px 12px; font-size: 12px;">⚙️ Profil</button>
       <button class="btn-text-grey" onclick="deconnexion()">Déconnexion</button>
     </div>
   </header>
@@ -388,197 +407,179 @@
       </div>
     </aside>
 
-    <!-- Main Viewport -->
+    <!-- Main Viewport (Cockpit) -->
     <main class="main-viewport">
 
       <!-- Section 1 : Jeux Interactifs -->
       <div id="section-jeux">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px;">Jeux Interactifs TikTok Live</div>
-        <div class="bento-grid">
+        <div style="font-size: 11px; font-weight: 800; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;">Jeux Interactifs TikTok Live</div>
+        <div class="cockpit-grid">
           
           <!-- Carte 1 : Mode Élimination Fermée -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-game" style="width:34px; height:34px; font-size:17px;">💀</div>
+                <h3>Élimination Fermée</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-elimination" checked onchange="toggleModuleState('elimination', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-game">💀</div>
-                <h3>Mode Élimination Fermée</h3>
-              </div>
-              <p>1 don = X places pendant le timer puis éliminations en série jusqu'au vainqueur final !</p>
-            </div>
+            <p>1 don = X places pendant le timer puis éliminations en série jusqu'au vainqueur.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirTelecommande('elimination', 'Mode Élimination Fermée', '💀'); event.stopPropagation();">🎮 Télécommande</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('elimination'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('elimination', 'Mode Élimination Fermée', '💀'); event.stopPropagation();" title="Réglages">⚙️ <span class="btn-text-full">Config</span></button>
+              <button class="card-btn-primary" onclick="ouvrirTelecommande('elimination', 'Mode Élimination Fermée', '💀')">🎮 Régie</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('elimination')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('elimination', 'Mode Élimination Fermée', '💀')" title="Réglages">⚙️ Config</button>
             </div>
           </div>
 
           <!-- Carte 2 : Mode Élimination Classique -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card card-disabled">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-game" style="width:34px; height:34px; font-size:17px;">⚡</div>
+                <h3>Élimination Classique</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-elimination-boucle" onchange="toggleModuleState('elimination-boucle', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-game">⚡</div>
-                <h3>Mode Élimination Classique</h3>
-              </div>
-              <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat de place !</p>
-            </div>
+            <p>Inscriptions continues en boucle : 1 éliminé par tour avec option de rachat.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirTelecommande('elimination-boucle', 'Mode Battle Royale', '⚡'); event.stopPropagation();">🎮 Télécommande</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('elimination-boucle'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('elimination-boucle', 'Mode Battle Royale', '⚡'); event.stopPropagation();" title="Réglages">⚙️ <span class="btn-text-full">Config</span></button>
+              <button class="card-btn-primary" onclick="ouvrirTelecommande('elimination-boucle', 'Mode Battle Royale', '⚡')">🎮 Régie</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('elimination-boucle')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('elimination-boucle', 'Mode Battle Royale', '⚡')" title="Réglages">⚙️ Config</button>
             </div>
           </div>
 
           <!-- Carte 3 : Jeu du Coffre-Fort -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <span class="status-tag-orange">Configuré</span>
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-game" style="width:34px; height:34px; font-size:17px;">🔐</div>
+                <h3>Jeu du Coffre-Fort</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-coffre" checked onchange="toggleModuleState('coffre', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-game">🔐</div>
-                <h3>Jeu du Coffre-Fort</h3>
-              </div>
-              <p>Le chat devine un mot ou code secret masqué case par case avec validation automatique.</p>
-            </div>
+            <p>Le chat devine un mot ou code secret masqué case par case avec validation.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirTelecommande('coffre', 'Jeu du Coffre-Fort', '🔐'); event.stopPropagation();">🎮 Télécommande</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('coffre'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('coffre', 'Jeu du Coffre-Fort', '🔐'); event.stopPropagation();" title="Réglages">⚙️ <span class="btn-text-full">Config</span></button>
+              <button class="card-btn-primary" onclick="ouvrirTelecommande('coffre', 'Jeu du Coffre-Fort', '🔐')">🟢 Lancer</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('coffre')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('coffre', 'Jeu du Coffre-Fort', '🔐')" title="Réglages">⚙️ Config</button>
             </div>
           </div>
 
           <!-- Carte 4 : Panneau d'Enchères -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-game" style="width:34px; height:34px; font-size:17px;">⚖️</div>
+                <h3>Panneau d'Enchères</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-encheres" checked onchange="toggleModuleState('encheres', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-game">⚖️</div>
-                <h3>Panneau d'Enchères &amp; Overlay</h3>
-              </div>
-              <p>Gérez vos enchères en direct avec règles anti-snipe et détection automatique des vouchs.</p>
-            </div>
+            <p>Gérez vos enchères en direct avec règles anti-snipe et vouchs automatiques.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="location.href='/encheres/' + encodeURIComponent(pseudoGlobal)">📱 Régie Live</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('encheres'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️'); event.stopPropagation();" title="Style">⚙️ <span class="btn-text-full">Style</span></button>
+              <button class="card-btn-primary" onclick="location.href='/encheres/' + encodeURIComponent(pseudoGlobal)">📱 Régie</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('encheres')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('encheres', 'Panneau d\'Enchères &amp; Overlay', '⚖️')" title="Thèmes">⚙️ Style</button>
             </div>
           </div>
 
         </div>
       </div>
 
-      <!-- Section 2 : Overlays de Suivi & Live -->
+      <!-- Section 2 : Widgets & Live -->
       <div id="section-widgets">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px;">Overlays de Suivi &amp; Live</div>
-        <div class="bento-grid">
+        <div style="font-size: 11px; font-weight: 800; color: var(--text-lo); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;">Overlays de Suivi &amp; Live</div>
+        <div class="cockpit-grid">
 
           <!-- Carte 5 : Top Donateurs -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-widget" style="width:34px; height:34px; font-size:17px;">💎</div>
+                <h3>Top Donateurs</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-donateurs" checked onchange="toggleModuleState('donateurs', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-widget">💎</div>
-                <h3>Top Donateurs</h3>
-              </div>
-              <p>Classement dynamique en temps réel des plus gros donateurs de votre live.</p>
-            </div>
+            <p>Classement dynamique en temps réel des plus gros donateurs de votre live.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirApercuWidget('donateurs')">👁️ Aperçu</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('donateurs'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('donateurs', 'Top Pièces (Donateurs)', '💎'); event.stopPropagation();" title="Style">⚙️ <span class="btn-text-full">Style</span></button>
+              <button class="card-btn-primary" onclick="ouvrirApercuWidget('donateurs')">👁️ Aperçu</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('donateurs')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('donateurs', 'Top Pièces (Donateurs)', '💎')" title="Thème">⚙️ Style</button>
             </div>
           </div>
 
           <!-- Carte 6 : Top Likers -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-widget" style="width:34px; height:34px; font-size:17px;">❤️</div>
+                <h3>Top Likers</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-likers" checked onchange="toggleModuleState('likers', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-widget">❤️</div>
-                <h3>Top Likers</h3>
-              </div>
-              <p>Classement en temps réel des spectateurs tapoteurs d'écran.</p>
-            </div>
+            <p>Classement en temps réel des spectateurs tapoteurs d'écran.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirApercuWidget('likers')">👁️ Aperçu</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('likers'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('likers', 'Top Likers', '❤️'); event.stopPropagation();" title="Style">⚙️ <span class="btn-text-full">Style</span></button>
+              <button class="card-btn-primary" onclick="ouvrirApercuWidget('likers')">👁️ Aperçu</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('likers')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('likers', 'Top Likers', '❤️')" title="Thème">⚙️ Style</button>
             </div>
           </div>
 
           <!-- Carte 7 : Widget Best Gift -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <span class="status-tag-orange">Configuré</span>
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-widget" style="width:34px; height:34px; font-size:17px;">👑</div>
+                <h3>Widget Best Gift</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-bestgift" checked onchange="toggleModuleState('bestgift', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-widget">👑</div>
-                <h3>Widget Best Gift</h3>
-              </div>
-              <p>Mise en valeur visuelle du plus gros cadeau reçu durant la session.</p>
-            </div>
+            <p>Mise en valeur visuelle du plus gros cadeau reçu durant la session.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirApercuWidget('bestgift')">👁️ Aperçu</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('bestgift'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('bestgift', 'Widget Best Gift', '👑'); event.stopPropagation();" title="Style">⚙️ <span class="btn-text-full">Style</span></button>
+              <button class="card-btn-primary" onclick="ouvrirApercuWidget('bestgift')">👁️ Aperçu</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('bestgift')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('bestgift', 'Widget Best Gift', '👑')" title="Thème">⚙️ Style</button>
             </div>
           </div>
 
           <!-- Carte 8 : Objectif de Live -->
-          <div class="bento-col-6 card overlay-card">
-            <div class="card-top-right">
-              <label class="toggle-switch" title="Activer / Désactiver le module" onclick="event.stopPropagation();">
+          <div class="cockpit-card">
+            <div class="cockpit-card-header">
+              <div class="cockpit-card-title-group">
+                <div class="overlay-icon-wrapper icon-square-widget" style="width:34px; height:34px; font-size:17px;">🎯</div>
+                <h3>Objectif de Live</h3>
+              </div>
+              <label class="toggle-switch" title="Activer / Désactiver">
                 <input type="checkbox" id="toggle-objectif" checked onchange="toggleModuleState('objectif', this)">
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                <div class="overlay-icon-wrapper icon-square-widget">🎯</div>
-                <h3>Objectif de Live</h3>
-              </div>
-              <p>Barre de progression visuelle pour vos objectifs de pièces ou de likes.</p>
-            </div>
+            <p>Barre de progression visuelle pour vos objectifs de pièces ou de likes.</p>
             <div class="card-btn-row">
-              <button class="btn btn-primary card-btn-main" onclick="ouvrirTelecommande('objectif', 'Objectif de Live', '🎯')">🟢 Activer</button>
-              <button class="btn btn-secondary card-btn-sub" onclick="copierLienDirect('objectif'); event.stopPropagation();" title="Copier le lien OBS">🔗 <span class="btn-text-full">OBS</span></button>
-              <button class="btn btn-secondary card-btn-sub" onclick="ouvrirConfig('objectif', 'Objectif de Live', '🎯'); event.stopPropagation();" title="Réglages">⚙️ <span class="btn-text-full">Config</span></button>
+              <button class="card-btn-primary" onclick="ouvrirTelecommande('objectif', 'Objectif de Live', '🎯')">🟢 Activer</button>
+              <button class="card-btn-obs" onclick="copierLienDirect('objectif')" title="Copier lien OBS">🔗 OBS</button>
+              <button class="card-btn-config" onclick="ouvrirConfig('objectif', 'Objectif de Live', '🎯')" title="Réglages">⚙️ Config</button>
             </div>
           </div>
 
@@ -588,7 +589,7 @@
     </main>
   </div>
 
-  <!-- ACTION A: MODALE DE CONFIGURATION (PARAMÈTRES ET THÈMES AVANT-LIVE) -->
+  <!-- ACTION 3 : MODALE DE CONFIGURATION (PARAMÈTRES AVANT-LIVE & THÈMES EXCLUSIFS) -->
   <div id="modal-config" class="modal-backdrop">
     <div class="modal-box" id="modal-config-container">
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -596,7 +597,7 @@
         <button class="modal-close-btn" onclick="fermerConfig()">✕</button>
       </div>
 
-      <!-- Thème visuel -->
+      <!-- Choix du thème -->
       <div style="display:flex; flex-direction:column; gap:8px;">
         <label>🎨 Style / Thème visuel de l'overlay :</label>
         <div class="style-picker-grid">
@@ -629,7 +630,7 @@
         <a id="modal-config-demo-link" href="#" target="_blank" style="font-size: 11px; color: var(--cyan); text-decoration: underline;">👁️ Aperçu du style (démo)</a>
       </div>
 
-      <!-- Champs de réglages spécifiques -->
+      <!-- Champs de réglages spécifiques (Prix, Mots secrets, Cadeaux, etc.) -->
       <div id="modal-config-fields"></div>
 
       <!-- Bouton Enregistrer -->
@@ -640,7 +641,7 @@
     </div>
   </div>
 
-  <!-- ACTION B: MODALE TÉLÉCOMMANDE LIVE (CONTRÔLES EN DIRECT EXCLUSIFS) -->
+  <!-- ACTION 1 : MODALE TÉLÉCOMMANDE LIVE (CONTRÔLES EN DIRECT EXCLUSIFS) -->
   <div id="modal-remote" class="modal-backdrop">
     <div class="modal-box" id="modal-remote-container" style="max-width: 520px !important;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -654,7 +655,7 @@
         <button class="modal-close-btn" onclick="fermerTelecommande()">✕</button>
       </div>
 
-      <!-- Boutons d'actions immédiates en direct -->
+      <!-- Boutons d'actions immédiates en direct EXCLUSIFS (Lancer le massacre, Réinitialiser, Révéler une case) -->
       <div id="modal-remote-actions" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
     </div>
   </div>
@@ -683,7 +684,7 @@
     </div>
   </div>
 
-  <!-- NOTIFICATION TOAST TEMPORAIRE -->
+  <!-- NOTIFICATION TOAST TEMPORAIRE (ACTION 2 OBS) -->
   <div id="toast-notification" class="toast-notification">
     <span>✨</span>
     <span id="toast-message">Lien OBS copié !</span>
@@ -706,9 +707,7 @@
       return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    /* --------------------------------------------------------------------------
-       ACTION C: TOAST NOTIFICATION & COPIE DIRECTE PRESSE-PAPIER
-       -------------------------------------------------------------------------- */
+    /* ACTION 2 : COPIE OBS DIRECTE + TOAST (SANS OUVERTURE DE MODALE) */
     function afficherToast(message = "Lien OBS copié !") {
       const toast = document.getElementById('toast-notification');
       const msgEl = document.getElementById('toast-message');
@@ -728,20 +727,24 @@
       }
       
       navigator.clipboard.writeText(lien).then(() => {
-        afficherToast(`✨ Lien OBS copié dans le presse-papier !`);
+        afficherToast(`✨ Lien OBS (${type}) copié dans le presse-papier !`);
       });
     }
 
     function toggleModuleState(type, checkbox) {
       const isEnabled = checkbox.checked;
-      afficherToast(`Module ${type} -> ${isEnabled ? 'ON' : 'OFF'}`);
+      const card = checkbox.closest('.cockpit-card');
+      if (card) {
+        card.classList.toggle('card-disabled', !isEnabled);
+      }
+      afficherToast(`Module ${type} -> ${isEnabled ? 'Activé' : 'Désactivé'}`);
     }
 
     function appliquerStatutUI(isOnline, pseudo) {
-      const dot = document.querySelector('.user-badge-pill .dot');
+      const dot = document.getElementById('status-dot');
       const text = document.getElementById('user-pseudo-display');
       if (dot) dot.className = isOnline ? 'dot online' : 'dot offline';
-      if (text) text.textContent = `@${pseudo} — ${isOnline ? 'En Live' : 'Hors Ligne'}`;
+      if (text) text.textContent = `TikTok Live : ${isOnline ? 'Connecté' : 'Hors Ligne'}`;
     }
 
     function verifierStatutLive(pseudo) {
@@ -751,9 +754,7 @@
         .catch(() => {});
     }
 
-    /* --------------------------------------------------------------------------
-       ACTION A: MODALE DE CONFIGURATION (PARAMÈTRES AVANT-LIVE & THÈMES)
-       -------------------------------------------------------------------------- */
+    /* ACTION 3 : MODALE CONFIGURATION (PARAMÈTRES AVANT-LIVE & THÈMES EXCLUSIFS) */
     function ouvrirConfig(type, titre, icone) {
       typeActuel = type;
       document.getElementById('modal-config-title').textContent = `${icone} Configuration — ${titre}`;
@@ -841,9 +842,7 @@
       afficherToast("✨ Lien OBS copié !");
     }
 
-    /* --------------------------------------------------------------------------
-       ACTION B: MODALE TÉLÉCOMMANDE LIVE (CONTRÔLES EN DIRECT EXCLUSIFS)
-       -------------------------------------------------------------------------- */
+    /* ACTION 1 : MODALE TÉLÉCOMMANDE LIVE (CONTRÔLES EN DIRECT EXCLUSIFS) */
     function ouvrirTelecommande(type, titre, icone) {
       typeActuel = type;
       document.getElementById('modal-remote-title').textContent = `${icone} Télécommande — ${titre}`;
@@ -903,9 +902,7 @@
       window.open(lien, '_blank');
     }
 
-    /* --------------------------------------------------------------------------
-       INITIALISATION APPLI & PROFIL
-       -------------------------------------------------------------------------- */
+    /* INITIALISATION APPLI & PROFIL */
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
