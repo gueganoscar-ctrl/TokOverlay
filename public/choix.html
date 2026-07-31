@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo.png">
   <style>
     body {
       display: flex;
@@ -43,9 +44,9 @@
       color: var(--text-lo);
     }
 
-    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
-    .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.5); }
+    .user-badge .dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s ease; }
+    .user-badge .dot.online { background-color: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
+    .user-badge .dot.offline { background-color: var(--danger); box-shadow: 0 0 8px rgba(255, 84, 112, 0.6); }
 
     .app-layout {
       display: flex;
@@ -215,8 +216,7 @@
       .style-picker-grid { grid-template-columns: 1fr; }
       .gift-grid { grid-template-columns: repeat(2, 1fr); }
     }
-  </style>:
-  <link rel="icon" type="image/png" href="/img/logo.png">
+  </style>
 </head>
 <body>
 
@@ -451,17 +451,46 @@
       return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
+    function appliquerStatutUI(isOnline, pseudo) {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('user-pseudo-display');
+      if (dot) dot.className = isOnline ? 'dot online' : 'dot offline';
+      if (text) text.textContent = `@${pseudo} — ${isOnline ? 'En Live' : 'Hors Ligne'}`;
+    }
+
+    function verifierStatutLive(pseudo) {
+      fetch('/api/live-status/' + encodeURIComponent(pseudo))
+        .then(r => r.json())
+        .then(s => {
+          appliquerStatutUI(Boolean(s.online), pseudo);
+        })
+        .catch(() => {});
+    }
+
     fetch('/api/me').then(res => res.json()).then(user => {
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
       document.getElementById('user-pseudo-display').textContent = `@${user.pseudo}`;
+      
       if (user.role === 'admin') {
         const vipSec = document.getElementById('vip-menu-section');
         if (vipSec) vipSec.style.display = 'block';
       }
+
       socket = io();
       socket.on('connect', () => { socket.emit('rejoindre', { pseudo: pseudoGlobal, type: 'control' }); });
-      verifierStatutLive(user.pseudo); setInterval(() => verifierStatutLive(user.pseudo), 3000);
+      
+      // ÉCOUTE DU STATUT EN TEMPS RÉEL (SANS NÉCESSITER DE F5)
+      socket.on('statutLiveModifier', data => {
+        if (data && typeof data.online === 'boolean') {
+          appliquerStatutUI(data.online, pseudoGlobal);
+        }
+      });
+
+      // Lancement immédiat + boucle de vérification continue en arrière-plan (2 sec)
+      verifierStatutLive(user.pseudo); 
+      if (window.liveStatusInterval) clearInterval(window.liveStatusInterval);
+      window.liveStatusInterval = setInterval(() => verifierStatutLive(user.pseudo), 2000);
     });
 
     async function deconnexion() {
@@ -477,13 +506,6 @@
 
     function toggleSidebar() {
       document.getElementById('app-sidebar').classList.toggle('open');
-    }
-
-    function verifierStatutLive(pseudo) {
-      fetch('/api/live-status/' + encodeURIComponent(pseudo)).then(r => r.json()).then(s => {
-          document.getElementById('status-dot').className = s.online ? 'dot online' : 'dot offline';
-          document.getElementById('user-pseudo-display').textContent = `@${pseudo} — ${s.online ? 'En Live' : 'Hors Ligne'}`;
-      }).catch(() => {});
     }
 
     function allerAuxStatistiques() { if (pseudoGlobal) window.location.href = `/statistiques/${pseudoGlobal}`; }

@@ -909,6 +909,7 @@ function arreterEcouteLive(pseudo, data, reason) {
     delete connexionsActives[pseudo];
   }
   
+  io.to(`streamer:${pseudo}`).emit('statutLiveModifier', { online: false });
   io.to(`streamer:${pseudo}`).emit('liveArrete', { reason });
 }
 
@@ -964,8 +965,11 @@ function demarrerEcouteLive(pseudo, apiKey) {
     }
   }, 1000); 
 
-  connection.connect().catch((err) => {
+  connection.connect().then(() => {
+    io.to(`streamer:${pseudo}`).emit('statutLiveModifier', { online: true });
+  }).catch((err) => {
     console.error(`[TikTokLive] Erreur connexion pour @${pseudo}:`, err);
+    io.to(`streamer:${pseudo}`).emit('statutLiveModifier', { online: false });
     io.to(`streamer:${pseudo}`).emit('erreurConnexion', "Impossible de se connecter au live.");
     arreterEcouteLive(pseudo, data, 'connect_error');
   });
@@ -1443,17 +1447,15 @@ function terminerEnchere(pseudo) {
 
 io.on('connection', socket => {
 
-  socket.on('simulerMessageTest', (payload = {}) => {
+  socket.on('simulerCadeauTest', (payload = {}) => {
     try {
-      const { pseudo, senderPseudo, message } = payload;
+      const { pseudo, senderPseudo, coins } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
-
-      // VÉRIFICATION STRICTE ADMIN
+      
       if (!isAdmin(socket.request.session?.user)) return;
 
       const data = connexionsActives[pseudoNettoye];
       if (!data) return;
-      // ... suite inchangée ...
 
       const id = `simul_${senderPseudo}`;
       const nickname = senderPseudo;
@@ -1509,7 +1511,7 @@ io.on('connection', socket => {
       const { pseudo, senderPseudo, message } = payload;
       const pseudoNettoye = normalizePseudo(pseudo);
 
-      if (!canManage(socket.request.session?.user, pseudoNettoye)) return;
+      if (!isAdmin(socket.request.session?.user)) return;
 
       const data = connexionsActives[pseudoNettoye];
       if (!data) return;
@@ -1591,12 +1593,16 @@ io.on('connection', socket => {
       demarrerEcouteLive(pseudoNettoye, utilisateur.apiKey);
       ack({ ok: true });
 
+      // Transmettre l'état actuel de la connexion immédiatement au client
+      const data = connexionsActives[pseudoNettoye];
+      const isOnline = Boolean(data && data.connection && data.connection.isConnected);
+      socket.emit('statutLiveModifier', { online: isOnline });
+
       // ENVOI IMMÉDIAT DU NOMBRE DE VOUCHS GLOBAL
       socket.emit('initVouch', { vouches: vouchesGlobalCount });
       socket.emit('updateVouchGlobal', { vouches: vouchesGlobalCount });
 
       // ENVOI IMMÉDIAT ET SYNCHRONE DES DONNÉES TEMPS RÉEL AU REJOIGNANT
-      const data = connexionsActives[pseudoNettoye];
       if (data) {
         const topGifters = Object.values(data.gifters).sort((a, b) => b.coins - a.coins).slice(0, 3);
         const topLikers = Object.values(data.likers).sort((a, b) => b.likes - a.likes).slice(0, 3);
