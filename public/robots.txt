@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wave-studio.onrender.com/sitemap.xml
