@@ -1,45 +1,92 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wave Studio - Statistiques &amp; Historique</title>
+  <title>Wave Studio - Analytics &amp; Historique</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo.png">
+  <!-- Chart.js pour les graphiques interactifs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body.app-bg {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: 40px 20px;
+      padding: 24px 16px;
+      min-height: 100vh;
     }
     .container {
       width: 100%;
-      max-width: 1000px;
+      max-width: 1100px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 20px;
     }
 
     .header-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow-card);
+      flex-wrap: wrap;
+      gap: 16px;
     }
 
-    .header-left {
+    .stats-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
+    @media (max-width: 900px) { .stats-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 550px) { .stats-kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 20px;
       display: flex;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .kpi-title { font-size: 11px; font-weight: 800; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.8px; }
+    .kpi-value { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; margin: 2px 0; }
+    .kpi-subtext { font-size: 11px; color: var(--text-faint); font-weight: 600; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+    @media (max-width: 850px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 250px;
     }
 
     .historique-grid {
@@ -51,24 +98,22 @@
     @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
 
     .historique-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      gap: 14px;
+      box-shadow: var(--shadow-card);
     }
 
-    .historique-card h2 { font-size: 15px; font-weight: 700; }
     .historique-liste { display: flex; flex-direction: column; gap: 10px; }
 
-    /* Fix strict de la mise en page de chaque élément de l'historique */
     .historique-item {
-      background: #181c28 !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-radius: 10px !important;
+      background: var(--surface-2) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--r-sm) !important;
       padding: 12px 16px !important;
       display: flex !important;
       flex-direction: column !important;
@@ -77,172 +122,286 @@
 
     .historique-item .ligne-haut {
       display: flex !important;
-      flex-direction: row !important;
       justify-content: space-between !important;
       align-items: center !important;
       width: 100% !important;
-      gap: 12px !important;
     }
 
     .historique-item .stat-stats {
-      font-weight: 700 !important;
+      font-weight: 800 !important;
       color: #ffffff !important;
       font-size: 13px !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
+      font-family: 'JetBrains Mono', monospace !important;
     }
 
     .historique-item .stat-date {
-      margin-left: auto !important;
       font-family: 'JetBrains Mono', monospace !important;
       font-size: 11px !important;
-      color: #9ca3af !important;
-      font-weight: 600 !important;
-      white-space: nowrap !important;
-      flex-shrink: 0 !important;
+      color: var(--text-lo) !important;
     }
 
     .historique-item .ligne-bas {
-      color: #9ca3af !important;
+      color: var(--text-lo) !important;
       font-size: 11px !important;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .historique-vide {
-      color: #6b7280;
+      color: var(--text-faint);
       font-size: 12px;
       text-align: center;
-      padding: 16px 0;
+      padding: 20px 0;
     }
   </style>
 </head>
 <body class="app-bg">
   <div class="container">
+    
+    <!-- En-tête -->
     <div class="header-card">
-      <div class="header-left">
-        <div>
-          <h1 style="font-size: 22px;">Statistiques &amp; Historique</h1>
-          <p class="subtitle" id="user-info">Chargement des données...</p>
-        </div>
+      <div>
+        <h1 style="font-size: 22px; margin: 0;">Wave Studio — Bilan &amp; Analytics</h1>
+        <p style="font-size: 12px; color: var(--text-lo); margin: 2px 0 0 0;" id="user-info">Chargement des données...</p>
       </div>
-      <a href="/choix.html" class="btn btn-secondary">← Retour au dashboard</a>
+      <a href="/choix.html" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px;">← Tableau de bord</a>
     </div>
 
+    <!-- KPIs Cumulés Globaux -->
+    <div class="stats-kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Gains Cumulés (Toutes sessions)</span>
+        <span class="kpi-value" id="total-eur-global" style="color: var(--cyan);">€0.00</span>
+        <span class="kpi-subtext" id="total-diamonds-global">0 💎 au total</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Moyenne par Live</span>
+        <span class="kpi-value" id="avg-eur-live" style="color: var(--gold);">€0.00</span>
+        <span class="kpi-subtext" id="avg-diamonds-live">0 💎 / session</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Enchères Réalisées</span>
+        <span class="kpi-value" id="total-encheres-count" style="color: var(--fuchsia);">0</span>
+        <span class="kpi-subtext" id="total-encheres-eur">€0.00 collectés</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Meilleure Session</span>
+        <span class="kpi-value" id="best-session-eur" style="color: var(--success);">€0.00</span>
+        <span class="kpi-subtext" id="best-session-diamonds">Record : 0 💎</span>
+      </div>
+    </div>
+
+    <!-- Graphiques Analytics Chart.js -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3 style="font-size: 14px; text-transform: uppercase; margin: 0;">📈 Évolutions des Gains (€ EUR) sur les derniers Lives</h3>
+        <div class="chart-container">
+          <canvas id="chart-revenus"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 style="font-size: 14px; text-transform: uppercase; margin: 0;">📊 Répartition des Gains</h3>
+        <div class="chart-container">
+          <canvas id="chart-pie"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique des Lives & Enchères -->
     <div class="historique-grid">
       <div class="historique-card">
-        <h2>📅 Historique des lives passés</h2>
+        <h3 style="font-size: 14px; text-transform: uppercase; margin: 0;">📅 Historique des Lives Passés</h3>
         <div class="historique-liste" id="historique-lives">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
+
       <div class="historique-card">
-        <h2>⚖️ Historique des enchères passées</h2>
+        <h3 style="font-size: 14px; text-transform: uppercase; margin: 0;">⚖️ Historique des Enchères</h3>
         <div class="historique-liste" id="historique-encheres">
           <div class="historique-vide">Chargement...</div>
         </div>
       </div>
     </div>
+
   </div>
 
   <script>
     let pseudoGlobal = '';
+    const EUR_PER_DIAMOND = 0.0048;
 
-    fetch('/api/me')
-      .then(res => res.json())
-      .then(user => {
-        if (!user || !user.pseudo) {
-          window.location.href = '/login.html';
-          return;
-        }
-        pseudoGlobal = user.pseudo;
-        document.getElementById('user-info').textContent = `Statistiques détaillées pour @${pseudoGlobal}`;
-        chargerHistorique(pseudoGlobal);
-      })
-      .catch(() => {
-        window.location.href = '/login.html';
-      });
+    function formaterEuros(montant) {
+      return '€' + Number(montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     function formaterDate(dateStr) {
       return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
-    function chargerHistorique(pseudo) {
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(user => {
+        if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
+        pseudoGlobal = user.pseudo;
+        document.getElementById('user-info').textContent = `Analytics détaillés et Bilan financier pour @${pseudoGlobal}`;
+        chargerAnalyticsEtHistorique(pseudoGlobal);
+      })
+      .catch(() => { window.location.href = '/login.html'; });
+
+    function chargerAnalyticsEtHistorique(pseudo) {
       fetch('/api/historique/' + encodeURIComponent(pseudo))
         .then(res => res.json())
         .then(({ lives, encheres }) => {
+          
+          // 1. Calculs des KPIs Globaux
+          let totalDiamantsLives = 0;
+          let totalLikesLives = 0;
+          let bestDiamonds = 0;
+
+          (lives || []).forEach(l => {
+            const d = l.totalDiamants || 0;
+            totalDiamantsLives += d;
+            totalLikesLives += (l.totalLikes || 0);
+            if (d > bestDiamonds) bestDiamonds = d;
+          });
+
+          let totalDiamantsEncheres = 0;
+          (encheres || []).forEach(e => {
+            totalDiamantsEncheres += (e.totalDiamantsEnchere || 0);
+          });
+
+          const totalEurGlobal = (totalDiamantsLives + totalDiamantsEncheres) * EUR_PER_DIAMOND;
+          const countLives = lives ? lives.length : 0;
+          const avgEurLive = countLives > 0 ? (totalDiamantsLives * EUR_PER_DIAMOND) / countLives : 0;
+
+          document.getElementById('total-eur-global').textContent = formaterEuros(totalEurGlobal);
+          document.getElementById('total-diamonds-global').textContent = `${(totalDiamantsLives + totalDiamantsEncheres).toLocaleString()} 💎 au total`;
+
+          document.getElementById('avg-eur-live').textContent = formaterEuros(avgEurLive);
+          document.getElementById('avg-diamonds-live').textContent = `${Math.round(countLives > 0 ? totalDiamantsLives / countLives : 0).toLocaleString()} 💎 / session`;
+
+          document.getElementById('total-encheres-count').textContent = encheres ? encheres.length : 0;
+          document.getElementById('total-encheres-eur').textContent = `${formaterEuros(totalDiamantsEncheres * EUR_PER_DIAMOND)} collectés`;
+
+          document.getElementById('best-session-eur').textContent = formaterEuros(bestDiamonds * EUR_PER_DIAMOND);
+          document.getElementById('best-session-diamonds').textContent = `Record : ${bestDiamonds.toLocaleString()} 💎`;
+
+          // 2. Rendu des Graphiques (Chart.js)
+          initialiserGraphiques(lives || [], totalDiamantsLives, totalDiamantsEncheres);
+
+          // 3. Rendu Liste Lives
           const conteneurLives = document.getElementById('historique-lives');
           conteneurLives.innerHTML = '';
           if (!lives || lives.length === 0) {
-            const divVide = document.createElement('div');
-            divVide.className = 'historique-vide';
-            divVide.textContent = 'Aucun live enregistré pour le moment.';
-            conteneurLives.appendChild(divVide);
+            conteneurLives.innerHTML = '<div class="historique-vide">Aucun live enregistré pour le moment.</div>';
           } else {
             lives.forEach(live => {
               const item = document.createElement('div');
               item.className = 'historique-item';
 
-              const ligneHaut = document.createElement('div');
-              ligneHaut.className = 'ligne-haut';
+              const d = live.totalDiamants || 0;
+              const eur = d * EUR_PER_DIAMOND;
 
-              const spanStats = document.createElement('span');
-              spanStats.className = 'stat-stats';
-              spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'stat-date';
-              spanDate.textContent = formaterDate(live.fin);
-
-              ligneHaut.append(spanStats, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = live.topDonateur 
-                ? `Top donateur : ${live.topDonateur.nickname} (${(live.topDonateur.coins || 0).toLocaleString()} 💎)` 
-                : 'Aucun don reçu';
-
-              item.append(ligneHaut, ligneBas);
+              item.innerHTML = `
+                <div class="ligne-haut">
+                  <span class="stat-stats" style="color:var(--gold);">💎 ${d.toLocaleString()} · ${formaterEuros(eur)}</span>
+                  <span class="stat-date">${formaterDate(live.fin)}</span>
+                </div>
+                <div class="ligne-bas">
+                  <span>${live.topDonateur ? ` Top Donateur : <strong>${live.topDonateur.nickname}</strong> (${live.topDonateur.coins.toLocaleString()} 💎)` : 'Aucun don reçu'}</span>
+                  <span>❤️ ${(live.totalLikes || 0).toLocaleString()}</span>
+                </div>
+              `;
               conteneurLives.appendChild(item);
             });
           }
 
+          // 4. Rendu Liste Enchères
           const conteneurEncheres = document.getElementById('historique-encheres');
           conteneurEncheres.innerHTML = '';
           if (!encheres || encheres.length === 0) {
-            const divVide = document.createElement('div');
-            divVide.className = 'historique-vide';
-            divVide.textContent = 'Aucune enchère enregistrée pour le moment.';
-            conteneurEncheres.appendChild(divVide);
+            conteneurEncheres.innerHTML = '<div class="historique-vide">Aucune enchère enregistrée pour le moment.</div>';
           } else {
             encheres.forEach(e => {
               const item = document.createElement('div');
               item.className = 'historique-item';
+              const dEnch = e.totalDiamantsEnchere || 0;
 
-              const ligneHaut = document.createElement('div');
-              ligneHaut.className = 'ligne-haut';
-
-              const spanGagnant = document.createElement('span');
-              spanGagnant.className = 'stat-stats';
-              spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'stat-date';
-              spanDate.textContent = formaterDate(e.date);
-
-              ligneHaut.append(spanGagnant, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = e.gagnant 
-                ? `Mise gagnante : ${(e.gagnant.coins || 0).toLocaleString()} 💎  ·  Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`
-                : `Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`;
-
-              item.append(ligneHaut, ligneBas);
+              item.innerHTML = `
+                <div class="ligne-haut">
+                  <span class="stat-stats" style="color:var(--cyan);">${e.gagnant ? `🏆 Gagnant : ${e.gagnant.nickname}` : 'Aucun gagnant'}</span>
+                  <span class="stat-date">${formaterDate(e.date)}</span>
+                </div>
+                <div class="ligne-bas">
+                  <span>Mise gagnante : <strong>${e.gagnant ? e.gagnant.coins.toLocaleString() : 0} 💎</strong></span>
+                  <span style="color:var(--gold); font-weight:bold;">Total : ${dEnch.toLocaleString()} 💎 (${formaterEuros(dEnch * EUR_PER_DIAMOND)})</span>
+                </div>
+              `;
               conteneurEncheres.appendChild(item);
             });
           }
+
         })
         .catch(() => {});
+    }
+
+    function initialiserGraphiques(lives, totalLivesDiamants, totalEncheresDiamants) {
+      // Graphique 1 : Évolution Lives (Line / Bar)
+      const ctxRevenus = document.getElementById('chart-revenus').getContext('2d');
+      const reversedLives = [...lives].reverse();
+      
+      const labels = reversedLives.map((l, i) => `Live #${i+1}`);
+      const dataEuros = reversedLives.map(l => (l.totalDiamants || 0) * EUR_PER_DIAMOND);
+
+      new Chart(ctxRevenus, {
+        type: 'bar',
+        data: {
+          labels: labels.length > 0 ? labels : ['Live #1'],
+          datasets: [{
+            label: 'Gains Net (€ EUR)',
+            data: dataEuros.length > 0 ? dataEuros : [0],
+            backgroundColor: 'rgba(34, 229, 224, 0.6)',
+            borderColor: '#22e5e0',
+            borderWidth: 2,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      // Graphique 2 : Répartition Donuts (Gifts Directs vs Enchères)
+      const ctxPie = document.getElementById('chart-pie').getContext('2d');
+      new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+          labels: ['Lives Directs', 'Enchères'],
+          datasets: [{
+            data: [totalLivesDiamants, totalEncheresDiamants],
+            backgroundColor: ['#22e5e0', '#ffbe3d'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#ffffff', font: { family: 'Inter', size: 11 } } }
+          }
+        }
+      });
     }
   </script>
 </body>

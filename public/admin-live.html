@@ -1,184 +1,207 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wave Studio - Panneau Admin Live</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo.png">
   <style>
     body.app-bg {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: 40px 20px;
+      padding: 24px 16px;
+      min-height: 100vh;
     }
+    
     .container {
       width: 100%;
-      max-width: 1000px;
+      max-width: 1100px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 20px;
     }
 
     .header-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow-card);
+      flex-wrap: wrap;
+      gap: 16px;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .stats-grid {
+    .stats-kpi-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
       width: 100%;
     }
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .stats-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 550px) { .stats-kpi-grid { grid-template-columns: 1fr; } }
 
-    .stat-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px !important;
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 8px !important;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
     }
 
-    .stat-title {
+    .kpi-title {
       font-size: 11px;
-      font-weight: 700;
-      color: #9ca3af;
+      font-weight: 800;
+      color: var(--text-lo);
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      display: block;
     }
 
-    .stat-value {
-      font-size: 32px;
+    .kpi-value {
+      font-size: 28px;
       font-weight: 800;
       font-family: 'JetBrains Mono', monospace;
-      display: block;
-      margin: 4px 0;
+      margin: 2px 0;
     }
 
-    .stat-subtext {
+    .kpi-subtext {
       font-size: 11px;
-      color: #6b7280;
-      display: block;
+      color: var(--text-faint);
+      font-weight: 600;
+    }
+
+    .podium-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+    @media (max-width: 800px) { .podium-grid { grid-template-columns: 1fr; } }
+
+    .podium-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .podium-card h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .podium-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .podium-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .podium-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .podium-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-strong);
     }
 
     .live-feed-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px 24px;
       display: flex;
       flex-direction: column;
       gap: 14px;
       width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
-    .alert-box {
-      background: #07090e;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 16px;
-      font-size: 13px;
-      color: #22e5e0;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .historique-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      width: 100%;
-    }
-    @media (max-width: 768px) { .historique-grid { grid-template-columns: 1fr; } }
-
-    .historique-card {
-      background: #11141d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+    .feed-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 14px;
+      max-height: 220px;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .historique-card h2 { font-size: 15px; font-weight: 700; }
-    .historique-liste { display: flex; flex-direction: column; gap: 10px; }
-
-    /* Fix strict de la mise en page de chaque élément de l'historique */
-    .historique-item {
-      background: #181c28 !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-radius: 10px !important;
-      padding: 12px 16px !important;
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 6px !important;
-    }
-
-    .historique-item .ligne-haut {
-      display: flex !important;
-      flex-direction: row !important;
-      justify-content: space-between !important;
-      align-items: center !important;
-      width: 100% !important;
-      gap: 12px !important;
-    }
-
-    .historique-item .stat-stats {
-      font-weight: 700 !important;
-      color: #ffffff !important;
-      font-size: 13px !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-    }
-
-    .historique-item .stat-date {
-      margin-left: auto !important;
-      font-family: 'JetBrains Mono', monospace !important;
-      font-size: 11px !important;
-      color: #9ca3af !important;
-      font-weight: 600 !important;
-      white-space: nowrap !important;
-      flex-shrink: 0 !important;
-    }
-
-    .historique-item .ligne-bas {
-      color: #9ca3af !important;
-      font-size: 11px !important;
-    }
-
-    .historique-vide {
-      color: #6b7280;
+      gap: 8px;
       font-size: 12px;
-      text-align: center;
-      padding: 16px 0;
+    }
+
+    .feed-entry {
+      padding: 8px 12px;
+      border-radius: var(--r-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .remote-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .remote-btn {
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: white;
+      transition: all 0.15s ease;
+    }
+
+    .remote-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
   </style>
 </head>
@@ -187,50 +210,83 @@
     
     <!-- En-tête -->
     <div class="header-card">
-      <div class="header-left">
-        <span class="live-dot"></span>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="live-dot" id="live-indicator-dot"></span>
         <div>
-          <h1 style="font-size: 22px;">Panneau Admin Live</h1>
-          <p class="subtitle" id="user-info">Chargement de vos statistiques...</p>
+          <h1 style="font-size: 20px; margin: 0;">Wave Studio — Régie Live Control</h1>
+          <p style="font-size: 12px; color: var(--text-lo); margin: 2px 0 0 0;" id="user-info">Suivi en direct...</p>
         </div>
       </div>
-      <a href="/choix.html" class="btn btn-secondary">← Retour au dashboard</a>
-    </div>
-
-    <!-- Blocs de statistiques -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <span class="stat-title">Total Pièces (Gifts)</span>
-        <span class="stat-value" id="stat-diamonds" style="color: #ffbe3d;">0</span>
-        <span class="stat-subtext" id="stat-earnings">Est. Live + Bonus Hebdo : €0.00 EUR</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-title">Total Likes</span>
-        <span class="stat-value" id="stat-likes" style="color: #22e5e0;">0</span>
-        <span class="stat-subtext">Activité en direct du flux</span>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="/choix.html" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px;">← Tableau de bord</a>
       </div>
     </div>
 
-    <!-- Activité live en direct -->
+    <!-- KPIs Principaux du Live -->
+    <div class="stats-kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Total Pièces (Gifts)</span>
+        <span class="kpi-value" id="kpi-diamonds" style="color: var(--gold);">0 💎</span>
+        <span class="kpi-subtext" id="kpi-eur-est">Est. Net : €0.00 EUR</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Gains Estimés (Net)</span>
+        <span class="kpi-value" id="kpi-earnings-eur" style="color: var(--cyan);">€0.00</span>
+        <span class="kpi-subtext" id="kpi-earnings-usd">$0.00 USD (Base 1k 💎 ≈ €4.80)</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Total Likes</span>
+        <span class="kpi-value" id="kpi-likes" style="color: var(--live-red);">0 ❤️</span>
+        <span class="kpi-subtext">Tapoteurs en direct</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Durée de la Session</span>
+        <span class="kpi-value" id="kpi-session-timer" style="color: #ffffff;">00:00:00</span>
+        <span class="kpi-subtext" id="kpi-session-start">Lancement du suivi</span>
+      </div>
+    </div>
+
+    <!-- Podiums Donateurs & Likers en Direct -->
+    <div class="podium-grid">
+      <div class="podium-card">
+        <h3><span>💎 Top Donateurs Live</span> <span style="font-size: 11px; color: var(--gold);" id="top-gift-total">0 💎</span></h3>
+        <div class="podium-list" id="list-donateurs">
+          <div style="font-size: 12px; color: var(--text-faint); text-align: center; padding: 12px;">En attente de dons...</div>
+        </div>
+      </div>
+
+      <div class="podium-card">
+        <h3><span>❤️ Top Likers Live</span> <span style="font-size: 11px; color: var(--live-red);" id="top-like-total">0 ❤️</span></h3>
+        <div class="podium-list" id="list-likers">
+          <div style="font-size: 12px; color: var(--text-faint); text-align: center; padding: 12px;">En attente de likes...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Activity Feed & Télécommande -->
     <div class="live-feed-card">
-      <h2 style="font-size: 16px;">⚡ Dernière Activité du Live</h2>
-      <div class="alert-box" id="latest-alert">
-        En attente d'événements sur le live... (Connectez votre clé API pour démarrer le flux)
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size: 15px; margin: 0;">⚡ Flux d'Activité en Direct</h2>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 10px;" onclick="viderFeed()">Vider le journal</button>
       </div>
-    </div>
 
-    <!-- Historique -->
-    <div class="historique-grid">
-      <div class="historique-card">
-        <h2>📅 Historique des lives passés</h2>
-        <div class="historique-liste" id="historique-lives">
-          <div class="historique-vide">Chargement...</div>
+      <div class="feed-box" id="activity-feed">
+        <div class="feed-entry" style="color: var(--text-lo);">
+          <span>ℹ️</span> <span>Régie connectée. En attente d'événements sur le Live TikTok...</span>
         </div>
       </div>
-      <div class="historique-card">
-        <h2>⚖️ Historique des enchères passées</h2>
-        <div class="historique-liste" id="historique-encheres">
-          <div class="historique-vide">Chargement...</div>
+
+      <!-- Barre de Télécommande Rapide -->
+      <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 12px;">
+        <label style="margin-bottom: 6px;">🕹️ Raccourcis Télécommande :</label>
+        <div class="remote-bar">
+          <button class="remote-btn" onclick="ouvrirLien('/encheres/' + pseudoGlobal)">⚖️ Régie Enchères</button>
+          <button class="remote-btn" onclick="ouvrirLien('/simulation/' + pseudoGlobal)">🧪 Simulateur Cadeaux</button>
+          <button class="remote-btn" onclick="ouvrirLien('/statistiques/' + pseudoGlobal)">📈 Bilan Financier</button>
+          <button class="remote-btn" onclick="location.reload()">🔄 Reconnecter le Flux</button>
         </div>
       </div>
     </div>
@@ -240,143 +296,169 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    let utilisateurGlobal = null;
-    const TAUX_CONVERSION_EUR = (460.44 / 95927) * 0.88;
+    let pseudoGlobal = '';
+    let sessionStartTimestamp = Date.now();
+    let timerInterval = null;
 
-    socket.on('connect', () => {
-      if (utilisateurGlobal && utilisateurGlobal.pseudo) {
-        socket.emit('rejoindre', { pseudo: utilisateurGlobal.pseudo, token: utilisateurGlobal.overlayToken });
-      }
-    });
+    // Taux de conversion officiel streamer (Net ~ €4.80 EUR pour 1 000 Diamants)
+    const EUR_PER_DIAMOND = 0.0048;
+    const USD_PER_DIAMOND = 0.0050;
+
+    function formaterEuros(montant) {
+      return '€' + Number(montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formaterUSD(montant) {
+      return '$' + Number(montant || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function viderFeed() {
+      document.getElementById('activity-feed').innerHTML = '';
+    }
+
+    function ajouterEntreeFeed(icone, texte, couleur = '#ffffff') {
+      const feed = document.getElementById('activity-feed');
+      const entry = document.createElement('div');
+      entry.className = 'feed-entry';
+      entry.style.borderColor = couleur !== '#ffffff' ? couleur : 'var(--border)';
+      
+      const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      entry.innerHTML = `
+        <span style="font-size:14px;">${icone}</span>
+        <span style="flex:1; color:${couleur}; font-weight:600;">${texte}</span>
+        <span style="font-family:'JetBrains Mono'; font-size:10px; color:var(--text-faint);">${timeStr}</span>
+      `;
+      
+      feed.prepend(entry);
+      if (feed.children.length > 30) feed.removeChild(feed.lastChild);
+    }
+
+    function demarrerChronoSession() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const diffSec = Math.floor((Date.now() - sessionStartTimestamp) / 1000);
+        const hrs = Math.floor(diffSec / 3600);
+        const mins = Math.floor((diffSec % 3600) / 60);
+        const secs = diffSec % 60;
+        document.getElementById('kpi-session-timer').textContent = 
+          `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }, 1000);
+    }
+
+    function mettreAJourKPIs(diamonds, likes) {
+      const totalDiamants = diamonds || 0;
+      const totalLikes = likes || 0;
+      const totalEur = totalDiamants * EUR_PER_DIAMOND;
+      const totalUsd = totalDiamants * USD_PER_DIAMOND;
+
+      document.getElementById('kpi-diamonds').textContent = `${totalDiamants.toLocaleString()} 💎`;
+      document.getElementById('kpi-likes').textContent = `${totalLikes.toLocaleString()} ❤️`;
+      document.getElementById('kpi-earnings-eur').textContent = formaterEuros(totalEur);
+      document.getElementById('kpi-earnings-usd').textContent = `${formaterUSD(totalUsd)} USD (Net Streamer)`;
+      document.getElementById('kpi-eur-est').textContent = `Est. Net : ${formaterEuros(totalEur)} EUR`;
+    }
+
+    function ouvrirLien(url) {
+      window.open(url, '_blank');
+    }
 
     fetch('/api/me')
       .then(res => res.json())
       .then(user => {
-        if (!user || !user.pseudo) {
-          window.location.href = '/login.html';
-          return;
-        }
-        utilisateurGlobal = user;
-        document.getElementById('user-info').textContent = `Suivi en direct pour @${user.pseudo}`;
+        if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
+        pseudoGlobal = user.pseudo;
+        document.getElementById('user-info').textContent = `Regie en direct pour @${pseudoGlobal}`;
 
-        socket.emit('rejoindre', { pseudo: user.pseudo, token: user.overlayToken });
+        socket.emit('rejoindre', { pseudo: pseudoGlobal, token: user.overlayToken, type: 'control' });
+        demarrerChronoSession();
 
-        function afficherAlerte(texte) {
-          document.getElementById('latest-alert').textContent = texte;
-        }
-
-        socket.on('updateTopGifters', top3 => {
-          if (top3 && top3[0]) afficherAlerte(`💎 ${top3[0].nickname} est en tête des donateurs avec ${top3[0].coins.toLocaleString()} pièces`);
-        });
-        socket.on('updateTopLikers', top3 => {
-          if (top3 && top3[0]) afficherAlerte(`❤️ ${top3[0].nickname} est en tête des likes avec ${top3[0].likes.toLocaleString()} likes`);
-        });
-        socket.on('erreurConnexion', msg => afficherAlerte(msg));
-
-        function actualiserStatsUI(stats) {
-          const diamonds = stats.totalDiamonds || 0;
-          const likes = stats.totalLikes || 0;
-          const estimatedEur = diamonds * TAUX_CONVERSION_EUR;
-
-          document.getElementById('stat-diamonds').textContent = diamonds.toLocaleString();
-          document.getElementById('stat-likes').textContent = likes.toLocaleString();
-          document.getElementById('stat-earnings').textContent = `Est. Live + Bonus Hebdo : €${estimatedEur.toFixed(2)} EUR`;
-        }
-
-        fetch('/api/live-stats/' + encodeURIComponent(user.pseudo))
-          .then(res => res.json())
-          .then(stats => actualiserStatsUI(stats))
+        // Récupération des stats initiales
+        fetch('/api/live-stats/' + encodeURIComponent(pseudoGlobal))
+          .then(r => r.json())
+          .then(s => mettreAJourKPIs(s.totalDiamonds, s.totalLikes))
           .catch(() => {});
 
-        socket.on('updateStatsLive', stats => actualiserStatsUI(stats));
-        chargerHistorique(user.pseudo);
+        // Événements Temps Réel
+        socket.on('statutLiveModifier', data => {
+          const dot = document.getElementById('live-indicator-dot');
+          if (dot) dot.className = data.online ? 'live-dot' : 'live-dot offline';
+        });
+
+        socket.on('updateTopGifters', top3 => {
+          const container = document.getElementById('list-donateurs');
+          container.innerHTML = '';
+          if (!top3 || top3.length === 0) {
+            container.innerHTML = '<div style="font-size: 12px; color: var(--text-faint); text-align: center; padding: 12px;">En attente de dons...</div>';
+            return;
+          }
+
+          let sumCoins = 0;
+          top3.forEach((u, i) => {
+            sumCoins += u.coins;
+            const item = document.createElement('div');
+            item.className = 'podium-item';
+            item.innerHTML = `
+              <div class="podium-user">
+                <span style="font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;">#${i+1}</span>
+                <img class="podium-avatar" src="${u.profilePictureUrl || 'https://ui-avatars.com/api/?name=User'}">
+                <span style="font-size:13px; font-weight:700;">${u.nickname}</span>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;">${u.coins.toLocaleString()} 💎</div>
+                <div style="font-size:10px; color:var(--text-lo);">${formaterEuros(u.coins * EUR_PER_DIAMOND)}</div>
+              </div>
+            `;
+            container.appendChild(item);
+          });
+          document.getElementById('top-gift-total').textContent = `${sumCoins.toLocaleString()} 💎`;
+        });
+
+        socket.on('updateTopLikers', top3 => {
+          const container = document.getElementById('list-likers');
+          container.innerHTML = '';
+          if (!top3 || top3.length === 0) {
+            container.innerHTML = '<div style="font-size: 12px; color: var(--text-faint); text-align: center; padding: 12px;">En attente de likes...</div>';
+            return;
+          }
+
+          let sumLikes = 0;
+          top3.forEach((u, i) => {
+            sumLikes += u.likes;
+            const item = document.createElement('div');
+            item.className = 'podium-item';
+            item.innerHTML = `
+              <div class="podium-user">
+                <span style="font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;">#${i+1}</span>
+                <img class="podium-avatar" src="${u.profilePictureUrl || 'https://ui-avatars.com/api/?name=User'}">
+                <span style="font-size:13px; font-weight:700;">${u.nickname}</span>
+              </div>
+              <div style="font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;">
+                ${u.likes.toLocaleString()} ❤️
+              </div>
+            `;
+            container.appendChild(item);
+          });
+          document.getElementById('top-like-total').textContent = `${sumLikes.toLocaleString()} ❤️`;
+        });
+
+        socket.on('updateStatsLive', stats => {
+          mettreAJourKPIs(stats.totalDiamonds, stats.totalLikes);
+        });
+
+        socket.on('updateBestGift', gift => {
+          if (gift) ajouterEntreeFeed('👑', `Nouveau Best Gift par <strong>@${gift.pseudo}</strong> (${gift.montant.toLocaleString()} 💎)`, 'var(--gold)');
+        });
+
+        socket.on('chatEnDirect', chat => {
+          ajouterEntreeFeed('💬', `<strong>@${chat.nickname}:</strong> ${chat.message}`, 'var(--text-hi)');
+        });
+
+        socket.on('erreurConnexion', msg => {
+          ajouterEntreeFeed('⚠️', msg, 'var(--danger)');
+        });
       })
-      .catch(() => {
-        window.location.href = '/login.html';
-      });
-
-    function formaterDate(dateStr) {
-      return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    }
-
-    function chargerHistorique(pseudo) {
-      fetch('/api/historique/' + encodeURIComponent(pseudo))
-        .then(res => res.json())
-        .then(({ lives, encheres }) => {
-          const conteneurLives = document.getElementById('historique-lives');
-          conteneurLives.innerHTML = '';
-          if (!lives || lives.length === 0) {
-            const divVide = document.createElement('div');
-            divVide.className = 'historique-vide';
-            divVide.textContent = 'Aucun live terminé pour le moment.';
-            conteneurLives.appendChild(divVide);
-          } else {
-            lives.forEach(live => {
-              const item = document.createElement('div');
-              item.className = 'historique-item';
-
-              const ligneHaut = document.createElement('div');
-              ligneHaut.className = 'ligne-haut';
-
-              const spanStats = document.createElement('span');
-              spanStats.className = 'stat-stats';
-              spanStats.textContent = `💎 ${(live.totalDiamants || 0).toLocaleString()} · ❤️ ${(live.totalLikes || 0).toLocaleString()}`;
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'stat-date';
-              spanDate.textContent = formaterDate(live.fin);
-
-              ligneHaut.append(spanStats, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = live.topDonateur 
-                ? `Top donateur : ${live.topDonateur.nickname} (${(live.topDonateur.coins || 0).toLocaleString()} 💎)` 
-                : 'Aucun don reçu';
-
-              item.append(ligneHaut, ligneBas);
-              conteneurLives.appendChild(item);
-            });
-          }
-
-          const conteneurEncheres = document.getElementById('historique-encheres');
-          conteneurEncheres.innerHTML = '';
-          if (!encheres || encheres.length === 0) {
-            const divVide = document.createElement('div');
-            divVide.className = 'historique-vide';
-            divVide.textContent = 'Aucune enchère terminée pour le moment.';
-            conteneurEncheres.appendChild(divVide);
-          } else {
-            encheres.forEach(e => {
-              const item = document.createElement('div');
-              item.className = 'historique-item';
-
-              const ligneHaut = document.createElement('div');
-              ligneHaut.className = 'ligne-haut';
-
-              const spanGagnant = document.createElement('span');
-              spanGagnant.className = 'stat-stats';
-              spanGagnant.textContent = e.gagnant ? `🏆 ${e.gagnant.nickname}` : 'Aucun gagnant';
-
-              const spanDate = document.createElement('span');
-              spanDate.className = 'stat-date';
-              spanDate.textContent = formaterDate(e.date);
-
-              ligneHaut.append(spanGagnant, spanDate);
-
-              const ligneBas = document.createElement('div');
-              ligneBas.className = 'ligne-bas';
-              ligneBas.textContent = e.gagnant 
-                ? `Mise gagnante : ${(e.gagnant.coins || 0).toLocaleString()} 💎  ·  Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`
-                : `Total enchère : ${(e.totalDiamantsEnchere || 0).toLocaleString()} 💎`;
-
-              item.append(ligneHaut, ligneBas);
-              conteneurEncheres.appendChild(item);
-            });
-          }
-        })
-        .catch(() => {});
-    }
+      .catch(() => { window.location.href = '/login.html'; });
   </script>
 </body>
 </html>
