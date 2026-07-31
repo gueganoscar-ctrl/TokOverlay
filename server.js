@@ -497,19 +497,19 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
     const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     const { error } = await resend.emails.send({
-      from: 'TokOverlay <onboarding@resend.dev>',
+      from: 'Wave Studio <onboarding@resend.dev>',
       to: [email],
-      subject: 'Réinitialisation de votre mot de passe - TokOverlay',
+      subject: 'Réinitialisation de votre mot de passe - Wave Studio',
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background: #f9f9f9; border-radius: 10px;">
           <h2 style="color: #6366f1;">Réinitialisation de mot de passe</h2>
           <p>Bonjour,</p>
-          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte TokOverlay.</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte Wave Studio.</p>
           <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe (ce lien est valable 15 minutes) :</p>
           <a href="${resetLink}" style="display: inline-block; padding: 12px 20px; background: #22d3ee; color: #000; font-weight: bold; text-decoration: none; border-radius: 5px; margin: 20px 0;">Réinitialiser mon mot de passe</a>
           <p>Si vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.</p>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-          <p style="font-size: 12px; color: #666;">TokOverlay - Tous droits réservés.</p>
+          <p style="font-size: 12px; color: #666;">Wave Studio - Tous droits réservés.</p>
         </div>
       `
     });
@@ -577,9 +577,9 @@ app.post('/api/contact', async (req, res) => {
 
   try {
     await resend.emails.send({
-      from: 'TokOverlay <onboarding@resend.dev>',
+      from: 'Wave Studio <onboarding@resend.dev>',
       to: ['gueganoscar@gmail.com'],
-      subject: `[TokOverlay] ${type} de @${user.pseudo}`,
+      subject: `[Wave Studio] ${type} de @${user.pseudo}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; background: #f4f4f5; border-radius: 10px; color: #18181b;">
           <h2 style="color: #6366f1;">Nouveau retour utilisateur (${type})</h2>
@@ -1989,4 +1989,4 @@ io.on('connection', socket => {
   });
 });
 
-server.listen(PORT, () => console.log(`🚀 TokOverlay démarré sur le port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Wave Studio démarré sur le port ${PORT}`));
