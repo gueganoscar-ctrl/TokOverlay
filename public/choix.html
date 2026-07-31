@@ -47,7 +47,7 @@
       width: 100%;
     }
 
-    /* FIX DE LA MODALE : CENTRÉE ET LARGEUR FIXE MAÎTRISÉE */
+    /* MODALES & SUPPRESSION DES BARRES DE DÉFILEMENT INESTHÉTIQUES */
     .modal-backdrop {
       display: none;
       position: fixed;
@@ -63,18 +63,42 @@
 
     .modal-box {
       width: 100%;
-      max-width: 620px !important;
+      max-width: 680px !important;
       background: var(--surface);
       border: 1px solid var(--cyan);
       border-radius: var(--r-lg);
-      padding: 24px;
+      padding: 26px;
       display: flex;
       flex-direction: column;
       gap: 18px;
-      max-height: 85vh;
+      max-height: 88vh;
       overflow-y: auto;
+      overflow-x: hidden !important;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
       margin: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+
+    /* Personnalisation fine des scrollbars */
+    .modal-box::-webkit-scrollbar,
+    .gift-grid::-webkit-scrollbar,
+    .modal-content::-webkit-scrollbar {
+      width: 5px;
+      height: 0px; /* Pas de scrollbar horizontale */
+    }
+
+    .modal-box::-webkit-scrollbar-track,
+    .gift-grid::-webkit-scrollbar-track,
+    .modal-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-box::-webkit-scrollbar-thumb,
+    .gift-grid::-webkit-scrollbar-thumb,
+    .modal-content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
     }
 
     .obs-link-box {
@@ -115,45 +139,70 @@
     }
     .style-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 
+    /* GRILLE DES CADEAUX ÉLARGIE À 100% SANS DEBORDEMENT HORIZONTAL */
     .gift-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+      gap: 10px;
       margin-top: 8px;
-      max-height: 200px;
+      max-height: 230px;
       overflow-y: auto;
+      overflow-x: hidden !important;
       background: var(--bg-dark);
-      padding: 10px;
-      border-radius: 8px;
+      padding: 12px;
+      border-radius: 10px;
       border: 1px solid var(--border);
+      width: 100%;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
     }
 
     .gift-item {
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px;
+      padding: 10px 6px;
       text-align: center;
       cursor: pointer;
-      transition: 0.2s;
+      transition: all 0.2s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 100%;
     }
+
     .gift-item:hover, .gift-item.selected {
       border-color: var(--cyan);
       background: rgba(34, 229, 224, 0.12);
     }
-    .gift-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px; }
+
+    .gift-icon { width: 34px; height: 34px; object-fit: contain; margin-bottom: 4px; }
     .gift-price { font-size: 11px; color: var(--gold); font-weight: bold; }
+
+    /* MODALE PROFIL RECTANGULAIRE & ÉLÉGANTE */
+    #modal-profil .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 540px !important;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
 
     .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
     @media (max-width: 768px) {
       .mobile-menu-btn { display: block; }
       .sidebar { position: absolute; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
-      .style-picker-grid { grid-template-columns: 1fr; }
-      .gift-grid { grid-template-columns: repeat(2, 1fr); }
+      .gift-grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); }
     }
   </style>
 </head>
@@ -369,19 +418,25 @@
     </div>
   </div>
 
-  <!-- Modal Profil -->
+  <!-- Modal Profil Rectangulaire -->
   <div id="modal-profil" class="modal-backdrop">
-    <div class="modal-content" style="background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h2>Modifier vos accès</h2>
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size: 18px; margin: 0;">⚙️ Profil Streamer &amp; Accès API</h2>
         <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer;" onclick="fermerModalProfil()">✕</button>
       </div>
-      <form id="form-profil" onsubmit="sauvegarderProfil(event)" style="display:flex; flex-direction:column; gap:12px;">
-        <div><label>Pseudo TikTok</label><input type="text" id="input-pseudo" required></div>
-        <div><label>Clé API Live Connector</label><input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle"></div>
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+      <form id="form-profil" onsubmit="sauvegarderProfil(event)" style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <label for="input-pseudo">Pseudo TikTok (sans @)</label>
+          <input type="text" id="input-pseudo" required placeholder="Ex: mon_pseudo">
+        </div>
+        <div>
+          <label for="input-apikey">Clé API Live Connector (EulerStream)</label>
+          <input type="text" id="input-apikey" placeholder="Laisser vide pour conserver l'actuelle">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
           <button type="button" class="btn btn-secondary" onclick="fermerModalProfil()">Annuler</button>
-          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
         </div>
       </form>
     </div>
@@ -424,6 +479,9 @@
       if (!user || !user.pseudo) { window.location.href = '/login.html'; return; }
       pseudoGlobal = user.pseudo; overlayTokenGlobal = user.overlayToken || '';
       
+      const inputPseudo = document.getElementById('input-pseudo');
+      if (inputPseudo) inputPseudo.value = user.pseudo;
+
       if (user.role === 'admin') {
         const vipSec = document.getElementById('vip-menu-section');
         if (vipSec) vipSec.style.display = 'block';
