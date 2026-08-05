@@ -621,6 +621,13 @@
       return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
+    function safeImageUrl(url, fallback = 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png') {
+      if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/'))) {
+        return url;
+      }
+      return fallback;
+    }
+
     function afficherToast(message = "Lien OBS copié !") {
       const toast = document.getElementById('toast-notification');
       const msgEl = document.getElementById('toast-message');
@@ -938,7 +945,7 @@
         item.onclick = () => { selectElimGift(g.image, g.diamond_count, i, g.name, modeType); };
 
         item.innerHTML = `
-          <img class="gift-icon" src="${g.image}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
+          <img class="gift-icon" src="${safeImageUrl(g.image)}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/5ea6ceee6885dfb90c910fae1ba1c1bb~tplv-obj.png'">
           <div class="gift-price">${g.diamond_count} 💎</div>
           <div style="font-size:9px; color:#a1a1aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${escapeHtml(g.name)}</div>
         `;

@@ -312,6 +312,13 @@
       return '$' + Number(montant || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function safeImageUrl(url, fallback) {
+      if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/'))) {
+        return url;
+      }
+      return fallback;
+    }
+
     function viderFeed() {
       document.getElementById('activity-feed').innerHTML = '';
     }
@@ -321,15 +328,23 @@
       const entry = document.createElement('div');
       entry.className = 'feed-entry';
       entry.style.borderColor = couleur !== '#ffffff' ? couleur : 'var(--border)';
-      
+
       const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
-      entry.innerHTML = `
-        <span style="font-size:14px;">${icone}</span>
-        <span style="flex:1; color:${couleur}; font-weight:600;">${texte}</span>
-        <span style="font-family:'JetBrains Mono'; font-size:10px; color:var(--text-faint);">${timeStr}</span>
-      `;
-      
+
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '14px';
+      iconSpan.textContent = icone;
+
+      const textSpan = document.createElement('span');
+      textSpan.style.cssText = 'flex:1; font-weight:600;';
+      textSpan.style.color = couleur;
+      textSpan.textContent = texte;
+
+      const timeSpan = document.createElement('span');
+      timeSpan.style.cssText = "font-family:'JetBrains Mono'; font-size:10px; color:var(--text-faint);";
+      timeSpan.textContent = timeStr;
+
+      entry.append(iconSpan, textSpan, timeSpan);
       feed.prepend(entry);
       if (feed.children.length > 30) feed.removeChild(feed.lastChild);
     }
@@ -398,17 +413,37 @@
             sumCoins += u.coins;
             const item = document.createElement('div');
             item.className = 'podium-item';
-            item.innerHTML = `
-              <div class="podium-user">
-                <span style="font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;">#${i+1}</span>
-                <img class="podium-avatar" src="${u.profilePictureUrl || 'https://ui-avatars.com/api/?name=User'}">
-                <span style="font-size:13px; font-weight:700;">${u.nickname}</span>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;">${u.coins.toLocaleString()} 💎</div>
-                <div style="font-size:10px; color:var(--text-lo);">${formaterEuros(u.coins * EUR_PER_DIAMOND)}</div>
-              </div>
-            `;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'podium-user';
+
+            const rankSpan = document.createElement('span');
+            rankSpan.style.cssText = "font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;";
+            rankSpan.textContent = `#${i + 1}`;
+
+            const img = document.createElement('img');
+            img.className = 'podium-avatar';
+            img.src = safeImageUrl(u.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
+
+            const nickSpan = document.createElement('span');
+            nickSpan.style.cssText = 'font-size:13px; font-weight:700;';
+            nickSpan.textContent = u.nickname;
+
+            userDiv.append(rankSpan, img, nickSpan);
+
+            const statsDiv = document.createElement('div');
+            statsDiv.style.textAlign = 'right';
+
+            const coinsDiv = document.createElement('div');
+            coinsDiv.style.cssText = "font-family:'JetBrains Mono'; font-weight:800; color:var(--gold); font-size:12px;";
+            coinsDiv.textContent = `${u.coins.toLocaleString()} 💎`;
+
+            const eurDiv = document.createElement('div');
+            eurDiv.style.cssText = 'font-size:10px; color:var(--text-lo);';
+            eurDiv.textContent = formaterEuros(u.coins * EUR_PER_DIAMOND);
+
+            statsDiv.append(coinsDiv, eurDiv);
+            item.append(userDiv, statsDiv);
             container.appendChild(item);
           });
           document.getElementById('top-gift-total').textContent = `${sumCoins.toLocaleString()} 💎`;
@@ -427,16 +462,29 @@
             sumLikes += u.likes;
             const item = document.createElement('div');
             item.className = 'podium-item';
-            item.innerHTML = `
-              <div class="podium-user">
-                <span style="font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;">#${i+1}</span>
-                <img class="podium-avatar" src="${u.profilePictureUrl || 'https://ui-avatars.com/api/?name=User'}">
-                <span style="font-size:13px; font-weight:700;">${u.nickname}</span>
-              </div>
-              <div style="font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;">
-                ${u.likes.toLocaleString()} ❤️
-              </div>
-            `;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'podium-user';
+
+            const rankSpan = document.createElement('span');
+            rankSpan.style.cssText = "font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;";
+            rankSpan.textContent = `#${i + 1}`;
+
+            const img = document.createElement('img');
+            img.className = 'podium-avatar';
+            img.src = safeImageUrl(u.profilePictureUrl, 'https://ui-avatars.com/api/?name=User');
+
+            const nickSpan = document.createElement('span');
+            nickSpan.style.cssText = 'font-size:13px; font-weight:700;';
+            nickSpan.textContent = u.nickname;
+
+            userDiv.append(rankSpan, img, nickSpan);
+
+            const likesDiv = document.createElement('div');
+            likesDiv.style.cssText = "font-family:'JetBrains Mono'; font-weight:800; color:var(--live-red); font-size:12px;";
+            likesDiv.textContent = `${u.likes.toLocaleString()} ❤️`;
+
+            item.append(userDiv, likesDiv);
             container.appendChild(item);
           });
           document.getElementById('top-like-total').textContent = `${sumLikes.toLocaleString()} ❤️`;
@@ -447,11 +495,13 @@
         });
 
         socket.on('updateBestGift', gift => {
-          if (gift) ajouterEntreeFeed('👑', `Nouveau Best Gift par <strong>@${gift.pseudo}</strong> (${gift.montant.toLocaleString()} 💎)`, 'var(--gold)');
+          if (gift) {
+            ajouterEntreeFeed('👑', `Nouveau Best Gift par @${gift.pseudo} (${gift.montant.toLocaleString()} 💎)`, 'var(--gold)');
+          }
         });
 
         socket.on('chatEnDirect', chat => {
-          ajouterEntreeFeed('💬', `<strong>@${chat.nickname}:</strong> ${chat.message}`, 'var(--text-hi)');
+          ajouterEntreeFeed('💬', `@${chat.nickname}: ${chat.message}`, 'var(--text-hi)');
         });
 
         socket.on('erreurConnexion', msg => {

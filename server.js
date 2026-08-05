@@ -24,7 +24,11 @@ if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
   throw new Error("FATAL ERROR: SESSION_SECRET et MONGO_URI sont obligatoires !");
 }
 
-const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+if (isProduction && !process.env.OVERLAY_TOKEN_SECRET) {
+  throw new Error("FATAL ERROR: OVERLAY_TOKEN_SECRET est obligatoire en production !");
+}
+
+const OVERLAY_TOKEN_SECRET = process.env.OVERLAY_TOKEN_SECRET || process.env.SESSION_SECRET || 'tokoverlay_dev_secret_key_12345';
 
 app.set('trust proxy', 1);
 
@@ -47,7 +51,7 @@ function parseCookies(req) {
 }
 
 const sessionMiddleware = session({
-  name: '__Host-tokoverlay',
+  name: isProduction ? '__Host-tokoverlay' : 'tokoverlay',
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -113,25 +117,20 @@ let db = null;
 let vouchesGlobalCount = 0;
 
 async function connectMongo() {
-  try {
-    const client = new MongoClient(mongoUri);
-    await client.connect();
-    db = client.db('tokoverlay_db');
-    console.log("✅ Connecté à MongoDB Atlas avec succès !");
+  const client = new MongoClient(mongoUri);
+  await client.connect();
+  db = client.db('tokoverlay_db');
+  console.log("✅ Connecté à MongoDB Atlas avec succès !");
 
-    await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
-    await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
+  await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
+  await db.collection('users').createIndex({ pseudo: 1 }, { unique: true }).catch(() => {});
 
-    await db.collection('remember_tokens').createIndex({ selector: 1 }, { unique: true }).catch(() => {});
-    await db.collection('remember_tokens').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }).catch(() => {});
+  await db.collection('remember_tokens').createIndex({ selector: 1 }, { unique: true }).catch(() => {});
+  await db.collection('remember_tokens').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }).catch(() => {});
 
-    const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
-    vouchesGlobalCount = compteur?.total || 0;
-  } catch (err) {
-    console.error("❌ Erreur de connexion MongoDB :", err);
-  }
+  const compteur = await db.collection('compteurs').findOne({ _id: 'vouches' });
+  vouchesGlobalCount = compteur?.total || 0;
 }
-connectMongo();
 
 async function checkRememberMe(req, res, next) {
   try {
@@ -238,6 +237,15 @@ function normalizePseudo(value) {
 
 function safeText(value, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function strictInteger(value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -352,6 +360,9 @@ app.post('/register', authLimiter, async (req, res) => {
 
     if (!cleanApiKey || !email || !password) {
       return res.redirect('/login.html?error=missing_fields&tab=register');
+    }
+    if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
+      return res.redirect('/login.html?error=weak_password&tab=register');
     }
 
     const usersCollection = db.collection('users');
@@ -570,6 +581,7 @@ app.post('/api/contact', async (req, res) => {
 
   const { type, message } = req.body;
   const user = req.session.user;
+  const cleanType = escapeHtml(safeText(type, 'Contact'));
 
   if (!message || message.trim() === '') {
     return res.status(400).json({ error: "Le message ne peut pas être vide." });
@@ -579,16 +591,16 @@ app.post('/api/contact', async (req, res) => {
     await resend.emails.send({
       from: 'Wave Studio <onboarding@resend.dev>',
       to: ['gueganoscar@gmail.com'],
-      subject: `[Wave Studio] ${type} de @${user.pseudo}`,
+      subject: `[Wave Studio] ${cleanType} de @${user.pseudo}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; background: #f4f4f5; border-radius: 10px; color: #18181b;">
-          <h2 style="color: #6366f1;">Nouveau retour utilisateur (${type})</h2>
+          <h2 style="color: #6366f1;">Nouveau retour utilisateur (${cleanType})</h2>
           <p><strong>Streamer :</strong> @${user.pseudo}</p>
           <p><strong>Email :</strong> ${user.email}</p>
           <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 15px 0;">
           <p><strong>Message :</strong></p>
           <blockquote style="background: #ffffff; padding: 12px; border-left: 4px solid #6366f1; margin: 0; border-radius: 4px;">
-            ${message.replace(/\n/g, '<br>')}
+            ${escapeHtml(message).replace(/\n/g, '<br>')}
           </blockquote>
         </div>
       `
@@ -709,12 +721,22 @@ app.get('/api/gifts/:username', async (req, res) => {
 });
 
 app.get('/api/test-vip/:username', (req, res) => {
-  const pseudo = req.params.username;
-  io.to(`streamer:${pseudo}`).emit('vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
-  setTimeout(() => {
-    io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username: "Testeur_VIP", message: "MonPseudoRoblox123" });
-  }, 1000);
-  res.send(`Test de simulation VIP lancé pour @${pseudo} ! Va voir ton overlay.`);
+  if (!req.session.user) {
+    return res.status(401).send('Non autorisé.');
+  }
+  try {
+    const pseudo = normalizePseudo(req.params.username);
+    if (req.session.user.pseudo !== pseudo && !isAdmin(req.session.user)) {
+      return res.status(403).send('Accès refusé.');
+    }
+    io.to(`streamer:${pseudo}`).emit('vip_alert', { username: "Testeur_VIP", giftName: "galaxy" });
+    setTimeout(() => {
+      io.to(`streamer:${pseudo}`).emit('roblox_pseudo', { username: "Testeur_VIP", message: "MonPseudoRoblox123" });
+    }, 1000);
+    res.send(`Test de simulation VIP lancé pour @${pseudo} ! Va voir ton overlay.`);
+  } catch {
+    res.status(400).send('Pseudo invalide.');
+  }
 });
 
 app.get('/encheres/:username', (req, res) => {
@@ -1039,8 +1061,7 @@ function demarrerEcouteLive(pseudo, apiKey) {
     if (db) {
       db.collection('users').updateOne(
         { pseudo: pseudo },
-        { $inc: { totalDiamantsGlobal: totalPieces } },
-        { upsert: true }
+        { $inc: { totalDiamantsGlobal: totalPieces } }
       ).catch(() => {});
     }
     
@@ -1284,7 +1305,7 @@ function processEliminationKill(pseudo, data) {
 
   const idx = Math.floor(Math.random() * vivants.length);
   vivants[idx].eliminated = true;
-  elim.nextElimination = Date.now() + (5 * 1000);
+  elim.nextElimination = Date.now() + (elim.intervalle * 1000);
   io.to(`streamer:${pseudo}`).emit('updateElimination', etatElimination(pseudo));
 }
 
@@ -1674,8 +1695,11 @@ io.on('connection', socket => {
           data.elimination.locked = true;
           data.elimination.eliminationEnCours = true;
           if (data.elimination.timer) clearInterval(data.elimination.timer);
-          data.elimination.nextElimination = Date.now() + (5 * 1000);
-          data.elimination.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), 5000);
+          data.elimination.nextElimination = Date.now() + (data.elimination.intervalle * 1000);
+          data.elimination.timer = setInterval(
+            () => processEliminationKill(pseudoNettoye, data),
+            data.elimination.intervalle * 1000
+          );
           
           io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', etatElimination(pseudoNettoye));
         }
@@ -1801,15 +1825,18 @@ io.on('connection', socket => {
         elim.eliminationEnCours = true;
         if (elim.openTimer) { clearTimeout(elim.openTimer); elim.openTimer = null; }
         if (elim.timer) clearInterval(elim.timer);
-        elim.nextElimination = Date.now() + (5 * 1000);
-        elim.timer = setInterval(() => processEliminationKill(pseudoNettoye, data), 5000);
+        elim.nextElimination = Date.now() + (elim.intervalle * 1000);
+        elim.timer = setInterval(
+          () => processEliminationKill(pseudoNettoye, data),
+          elim.intervalle * 1000
+        );
       } else if (action === 'stop_kill') {
         elim.eliminationEnCours = false;
         if (elim.timer) { clearInterval(elim.timer); elim.timer = null; }
         elim.nextElimination = null;
       } else if (action === 'reset') {
         if (elim.timer) clearInterval(elim.timer);
-        if (elim.openTimer) clearInterval(elim.openTimer);
+        if (elim.openTimer) clearTimeout(elim.openTimer);
         data.elimination = null;
         io.to(`streamer:${pseudoNettoye}`).emit('updateElimination', { actif: false });
         return;
@@ -1851,7 +1878,7 @@ io.on('connection', socket => {
         }, elim.tempsOuverture * 1000);
       } else if (action === 'reset') {
         if (elim.timer) clearTimeout(elim.timer);
-        if (elim.openTimer) clearInterval(elim.openTimer);
+        if (elim.openTimer) clearTimeout(elim.openTimer);
         data.eliminationBoucle = null;
         io.to(`streamer:${pseudoNettoye}`).emit('updateEliminationBoucle', { actif: false });
         return;
@@ -1995,4 +2022,13 @@ io.on('connection', socket => {
   });
 });
 
-server.listen(PORT, () => console.log(`🚀 Wave Studio démarré sur le port ${PORT}`));
+async function startServer() {
+  try {
+    await connectMongo();
+    server.listen(PORT, () => console.log(`🚀 Wave Studio démarré sur le port ${PORT}`));
+  } catch (err) {
+    console.error("❌ Échec critique du démarrage (MongoDB) :", err);
+    process.exit(1);
+  }
+}
+startServer();

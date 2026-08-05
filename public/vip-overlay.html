@@ -135,42 +135,63 @@
             "corgi": 299
         };
 
+        function safeDomId(value) {
+            return String(value || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
         socket.on('vip_alert', (data) => {
             joueursEnAttente[data.username] = data.giftName;
         });
 
         // Fonction principale pour afficher un joueur
         function afficherCarteVIP(data) {
-            const carteExistante = document.getElementById(`carte-${data.username}`);
+            const domId = safeDomId(data.username);
+            const carteExistante = document.getElementById(`carte-${domId}`);
             if (carteExistante) {
-                const msgElement = document.getElementById(`msg-${data.username}`);
-                if (msgElement) msgElement.innerText = `🎮 ${data.message}`;
+                const msgElement = document.getElementById(`msg-${domId}`);
+                if (msgElement) msgElement.textContent = `🎮 ${data.message || ''}`;
                 return;
             }
 
-            const nomDuCadeau = joueursEnAttente[data.username] || "galaxy"; 
-            
+            const nomDuCadeau = joueursEnAttente[data.username] || "galaxy";
+
             const anciennesCartes = document.querySelectorAll('.dernier-joueur');
             anciennesCartes.forEach(c => c.classList.remove('dernier-joueur'));
 
             const pieces = VALEUR_CADEAUX[nomDuCadeau.toLowerCase()] || "???";
-            
-            const carte = document.createElement('div');
-            carte.id = `carte-${data.username}`;
-            carte.className = 'carte-joueur dernier-joueur';
-            
-            const htmlContent = `
-                <div class="en-tete">
-                    <div class="groupe-tiktok">
-                        <span class="pseudo-tiktok">@${data.username}</span>
-                        <span class="badge-nouveau">✨ Nouveau</span>
-                    </div>
-                    <span class="infos-cadeau">🎁 ${nomDuCadeau} (${pieces} 🪙)</span>
-                </div>
-                <div class="message-roblox" id="msg-${data.username}">🎮 ${data.message}</div>
-            `;
 
-            carte.innerHTML = htmlContent;
+            const carte = document.createElement('div');
+            carte.id = `carte-${domId}`;
+            carte.className = 'carte-joueur dernier-joueur';
+
+            const enTete = document.createElement('div');
+            enTete.className = 'en-tete';
+
+            const groupeTiktok = document.createElement('div');
+            groupeTiktok.className = 'groupe-tiktok';
+
+            const pseudoSpan = document.createElement('span');
+            pseudoSpan.className = 'pseudo-tiktok';
+            pseudoSpan.textContent = `@${data.username || ''}`;
+
+            const badgeSpan = document.createElement('span');
+            badgeSpan.className = 'badge-nouveau';
+            badgeSpan.textContent = '✨ Nouveau';
+
+            groupeTiktok.append(pseudoSpan, badgeSpan);
+
+            const infosCadeau = document.createElement('span');
+            infosCadeau.className = 'infos-cadeau';
+            infosCadeau.textContent = `🎁 ${nomDuCadeau} (${pieces} 🪙)`;
+
+            enTete.append(groupeTiktok, infosCadeau);
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-roblox';
+            messageDiv.id = `msg-${domId}`;
+            messageDiv.textContent = `🎮 ${data.message || ''}`;
+
+            carte.append(enTete, messageDiv);
             listeJoueurs.prepend(carte);
 
             if (listeJoueurs.children.length > 6) {

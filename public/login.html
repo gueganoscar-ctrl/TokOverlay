@@ -343,6 +343,7 @@
         if (error === 'email_exists') { alertBox.textContent = "Cet email est déjà utilisé."; switchTab('register'); }
         else if (error === 'pseudo_exists') { alertBox.textContent = "Ce pseudo est déjà utilisé."; switchTab('register'); }
         else if (error === 'wrong_credentials') { alertBox.textContent = "Pseudo ou mot de passe incorrect."; switchTab('login'); }
+        else if (error === 'weak_password') { alertBox.textContent = "Le mot de passe doit contenir au moins 6 caractères."; switchTab('register'); }
       }
     });
 

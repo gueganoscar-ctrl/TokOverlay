@@ -134,6 +134,13 @@
     let animationQueue = [];
     let isAnimating = false;
 
+    function safeImageUrl(url, fallback) {
+      if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/'))) {
+        return url;
+      }
+      return fallback;
+    }
+
     if (isDemo) {
       chargerEliminationDemo();
     } else {
@@ -261,7 +268,10 @@
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         cell.dataset.placeIndex = place.idx;
-        cell.innerHTML = `<img src="${place.avatar}" referrerpolicy="no-referrer">`;
+        const img = document.createElement('img');
+        img.src = safeImageUrl(place.avatar, 'https://ui-avatars.com/api/?name=User');
+        img.referrerPolicy = 'no-referrer';
+        cell.appendChild(img);
         grid.appendChild(cell);
       });
 

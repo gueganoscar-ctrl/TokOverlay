@@ -307,16 +307,35 @@
               const d = live.totalDiamants || 0;
               const eur = d * EUR_PER_DIAMOND;
 
-              item.innerHTML = `
-                <div class="ligne-haut">
-                  <span class="stat-stats" style="color:var(--gold);">💎 ${d.toLocaleString()} · ${formaterEuros(eur)}</span>
-                  <span class="stat-date">${formaterDate(live.fin)}</span>
-                </div>
-                <div class="ligne-bas">
-                  <span>${live.topDonateur ? ` Top Donateur : <strong>${live.topDonateur.nickname}</strong> (${live.topDonateur.coins.toLocaleString()} 💎)` : 'Aucun don reçu'}</span>
-                  <span>❤️ ${(live.totalLikes || 0).toLocaleString()}</span>
-                </div>
-              `;
+              const ligneHaut = document.createElement('div');
+              ligneHaut.className = 'ligne-haut';
+
+              const statsSpan = document.createElement('span');
+              statsSpan.className = 'stat-stats';
+              statsSpan.style.color = 'var(--gold)';
+              statsSpan.textContent = `💎 ${d.toLocaleString()} · ${formaterEuros(eur)}`;
+
+              const dateSpan = document.createElement('span');
+              dateSpan.className = 'stat-date';
+              dateSpan.textContent = formaterDate(live.fin);
+
+              ligneHaut.append(statsSpan, dateSpan);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+
+              const donSpan = document.createElement('span');
+              if (live.topDonateur) {
+                donSpan.textContent = ` Top Donateur : ${live.topDonateur.nickname} (${live.topDonateur.coins.toLocaleString()} 💎)`;
+              } else {
+                donSpan.textContent = 'Aucun don reçu';
+              }
+
+              const likesSpan = document.createElement('span');
+              likesSpan.textContent = `❤️ ${(live.totalLikes || 0).toLocaleString()}`;
+
+              ligneBas.append(donSpan, likesSpan);
+              item.append(ligneHaut, ligneBas);
               conteneurLives.appendChild(item);
             });
           }
@@ -332,16 +351,33 @@
               item.className = 'historique-item';
               const dEnch = e.totalDiamantsEnchere || 0;
 
-              item.innerHTML = `
-                <div class="ligne-haut">
-                  <span class="stat-stats" style="color:var(--cyan);">${e.gagnant ? `🏆 Gagnant : ${e.gagnant.nickname}` : 'Aucun gagnant'}</span>
-                  <span class="stat-date">${formaterDate(e.date)}</span>
-                </div>
-                <div class="ligne-bas">
-                  <span>Mise gagnante : <strong>${e.gagnant ? e.gagnant.coins.toLocaleString() : 0} 💎</strong></span>
-                  <span style="color:var(--gold); font-weight:bold;">Total : ${dEnch.toLocaleString()} 💎 (${formaterEuros(dEnch * EUR_PER_DIAMOND)})</span>
-                </div>
-              `;
+              const ligneHaut = document.createElement('div');
+              ligneHaut.className = 'ligne-haut';
+
+              const gagnantSpan = document.createElement('span');
+              gagnantSpan.className = 'stat-stats';
+              gagnantSpan.style.color = 'var(--cyan)';
+              gagnantSpan.textContent = e.gagnant ? `🏆 Gagnant : ${e.gagnant.nickname}` : 'Aucun gagnant';
+
+              const dateSpan = document.createElement('span');
+              dateSpan.className = 'stat-date';
+              dateSpan.textContent = formaterDate(e.date);
+
+              ligneHaut.append(gagnantSpan, dateSpan);
+
+              const ligneBas = document.createElement('div');
+              ligneBas.className = 'ligne-bas';
+
+              const miseSpan = document.createElement('span');
+              miseSpan.textContent = `Mise gagnante : ${e.gagnant ? e.gagnant.coins.toLocaleString() : 0} 💎`;
+
+              const totalSpan = document.createElement('span');
+              totalSpan.style.color = 'var(--gold)';
+              totalSpan.style.fontWeight = 'bold';
+              totalSpan.textContent = `Total : ${dEnch.toLocaleString()} 💎 (${formaterEuros(dEnch * EUR_PER_DIAMOND)})`;
+
+              ligneBas.append(miseSpan, totalSpan);
+              item.append(ligneHaut, ligneBas);
               conteneurEncheres.appendChild(item);
             });
           }
